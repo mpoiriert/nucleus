@@ -1,0 +1,10 @@
+{
+    "services": {
+        "routing": {
+            "class": "Nucleus\\Routing\\Router"
+        }
+    },
+    "nucleus": {
+        "annotationNamespaces": ["Nucleus\\Routing"]
+    }
+}

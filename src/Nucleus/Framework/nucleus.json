@@ -1,0 +1,22 @@
+{
+    "imports": [
+        "../EventDispatcher/nucleus.json",
+        "../Invoker/nucleus.json",
+        "../Configuration/nucleus.json",
+        "../Routing/nucleus.json",
+        "../View/nucleus.json",
+        "../Twig/nucleus.json",
+        "../AssetManager/nucleus.json",
+        "../FrontController/nucleus.json",
+        "../Security/nucleus.json",
+        "../Session/nucleus.json",
+        "../Log/nucleus.json",
+        "../DebugBar/nucleus.json"
+    ],
+    "services": {
+        "clock": {
+            "class": "Nucleus\\Framework\\Clock",
+            "configuration": []
+        }
+    }
+}

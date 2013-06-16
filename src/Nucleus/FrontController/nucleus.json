@@ -1,0 +1,10 @@
+{
+    "services": {
+        "frontController": {
+            "class": "Nucleus\\FrontController\\FrontController"
+        },
+        "jsonResponseAdapter": {
+            "class": "Nucleus\\FrontController\\JsonResponseAdapter"
+        }
+    }
+}

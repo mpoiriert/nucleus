@@ -1,0 +1,6 @@
+{
+    "imports": [
+        "test1.json",
+        "subDirectory/data.json"
+    ]
+}

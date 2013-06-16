@@ -1,0 +1,13 @@
+{
+    "imports": [
+        "/src/Nucleus/Framework/nucleus.json",
+        "/src/Nucleus/Dashboard/nucleus.json"
+    ],
+     "services": {
+        "assetManager": {
+            "configuration": {
+                "rootDirectory": "<?php echo str_replace('\\','/',__DIR__) . '/web' ?>"
+            }
+        }
+     }
+}

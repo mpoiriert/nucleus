@@ -1,0 +1,55 @@
+{
+    "name": "mpoiriert/nucleus",
+    "type": "library",
+    "minimum-stability": "dev",
+    "description": "Reusable library",
+    "keywords": ["framework"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Martin Poirier Theoret",
+            "email": "mpoiriert@gmail.com"
+        }
+    ],
+    "repositories": [
+        {
+            "type": "package",
+            "package": {
+                "name": "maximebf/php-debugbar",
+                "version": "master",
+                "source": {
+                    "url": "https://github.com/mpoiriert/php-debugbar.git",
+                    "type": "git",
+                    "reference": "master"
+                }
+            }
+        }
+    ],
+    "require": {
+        "php": ">=5.3",
+        "doctrine/annotations": "1.*",
+        "symfony/event-dispatcher": "2.*",
+        "symfony/property-access": "2.*",
+        "symfony/routing": "2.*",
+        "symfony/http-foundation": "2.2.*",
+        "twig/twig": "1.*",
+        "kriswallsmith/assetic": "1.1.*",
+        "leafo/scssphp": "0.0.*",
+        "leafo/lessphp": "0.3.*",
+        "symfony/yaml": "2.2.*",
+        "symfony/filesystem": "2.3.*",
+        "symfony/dependency-injection": "2.3.*",
+        "symfony/config": "2.3.*",
+        "maximebf/php-debugbar": "*",
+        "monolog/monolog": "1.5.*",
+        "psr/log": "1.0.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "3.7.*",
+        "phpmd/phpmd": "1.4.*"
+    },
+    "autoload": {
+        "psr-0": {"Nucleus\\": "src/", "DebugBar\\": "vendor/maximebf/php-debugbar/src"},
+        "files": ["src/Nucleus/IService/functions.php","src/Nucleus/Framework/nucleus-autoload.php"]
+    }
+}

@@ -1,0 +1,13 @@
+{
+    "imports": [
+        "../Invoker/nucleus.json"
+    ],
+    "services": {
+        "eventDispatcher": {
+            "class": "Nucleus\\EventDispatcher\\EventDispatcher"
+        }
+    },
+    "nucleus": {
+        "annotationNamespaces": ["Nucleus\\EventDispatcher"]
+    }
+}

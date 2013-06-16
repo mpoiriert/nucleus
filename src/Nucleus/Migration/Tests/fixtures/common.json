@@ -1,0 +1,10 @@
+{
+    "services": {
+        "migrator": {
+            "class": "Nucleus\\Migration\\Migrator"
+        },
+        "applicationVariable": {
+            "class": "Nucleus\\Application\\NotPersistentVariableRegistry"
+        }
+    }
+}

@@ -1,0 +1,15 @@
+{
+    "services": {
+        "logger": {
+            "class": "Nucleus\\Log\\Logger",
+            "configuration": {
+                "name": "main"
+            }
+        },
+        "logger.handler.file": {
+            "class": "Monolog\\Handler\\RotatingFileHandler",
+            "arguments": ["%generatedDirectory%/log.txt"],
+            "tags": [{"name": "logger.handler"}]
+        }
+    }
+}

@@ -1,0 +1,19 @@
+{
+    "imports": [
+        "common.json"
+    ],
+    "services": {
+        "migrator": {
+            "configuration": {
+                "versions": {
+                    "v1.0": [
+                        {"taskName": "testTask", "parameters": {"filename": "update.sql"}}
+                    ]
+                }
+            }
+        },
+        "migrationTask.testTask": {
+            "class": "Nucleus\\Migration\\Tests\\TestTask"
+        }
+    }
+}

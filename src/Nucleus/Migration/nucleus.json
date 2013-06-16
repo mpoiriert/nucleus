@@ -1,0 +1,10 @@
+{
+    "services": {
+        "Migration": {
+            "class": "Nucleus\\Migration\\Migrator",
+            "configuration": {
+                "versions": {}
+            }
+        }
+    }
+}

@@ -1,0 +1,13 @@
+{
+    "imports": [
+        "../../nucleus.json"
+    ],
+    "services": {
+        "serviceForTest": {
+            "class": "Nucleus\\Framework\\Tests\\ServiceForTest"
+        },
+        "sessionStorage": {
+            "class": "Symfony\\Component\\HttpFoundation\\Session\\Storage\\MockArraySessionStorage"
+        }
+    }
+}

@@ -1,0 +1,15 @@
+--TEST--
+Twig supports for addAsset
+--TEMPLATE--
+{{ assetBag }}
+{{ assetBag.add('test.css') }}
+{% include "foo.twig" %}
+--TEMPLATE(foo.twig)--
+{{ assetBag.add('test2.css') }}
+--DATA--
+return array()
+--CONFIG--
+return array('base_template_class' => '\Nucleus\Twig\TwigTemplate')
+--EXPECT--
+test.css
+test2.css

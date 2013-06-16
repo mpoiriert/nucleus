@@ -1,0 +1,60 @@
+<?php
+
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+namespace Nucleus\AssetManager;
+
+use Nucleus\IService\FileSystem\IFileSystemService;
+
+/**
+ * Description of AssetCopier
+ *
+ * @author Martin
+ */
+class AssetCopier
+{
+    /**
+     * @var \Nucleus\IService\FileSystem\IFileSystemService
+     */
+    private $fileSystem;
+    
+    /**
+     * @var array
+     */
+    private $configuration;
+    
+    /**
+     * @param array $configuration
+     * 
+     * @Inject(configuration="$",rootDirectory="$[assetManager][rootDirectory]")
+     */
+    public function setConfiguration(array $configuration, $rootDirectory)
+    {
+        $this->configuration = $configuration;
+        $this->rootDirectory = $rootDirectory . '/nucleus/asset';
+    }
+    
+    /**
+     * @param \Nucleus\IService\FileSystem\IFileSystemService $fileSystem
+     * 
+     * @Inject
+     */
+    public function intilalize(IFileSystemService $fileSystem)
+    {
+        $this->fileSystem = $fileSystem;
+    }
+    
+    public function mirror()
+    {
+        foreach($this->configuration['toMirror'] as $sectionName => $mirrorConfiguration) {
+            $endTarget =  isset($mirrorConfiguration['target']) ? $mirrorConfiguration['target'] : $sectionName;
+            $target = $this->rootDirectory . '/' . $endTarget;
+            $source = $mirrorConfiguration['source'];
+            $sourcePath = stream_resolve_include_path($source);
+            $this->fileSystem->mirror($sourcePath, $target, null, array('copy_on_windows'=>true,'delete'=>true));
+        }
+    }
+}

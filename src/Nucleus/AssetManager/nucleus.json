@@ -1,0 +1,27 @@
+{
+    "imports": [
+        "../FileSystem/nucleus.json"
+    ],
+    "services": {
+        "assetManager": {
+            "class": "Nucleus\\AssetManager\\Manager",
+            "configuration": {
+                "rootDirectory": "<?php echo str_replace('\\','/',realpath(__DIR__ . '/../../../web')) ?>",
+                "aggregation": false
+            }
+        },
+        "assetCopier": {
+            "class": "Nucleus\\AssetManager\\AssetCopier",
+            "configuration": { "toMirror": {} }
+        },
+        "urlBuilder": {
+            "class": "Nucleus\\AssetManager\\UrlBuilder"
+        },
+        "assetManagerTwigExtension": {
+            "class": "Nucleus\\AssetManager\\Twig\\AssetManagerExtension"
+        },
+        "assetManagerFilePersister": {
+            "class": "Nucleus\\AssetManager\\FilePersister"
+        }
+    }
+}

@@ -1,0 +1,7 @@
+{
+    "services": {
+        "fileSystem": {
+            "class": "Nucleus\\FileSystem\\FileSystemService"
+        }
+    }
+}

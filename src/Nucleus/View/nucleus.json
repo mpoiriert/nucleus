@@ -1,0 +1,20 @@
+{
+    "services": {
+        "viewRenderer": {
+            "class": "Nucleus\\View\\CompositeRenderer"
+        },
+        "viewFileLoader": {
+            "class": "Nucleus\\View\\FileSystemLoader",
+            "configuration": []
+        },
+        "viewRenderer.php": {
+            "class": "Nucleus\\View\\PhpRenderer"
+        },
+        "viewRenderer.twig": {
+            "class": "Nucleus\\View\\TwigRenderer"
+        },
+        "viewRendererReponseAdapter": {
+            "class": "Nucleus\\View\\HtmlResponseAdapter"
+        }
+    }
+}

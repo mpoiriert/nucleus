@@ -1,0 +1,18 @@
+{
+    "imports": [
+        "../View/nucleus.json"
+    ],
+    "services": {
+        "assetBagTwigExtension": {
+            "class": "Nucleus\\Twig\\AssetBagTwigExtension"
+        },
+        "viewRenderer.twig": {
+            "class": "Nucleus\\Twig\\TwigRenderer",
+            "configuration": {
+                "twigEnvironment": {
+                    "base_template_class": "\\Nucleus\\Twig\\TwigTemplate"
+                }
+            }
+        }
+    }
+}

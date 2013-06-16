@@ -1,0 +1,7 @@
+{
+    "services": {
+        "annotationParser": {
+            "class": "Nucleus\\Annotation\\AnnotationParser"
+        }
+    }
+}

@@ -1,0 +1,26 @@
+{
+    "imports": [
+        "../BusinessRule/nucleus.json"
+    ],
+    "services": {
+        "accessControl": {
+            "class": "Nucleus\\Security\\AccessControlManager"
+        },
+        "accessControlUser": {
+            "class": "Nucleus\\Security\\SessionAccessControlUser"
+        },
+        "businessRuleEngine": {
+            "configuration": {
+                "defaultRules": {
+                    "security": {"rule": "hasPermission", "parameter": "permission"}
+                },
+                "rules": {
+                    "security\\hasPermission": "businessRuleEngine.rule.securityHasPermission"
+                }
+            }
+        },
+        "businessRuleEngine.rule.securityHasPermission": {
+            "class": "Nucleus\\Security\\CheckPermissionRule"
+        }
+    }
+}

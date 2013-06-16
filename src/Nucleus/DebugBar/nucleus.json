@@ -1,0 +1,28 @@
+{   
+    "services": {
+        "debugBarTwigExtension": {
+            "class": "Nucleus\\DebugBar\\TwigDebugBarExtension"
+        },
+        
+        "loggerToMessagesCollectorAdapter": {
+            "class": "Nucleus\\DebugBar\\LoggerToMessagesCollectorAdapter"
+        },
+        
+        "debugBar": {
+            "class": "DebugBar\\StandardDebugBar"
+        },
+        
+        "debugBarRenderer": {
+            "class": "DebugBar\\JavascriptRenderer",
+            "arguments": ["@debugBar","/nucleus/asset/debugBar"]
+        },
+        
+        "assetCopier": {
+            "configuration": {
+                "toMirror": {
+                    "debugBar": { "source" : "maximebf/php-debugbar/web" }
+                }
+            }
+        }
+    }
+}

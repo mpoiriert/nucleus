@@ -1,0 +1,20 @@
+--TEST--
+Twig supports for debug bar
+--TEMPLATE--
+<html>
+    <head>
+    </head>
+    <body>
+    </body>
+</html>
+--DATA--
+return array()
+--CONFIG--
+return array('base_template_class' => '\Nucleus\Twig\TwigTemplate')
+--EXPECT--
+<html>
+    <head>
+    debugIncludes</head>
+    <body>
+    debugToolbar</body>
+</html>

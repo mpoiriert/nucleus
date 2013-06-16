@@ -1,0 +1,7 @@
+{
+    "services": {
+        "invoker": {
+            "class": "Nucleus\\Invoker\\Invoker"
+        }
+    }
+}

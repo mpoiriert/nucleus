@@ -1,0 +1,16 @@
+{
+    "imports": [
+        "common.json"
+    ],
+    "services": {
+        "migrator": {
+            "configuration": {
+                "versions": {
+                    "v1.0": [
+                        { "taskName": "testTask" }
+                    ]
+                }
+            }
+        }
+    }
+}

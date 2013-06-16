@@ -1,0 +1,34 @@
+{
+    "imports": [
+        "../Invoker/nucleus.json",
+        "../Framework/nucleus.json"
+    ],
+    "services": {
+        "businessRuleEngine": {
+            "class": "Nucleus\\BusinessRule\\BusinessRuleEngine",
+            "configuration": {
+                "rules": {
+                    "date\\before": "businessRuleEngine.rule.dateBefore",
+                    "date\\after": "businessRuleEngine.rule.dateAfter",
+                    "default\\configuration": "businessRuleEngine.rule.configuration",
+                    "default\\debug": "businessRuleEngine.rule.debug"
+                }
+            }
+        },
+        "businessRuleEngine.rule.dateBefore": {
+            "class": "Nucleus\\BusinessRule\\Rule\\DateBefore"
+        },
+        "businessRuleEngine.rule.dateAfter": {
+            "class": "Nucleus\\BusinessRule\\Rule\\DateAfter"
+        },
+        "businessRuleEngine.rule.configuration": {
+            "class": "Nucleus\\BusinessRule\\Rule\\Configuration"
+        },
+        "businessRuleEngine.rule.debug": {
+            "class": "Nucleus\\BusinessRule\\Rule\\Debug"
+        },
+        "yamlParser": {
+            "class": "Symfony\\Component\\Yaml\\Yaml"
+        }
+    }
+}

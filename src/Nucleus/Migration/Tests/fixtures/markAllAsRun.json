@@ -1,0 +1,23 @@
+{
+    "imports": [
+        "common.json"
+    ],
+    "services": {
+        "migrator": {
+            "configuration": {
+                "versions": {
+                    "v1.0": [
+                        {"taskName": "testTask"},
+                        {"taskName": "testTask2"}
+                    ]
+                }
+            }
+        },
+        "migrationTask.testTask": {
+            "class": "Nucleus\\Migration\\Tests\\TestTask"
+        },
+        "migrationTask.testTask2": {
+            "class": "Nucleus\\Migration\\Tests\\TestTask"
+        }
+    }
+}

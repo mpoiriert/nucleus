@@ -1,0 +1,19 @@
+{
+    "imports": [
+        "../BusinessRule/nucleus.json"
+    ],
+    "services": {
+        "session": {
+            "class": "Nucleus\\Session\\Session"
+        },
+        "sessionStorage": {
+            "class": "Symfony\\Component\\HttpFoundation\\Session\\Storage\\NativeSessionStorage"
+        },
+        "sessionServiceBinder": {
+            "class": "Nucleus\\Session\\ServiceBinder"
+        }
+    },
+    "nucleus": {
+        "annotationNamespaces": ["Nucleus\\Session"]
+    }
+}
