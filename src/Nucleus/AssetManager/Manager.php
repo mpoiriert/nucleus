@@ -51,7 +51,6 @@ class Manager implements \Nucleus\IService\AssetManager\IAssetManager
     }
 
     /**
-     * @Route(path="/nucleus/copiedAsset/*")
      * @param string $path
      */
     public function getContent($path)
