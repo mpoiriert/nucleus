@@ -8,13 +8,14 @@
 namespace Nucleus\AssetManager;
 
 use Nucleus\IService\FileSystem\IFileSystemService;
+use Nucleus\IService\AssetManager\IFilePersister;
 
 /**
  * Description of FilePersister
  *
  * @author Martin
  */
-class FilePersister
+class FilePersister implements IFilePersister
 {
     private $rootDirectory;
 

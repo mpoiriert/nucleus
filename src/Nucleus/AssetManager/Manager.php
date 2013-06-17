@@ -15,6 +15,7 @@ use Exception;
 use Nucleus\Framework\Nucleus;
 use Nucleus\IService\AssetManager\IUrlBuilder;
 use Symfony\Component\Routing\Route;
+use Nucleus\IService\AssetManager\IFilePersister;
 
 /**
  * Description of Manager
@@ -26,7 +27,7 @@ class Manager implements \Nucleus\IService\AssetManager\IAssetManager
     private $configuration;
 
     /**
-     * @var FilePersister
+     * @var IFilePersister
      */
     private $filePersister;
 
@@ -42,7 +43,7 @@ class Manager implements \Nucleus\IService\AssetManager\IAssetManager
      * 
      * @Inject(configuration="$")
      */
-    public function initialize(array $configuration, FilePersister $assetManagerFilePersister, IUrlBuilder $urlBuilder)
+    public function initialize(array $configuration, IFilePersister $assetManagerFilePersister, IUrlBuilder $urlBuilder)
     {
         $this->configuration = $configuration;
         $this->filePersister = $assetManagerFilePersister;
