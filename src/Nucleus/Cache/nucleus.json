@@ -5,10 +5,7 @@
     ],
     "services": {
         "cache": {
-            "class": "Nucleus\\Cache\\File\\FileCache",
-            "configuration": {
-                "cachePath": "%generatedDirectory%/cache"
-            }
+            "class": "Nucleus\\Cache\\File\\FileCache"
         }
     },
     "nucleus": {

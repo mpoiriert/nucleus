@@ -30,12 +30,12 @@ class FileCache implements ICacheService
     /**
      * @param \Nucleus\IService\FileSystem\IFileSystemService $fileSystem
      * 
-     * @Inject(configuration="$")
+     * @Inject(cachePath="$[configuration][generatedDirectory]")
      */
-    public function initialize(IFileSystemService $fileSystem, array $configuration)
+    public function initialize(IFileSystemService $fileSystem, $cachePath)
     {
         $this->fileSystem = $fileSystem;
-        $this->cachePath = $configuration['cachePath'];
+        $this->cachePath = $cachePath . '/fileCache';
     }
     
     public function clearAllNamespaces()
@@ -45,7 +45,7 @@ class FileCache implements ICacheService
 
     public function clearNamespace($namespace = ICacheService::NAMESPACE_DEFAULT)
     {
-        $this->fileSystem->remove($this->cachePath . '/' . $namespace);
+        $this->fileSystem->remove($this->cachePath . '/' . $this->sanitize($namespace));
     }
 
     public function get($name, $namespace = ICacheService::NAMESPACE_DEFAULT)
@@ -96,7 +96,14 @@ class FileCache implements ICacheService
     
     private function getFile($name, $namespace)
     {
-        return $this->cachePath . '/' . $namespace . '/' . md5($name) . '.php';
+        $namespace = $this->sanitize($namespace);
+        $name = $this->sanitize($name);
+        return $this->cachePath . '/' . $namespace . '/' . $name . '.php';
+    }
+    
+    private function sanitize($string)
+    {
+        return preg_replace('/[^\w\-~_\.]+/u', '-', $string);
     }
     
     /**
