@@ -54,7 +54,19 @@ class NucleusIntegrationTest extends \PHPUnit_Framework_TestCase
             ), $result
         );
 
-        $serviceContainer->getServiceByName("viewRenderer");
+        $result = $serviceRouter->match('/test-en-us');
+        unset($result['_route']);
+        $this->assertEquals(
+            array(
+            'test' => 0,
+            '_service' => array('name' => 'serviceForTest', 'method' => 'route'),
+            '_culture' => 'en-us'
+            ), $result
+        );
+        
+        $serviceRouter->setDefaultCulture('en-us');
+        $result = $serviceRouter->generate('test');
+        $this->assertEquals('/test-en-us', $result);
     }
 
     public function testLoadServices()
@@ -94,6 +106,7 @@ class ServiceForTest
 
     /**
      * @Route(name="test",path="/test",defaults={"test" = 0})
+     * @Route(name="test",path="/test-en-us",defaults={"test" = 0, "_culture" = "en-us"})
      */
     public function route()
     {

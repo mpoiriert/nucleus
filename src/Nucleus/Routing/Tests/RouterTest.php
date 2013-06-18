@@ -54,4 +54,34 @@ class RouterTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $result);
         $routing->removeRoute($name);
     }
+    
+    public function testRouteI18n()
+    {
+        $routing = $this->loadRoutingService();
+        $routing->addRoute('test', '/test-fr-fr', array('_culture'=>'fr-fr'));
+        $routing->addRoute('test', '/test-en-us', array('_culture'=>'en-us'));
+        $routing->addRoute('test', '/test-en', array('_culture'=>'en'));
+        $routing->addRoute('test', '/test');
+        
+        $result = $routing->match('/test-en-us');
+        unset($result['_route']);
+        $this->assertEquals(array('_culture'=>'en-us'), $result);
+        
+        $result = $routing->generate('test',array('_culture'=>'en-us'));
+        $this->assertEquals('/test-en-us', $result);
+        
+        $result = $routing->generate('test',array('_culture'=>'en-uk'));
+        $this->assertEquals('/test-en', $result);
+        
+        $result = $routing->generate('test',array('_culture'=>'fr-ca'));
+        $this->assertEquals('/test?_culture=fr-ca', $result);
+        
+        $result = $routing->generate('test');
+        $this->assertEquals('/test', $result);
+        
+        
+        $routing->setDefaultCulture('en-us');
+        $result = $routing->generate('test');
+        $this->assertEquals('/test-en-us', $result);
+    }
 }
