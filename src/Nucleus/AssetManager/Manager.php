@@ -14,7 +14,6 @@ use Assetic\Filter\ScssphpFilter;
 use Exception;
 use Nucleus\Framework\Nucleus;
 use Nucleus\IService\AssetManager\IUrlBuilder;
-use Symfony\Component\Routing\Route;
 use Nucleus\IService\AssetManager\IFilePersister;
 
 /**

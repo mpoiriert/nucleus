@@ -33,6 +33,10 @@ class ConfigurationFileLoader
 
     private function getFilePath($filename, $basePath = null)
     {
+        $extension = pathinfo($filename, PATHINFO_EXTENSION);
+        if (!$extension) {
+            $filename .= "/nucleus.json";
+        }
         switch (true) {
             case file_exists($filename):
                 $file = $filename;
@@ -41,13 +45,7 @@ class ConfigurationFileLoader
                 $file = $basePath . DIRECTORY_SEPARATOR . $filename;
                 break;
             default:
-                $path = $filename;
-                $extension = pathinfo($filename, PATHINFO_EXTENSION);
-                if (!$extension) {
-                    $path .= "/nucleus.json";
-                }
-
-                $file = str_replace("\\", "/", stream_resolve_include_path($path));
+                $file = str_replace("\\", "/", stream_resolve_include_path($filename));
                 break;
         }
 

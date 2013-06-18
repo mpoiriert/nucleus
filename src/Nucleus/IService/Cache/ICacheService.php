@@ -17,36 +17,54 @@ interface ICacheService
      * The service name use as a reference
      */
     const NUCLEUS_SERVICE_NAME = 'cache';
-
+    
     /**
-     * Return all the existings category names
+     * The default cache namespace
      */
-    public function getAllCategoryNames();
-
+    const NAMESPACE_DEFAULT = 'default';
+    
     /**
-     * Return all the existings categories
-     * 
-     * @return Nucleus\IService\Cache\ICacheCategory[]
-     */
-    public function getAllCategories();
-
-    /**
-     * Return a cache category by it's name. Mainly use to call clear on it.
+     * Return a value from the cache.
      * 
      * @param string $name
+     * @param string $namespace
      * 
-     * @return Nucleus\IService\Cache\ICacheCategory
+     * @throws EntryNotFoundException Thrown if the value is not in the cache
+     * 
+     * @return mixed
      */
-    public function getCategory($name);
-
+    public function get($name, $namespace = ICacheService::NAMESPACE_DEFAULT);
+    
     /**
-     * Return a entry of cache. From the entry you will be able to call the function
-     * get/set/delete/...
+     * Set a value in the cache. The value must be serialize by the cache
+     * service if cannot be stored as is.
      * 
      * @param string $name
-     * @param string $categoryName
-     * 
-     * @return Nucleus\IService\Cache\ICacheEntry
+     * @param mixed $value
+     * @param int $timeToLive The delay before the value will be lost, 0 for none
+     * @param string $namespace
      */
-    public function entryFactory($name, $categoryName = ICacheCategory::NAME_DEFAULT);
+    public function set($name, $value, $timeToLive = 0, $namespace = ICacheService::NAMESPACE_DEFAULT);
+    
+    /**
+     * Verify is a value is still in the cache
+     * 
+     * @param string $name
+     * @param string $namespace
+     * 
+     * @return boolean
+     */
+    public function has($name, $namespace = ICacheService::NAMESPACE_DEFAULT);
+    
+    /**
+     * Clear a specific namespace
+     * 
+     * @param string $namespace
+     */
+    public function clearNamespace($namespace = ICacheService::NAMESPACE_DEFAULT);
+    
+    /**
+     * Clear all the namespaces
+     */
+    public function clearAllNamespaces();
 }

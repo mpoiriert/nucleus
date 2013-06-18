@@ -11,20 +11,6 @@
             "email": "mpoiriert@gmail.com"
         }
     ],
-    "repositories": [
-        {
-            "type": "package",
-            "package": {
-                "name": "maximebf/php-debugbar",
-                "version": "master",
-                "source": {
-                    "url": "https://github.com/mpoiriert/php-debugbar.git",
-                    "type": "git",
-                    "reference": "master"
-                }
-            }
-        }
-    ],
     "require": {
         "php": ">=5.3",
         "doctrine/annotations": "1.*",

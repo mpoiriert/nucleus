@@ -1,0 +1,13 @@
+{
+    "imports": [
+        ".."
+    ],
+    "services": {
+        "cache.file": {
+            "class": "Nucleus\\Cache\\File\\FileCache",
+            "configuration": {
+                "cachePath": "%generatedDirectory%/cache"
+            }
+        }
+    }
+}

@@ -1,0 +1,17 @@
+{
+    "imports": [
+        "../FileSystem",
+        "../Configuration"
+    ],
+    "services": {
+        "cache": {
+            "class": "Nucleus\\Cache\\File\\FileCache",
+            "configuration": {
+                "cachePath": "%generatedDirectory%/cache"
+            }
+        }
+    },
+    "nucleus": {
+        "annotationNamespaces": ["Nucleus\\Cache"]
+    }
+}

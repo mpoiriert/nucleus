@@ -8,11 +8,10 @@
 namespace Nucleus\IService\Cache;
 
 /**
- * Description of CategoryDoesNotExistsException
+ * Description of CacheException
  *
  * @author Martin
  */
-class CategoryDoesNotExistsException extends \Exception
+class CacheException extends \Exception
 {
-    
 }
