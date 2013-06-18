@@ -64,8 +64,12 @@ class NucleusIntegrationTest extends \PHPUnit_Framework_TestCase
             ), $result
         );
         
+        
+        $result = $serviceRouter->generate('test-i18n');
+        $this->assertEquals('/test-i18n', $result);
+        
         $serviceRouter->setDefaultCulture('en-us');
-        $result = $serviceRouter->generate('test');
+        $result = $serviceRouter->generate('test-i18n');
         $this->assertEquals('/test-en-us', $result);
     }
 
@@ -106,7 +110,12 @@ class ServiceForTest
 
     /**
      * @Route(name="test",path="/test",defaults={"test" = 0})
-     * @Route(name="test",path="/test-en-us",defaults={"test" = 0, "_culture" = "en-us"})
+     * @I18nRoute(
+     *      name="test-i18n",path="/test-i18n",defaults={"test" = 0},
+     *      routes={
+     *          "en-us" = @Route(path="/test-en-us")
+     *      }
+     * )
      */
     public function route()
     {
