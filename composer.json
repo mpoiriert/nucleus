@@ -35,7 +35,7 @@
         "phpmd/phpmd": "1.4.*"
     },
     "autoload": {
-        "psr-0": {"Nucleus\\": "src/", "DebugBar\\": "vendor/maximebf/php-debugbar/src"},
+        "psr-0": {"Nucleus\\": "src/"},
         "files": ["src/Nucleus/IService/functions.php","src/Nucleus/Framework/nucleus-autoload.php"]
     }
 }
