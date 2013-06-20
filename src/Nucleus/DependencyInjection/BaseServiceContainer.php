@@ -8,6 +8,7 @@ use Nucleus\IService\DependencyInjection\IServiceContainer;
 use Nucleus\IService\DependencyInjection\ServiceDisabledException;
 use Nucleus\IService\DependencyInjection\ServiceDoesNotExistsException;
 use Symfony\Component\DependencyInjection\Container;
+use Go\Aop\Aspect;
 
 abstract class BaseServiceContainer extends Container implements IServiceContainer
 {
@@ -19,6 +20,16 @@ abstract class BaseServiceContainer extends Container implements IServiceContain
     protected $aliases = array();
 
     /**
+     * @var \Go\Core\AspectContainer 
+     */
+    protected $aspectContainer;
+    
+    /**
+     * @var Aspect[]
+     */
+    private $loadedAspects = array();
+    
+    /**
      *
      * @var \Nucleus\IService\DependencyInjection\ILifeCycleAware[]
      */
@@ -26,6 +37,7 @@ abstract class BaseServiceContainer extends Container implements IServiceContain
 
     public function initialize()
     {
+        $this->aspectContainer = parent::get('aspectContainer');
         $this->getServicesByTag("autoStart");
         register_shutdown_function(array($this, 'shutdown'));
     }
@@ -67,13 +79,23 @@ abstract class BaseServiceContainer extends Container implements IServiceContain
         }
 
         $service = parent::get($name);
-
+        
         if ($service instanceof ILifeCycleAware && !in_array($service, $this->startedServices)) {
             $this->startedServices[spl_object_hash($service)] = $service;
             $service->serviceStart();
         }
 
+        $this->loadAspect($service);
+        
         return $service;
+    }
+    
+    private function loadAspect($service)
+    {
+        if ($service instanceof Aspect && !in_array($service, $this->loadedAspects)) {
+            $this->loadedAspects[spl_object_hash($service)] = $service;
+            $this->aspectContainer->registerAspect($service);
+        }
     }
 
     public function getServiceByName($name)

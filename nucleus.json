@@ -1,7 +1,7 @@
 {
     "imports": [
-        "/src/Nucleus/Framework/nucleus.json",
-        "/src/Nucleus/Dashboard/nucleus.json"
+        "src/Nucleus/Framework/nucleus.json",
+        "src/Nucleus/Dashboard/nucleus.json"
     ],
      "services": {
         "assetManager": {

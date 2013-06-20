@@ -12,6 +12,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\DefinitionDecorator;
 use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
 use Symfony\Component\DependencyInjection\Reference;
+use ReflectionClass;
 
 class NucleusCompilerPass implements CompilerPassInterface
 {
@@ -67,8 +68,13 @@ class NucleusCompilerPass implements CompilerPassInterface
                 continue;
             }
             $definition = $this->container->getDefinition($name);
+           
             $parsingResult = $annotationParser->parse($serviceConfiguration['class']);
-
+            
+            if($this->isAspect($serviceConfiguration['class'])) {
+                $definition->addTag('autoStart');
+            }
+            
             $annotations = $parsingResult->getAllAnnotations(array(
                 function($annotation) {
                     return $annotation instanceof IServiceContainerGeneratorAnnotation;
@@ -83,6 +89,12 @@ class NucleusCompilerPass implements CompilerPassInterface
         }
 
         $this->container->getDefinition("configuration")->addArgument(new Variable("this->serviceConfigurations"));
+    }
+    
+    private function isAspect($class)
+    {
+        $reflectionClass = new ReflectionClass($class);
+        return $reflectionClass->implementsInterface('\Go\Aop\Aspect');
     }
 
     private function setDefaultConfiguration()
