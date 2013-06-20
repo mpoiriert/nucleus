@@ -20,7 +20,7 @@
         "assetCopier": {
             "configuration": {
                 "toMirror": {
-                    "debugBar": { "source" : "maximebf/php-debugbar/web" }
+                    "debugBar": { "source" : "maximebf/debugbar/src/DebugBar/Resources" }
                 }
             }
         }
