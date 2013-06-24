@@ -6,13 +6,11 @@
         "assetBagTwigExtension": {
             "class": "Nucleus\\Twig\\AssetBagTwigExtension"
         },
+        "twigEnvironment": {
+            "class": "Nucleus\\Twig\\TwigEnvironment"
+        },
         "viewRenderer.twig": {
-            "class": "Nucleus\\Twig\\TwigRenderer",
-            "configuration": {
-                "twigEnvironment": {
-                    "base_template_class": "\\Nucleus\\Twig\\TwigTemplate"
-                }
-            }
+            "class": "Nucleus\\Twig\\TwigRenderer"
         }
     }
 }
