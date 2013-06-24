@@ -27,18 +27,6 @@ class TwigRenderer extends BaseExtensionRenderer
 
     /**
      *
-     * @var \Twig_Extension[] 
-     */
-    private $twigExtensions = array();
-
-    /**
-     *
-     * @var \Twig_Loader_Array
-     */
-    private $arrayLoader = null;
-
-    /**
-     *
      * @var array
      */
     private $configuration = array();
@@ -67,27 +55,15 @@ class TwigRenderer extends BaseExtensionRenderer
     }
 
     /**
-     * @return \Twig_Environment
+     * @Inject
      */
-    private function getTwig()
+    public function setTwig(Twig_Environment $twigEnvironment)
     {
-        if (is_null($this->twig)) {
-            $loader = new Twig_Loader_Chain();
-            $this->arrayLoader = new Twig_Loader_Array(array());
-            $loader->addLoader($this->arrayLoader);
-            $loader->addLoader(
-                new Twig_Loader_Filesystem($this->getFileSystemLoader()->getPaths())
-            );
+        $this->twig = $twigEnvironment;
+    }
 
-            $this->twig = new Twig_Environment(
-                $loader, $this->configuration["twigEnvironment"]
-            );
-
-            foreach ($this->twigExtensions as $extension) {
-                $this->twig->addExtension($extension);
-            }
-        }
-
+    public function getTwig()
+    {
         return $this->twig;
     }
 
@@ -99,15 +75,16 @@ class TwigRenderer extends BaseExtensionRenderer
      */
     public function setTwigExtensions(array $extensions)
     {
-        $this->twigExtensions = $extensions;
+        foreach ($extensions as $extension) {
+            $this->twig->addExtension($extension);
+        }
     }
 
     public function render($file, array $parameters = array())
     {
-        $twig = $this->getTwig();
         if (file_exists($file)) {
-            $this->arrayLoader->setTemplate($file, file_get_contents($file));
+            $this->twig->getArrayLoader()->setTemplate($file, file_get_contents($file));
         }
-        return $twig->render($file, $parameters);
+        return $this->twig->render($file, $parameters);
     }
 }
