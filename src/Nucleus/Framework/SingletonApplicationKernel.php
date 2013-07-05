@@ -36,7 +36,7 @@ abstract class SingletonApplicationKernel
      */
     protected function getDnaConfiguration()
     {
-        return DnaConfiguration::factory($this);
+        return new DnaConfiguration();
     }
 
     /**

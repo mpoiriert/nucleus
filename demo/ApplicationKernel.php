@@ -5,19 +5,19 @@
  * and open the template in the editor.
  */
 
-include __DIR__ . '/src/Nucleus/Framework/SingletonApplicationKernel.php';
+use Nucleus\Framework\SingletonApplicationKernel;
 
 /**
  * Description of ApplicationKernel
  *
  * @author Martin
  */
-class ApplicationKernel extends \Nucleus\Framework\SingletonApplicationKernel
+class ApplicationKernel extends SingletonApplicationKernel
 {
     protected function getDnaConfiguration()
     {
         return parent::getDnaConfiguration()
-            ->setCachePath(__DIR__ . '/cache')
+            ->setCachePath(realpath(__DIR__ . '/../cache'))
             ->setDebug(false);
     }
 }

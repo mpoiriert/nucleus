@@ -11,6 +11,7 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Nucleus\DependencyInjection\NucleusCompilerPass;
 use Nucleus\DependencyInjection\PhpDumper;
 use Symfony\Component\Config\ConfigCache;
+use InvalidArgumentException;
 
 /**
  * Description of Nucleus
@@ -75,7 +76,7 @@ class Nucleus
         if($configuration instanceof DnaConfiguration) {
             $dna = $configuration;
         } else {
-            $dna = new DnaConfiguration(realpath(__DIR__ . '/../../..'));
+            $dna = new DnaConfiguration();
             $dna->setConfiguration($configuration);
         }
         

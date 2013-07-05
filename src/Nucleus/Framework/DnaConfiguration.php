@@ -7,8 +7,6 @@
 
 namespace Nucleus\Framework;
 
-use ReflectionObject;
-
 /**
  * This is the configuration class need to initialize a nucleus instance.
  *
@@ -24,8 +22,16 @@ class DnaConfiguration
     private $addSaltToCache = true;
     private $cachePathIsFreeze = false;
 
-    public function __construct($rootDirectory)
+    public function __construct($rootDirectory = null)
     {
+        if(is_null($rootDirectory)) {
+            $result = stream_resolve_include_path('composer/ClassLoader.php');
+            if(!$result) {
+                throw new InvalidArgumentException('Cannot determine the vendor directory.');
+            }
+            
+            $rootDirectory = realpath(dirname($result) . '/../..');
+        }
         $this->rootDirectory = $rootDirectory;
         $this->initializeDefaults();
     }
@@ -147,18 +153,5 @@ class DnaConfiguration
             'cacheDir' => $cacheDir,
             'includePaths' => $this->getAspectIncludePaths()
         );
-    }
-
-    /**
-     * 
-     * @param \Nucleus\Framework\SingletonApplicationKernel $application
-     * @return \Nucleus\Framework\DnaConfiguration
-     */
-    public static function factory(SingletonApplicationKernel $application)
-    {
-        $reflectionObject = new ReflectionObject($application);
-        $classDirectory = dirname($reflectionObject->getFileName());
-        $dna = new DnaConfiguration($classDirectory);
-        return $dna;
     }
 }

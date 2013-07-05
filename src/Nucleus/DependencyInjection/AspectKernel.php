@@ -40,7 +40,6 @@ class AspectKernel extends BaseKernel
         $instance = static::getInstance();
 
         if ($isNew) {
-            var_dump($options);
             $instance->init($options);
         }
 
