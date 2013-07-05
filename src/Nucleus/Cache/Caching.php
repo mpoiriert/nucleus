@@ -2,13 +2,7 @@
 
 namespace Nucleus\Cache;
 
-;
-use Go\Aop\Intercept\FieldAccess;
 use Go\Aop\Intercept\MethodInvocation;
-use Go\Lang\Annotation\After;
-use Go\Lang\Annotation\Before;
-use Go\Lang\Annotation\Around;
-use Go\Lang\Annotation\Pointcut;
 use Nucleus\IService\Cache\ICacheService;
 use Nucleus\DependencyInjection\BaseAspect;
 use Nucleus\IService\Cache\EntryNotFoundException;
@@ -33,7 +27,7 @@ class Caching extends BaseAspect
      *
      * @param MethodInvocation $invocation Invocation
      *
-     * @Around("execution(public **->handleRequest(*))")
+     * @Go\Lang\Annotation\Around("@annotation(Nucleus\Cache\Caching)")
      */
     public function aroundCacheable(MethodInvocation $invocation)
     {
