@@ -18,7 +18,6 @@ use Twig_Template;
  */
 abstract class TwigTemplate extends Twig_Template
 {
-
     public function render(array $context)
     {
         foreach ($this->env->getExtensions() as $extension) {

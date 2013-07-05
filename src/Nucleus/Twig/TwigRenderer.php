@@ -7,11 +7,9 @@
 
 namespace Nucleus\Twig;
 
-use Twig_Loader_Array;
-use Twig_Loader_Chain;
 use Twig_Environment;
-use Twig_Loader_Filesystem;
 use Nucleus\View\BaseExtensionRenderer;
+use Nucleus\Framework\Nucleus;
 
 /**
  * Description of TwigRenderer
@@ -21,37 +19,13 @@ use Nucleus\View\BaseExtensionRenderer;
 class TwigRenderer extends BaseExtensionRenderer
 {
     /**
-     * @var \Twig_Environment 
+     * @var Twig_Environment 
      */
     private $twig = null;
-
-    /**
-     *
-     * @var array
-     */
-    private $configuration = array();
 
     public function __construct()
     {
         $this->setExtensions(array('twig'));
-    }
-
-    /**
-     * 
-     * @param string $cacheDirectory
-     * @param string $viewDirectory
-     * 
-     * @Inject(
-     *   configuration="$",
-     *   cacheDirectory="$[configuration][generatedDirectory]",
-     *   debug="$[configuration][debug]"
-     * )
-     */
-    public function initialize($configuration, $cacheDirectory, $debug)
-    {
-        $this->configuration = $configuration;
-        $this->configuration["twigEnvironment"]["debug"] = $debug;
-        $this->configuration["twigEnvironment"]["cache"] = $cacheDirectory . '/twig';
     }
 
     /**
@@ -62,29 +36,21 @@ class TwigRenderer extends BaseExtensionRenderer
         $this->twig = $twigEnvironment;
     }
 
-    public function getTwig()
-    {
-        return $this->twig;
-    }
-
-    /**
-     * 
-     * @param \Twig_Extension[] $extensions
-     * 
-     * @Inject(extensions="@twigRenderer.twigExtension")
-     */
-    public function setTwigExtensions(array $extensions)
-    {
-        foreach ($extensions as $extension) {
-            $this->twig->addExtension($extension);
-        }
-    }
-
     public function render($file, array $parameters = array())
     {
-        if (file_exists($file)) {
-            $this->twig->getArrayLoader()->setTemplate($file, file_get_contents($file));
-        }
         return $this->twig->render($file, $parameters);
+    }
+    
+    /**
+     * @param mixed $configuration
+     * @return TwigRenderer
+     */
+    public static function factory($configuration = null)
+    {
+        if (is_null($configuration)) {
+            $configuration = __DIR__ . '/nucleus.json';
+        }
+
+        return Nucleus::serviceFactory($configuration, 'viewRenderer.twig');
     }
 }

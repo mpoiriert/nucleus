@@ -1,13 +1,20 @@
 {
     "imports": [
-        "../View/nucleus.json"
+        "../View",
+        "../AssetManager",
+        "../Configuration"
     ],
     "services": {
         "assetBagTwigExtension": {
             "class": "Nucleus\\Twig\\AssetBagTwigExtension"
         },
         "twigEnvironment": {
-            "class": "Nucleus\\Twig\\TwigEnvironment"
+            "class": "Nucleus\\Twig\\TwigEnvironment",
+            "configuration": 
+              {
+                  "debug":"%debug%",
+                  "cache":"%generatedDirectory%/twig"
+              }
         },
         "viewRenderer.twig": {
             "class": "Nucleus\\Twig\\TwigRenderer"

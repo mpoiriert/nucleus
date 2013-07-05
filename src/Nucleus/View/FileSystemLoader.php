@@ -8,26 +8,14 @@
 namespace Nucleus\View;
 
 use Twig_Loader_Filesystem;
-use ReflectionMethod;
 
 /**
  * Description of FileSystemLoader
  *
  * @author Martin
  */
-class FileSystemLoader
+class FileSystemLoader extends Twig_Loader_Filesystem
 {
-    private $twigFileSystemLoader;
-    private $findTemplateReflectionMethod;
-
-    public function __construct(array $paths = array())
-    {
-        $this->twigFileSystemLoader = new Twig_Loader_Filesystem(array());
-        $this->findTemplateReflectionMethod = new ReflectionMethod(get_class($this->twigFileSystemLoader), 'findTemplate');
-        $this->findTemplateReflectionMethod->setAccessible(true);
-        $this->setPaths($paths);
-    }
-
     /**
      * @param array $configuration
      * 
@@ -40,30 +28,29 @@ class FileSystemLoader
         }
     }
 
-    public function setPaths(array $paths = array())
-    {
-        $this->twigFileSystemLoader->setPaths($paths);
-    }
-
-    public function addPath($path)
-    {
-        $this->twigFileSystemLoader->addPath($path);
-    }
-
-    public function getPaths()
-    {
-        return $this->twigFileSystemLoader->getPaths();
-    }
-
     public function exists($fileName)
     {
-        return file_exists($fileName) || $this->twigFileSystemLoader->exists($fileName);
+        return file_exists($fileName) || parent::exists($fileName);
+    }
+    
+    public function findTemplate($name)
+    {
+        // normalize name
+        $name = preg_replace('#/{2,}#', '/', strtr((string)$name, '\\', '/'));
+
+        if (isset($this->cache[$name])) {
+            return $this->cache[$name];
+        }
+        
+        if (is_file($name)) {
+            return $this->cache[$name] = $name;
+        }
+        
+        return parent::findTemplate($name);
     }
 
     public function getFullPath($fileName)
     {
-        return $this->findTemplateReflectionMethod->invoke(
-                $this->twigFileSystemLoader, $fileName
-        );
+        return $this->findTemplate($fileName);
     }
 }

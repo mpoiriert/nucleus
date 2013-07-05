@@ -22,14 +22,25 @@ class TwigRendererTest extends PHPUnit_Framework_TestCase
 
     public function setUp()
     {
-        $this->renderer = new TwigRenderer();
-        $this->renderer->initialize(array(), sys_get_temp_dir() . '/' . uniqid(), false);
-        $this->renderer->setFileLoader(new FileSystemLoader(array(__DIR__)));
+        $this->renderer = TwigRenderer::factory(
+            array(
+                'imports' => array(__DIR__ . '/..'),
+                'services' => array(
+                    "twigEnvironment" => array(
+                        "configuration" => array(
+                            "cache" => false,
+                            "debug" => false
+                        )
+                    )
+                )
+            )
+        );
+        $this->renderer->getFileSystemLoader()->addPath(__DIR__);
     }
 
     public function testCanRender()
     {
-        $this->assertTrue($this->renderer->canRender('/fixtures/toRender.twig'));
+        $this->assertTrue($this->renderer->canRender(__DIR__ . '/fixtures/toRender.twig'));
         $this->assertTrue($this->renderer->canRender('/fixtures/toRender'));
         $this->assertFalse($this->renderer->canRender('notexistingFile.twig'));
         $this->assertFalse($this->renderer->canRender('/fixtures/toRender.badExtension'));
@@ -38,7 +49,7 @@ class TwigRendererTest extends PHPUnit_Framework_TestCase
     public function testRender()
     {
         $this->assertEquals(
-            "", $this->renderer->render('fixtures/toRender.twig')
+            "", $this->renderer->render(__DIR__ . '/fixtures/toRender.twig')
         );
     }
 }
