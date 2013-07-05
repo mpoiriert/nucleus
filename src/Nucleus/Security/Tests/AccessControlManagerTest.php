@@ -5,7 +5,7 @@ namespace Nucleus\Security\Tests;
 use Nucleus\Security\AccessControlManager;
 use Nucleus\IService\Security\IAccessControlUser;
 
-class AccessControlManagetTest extends \PHPUnit_Framework_TestCase
+class AccessControlManagerTest extends \PHPUnit_Framework_TestCase
 {
     /**
      *

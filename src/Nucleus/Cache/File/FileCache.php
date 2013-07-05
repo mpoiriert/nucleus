@@ -103,7 +103,15 @@ class FileCache implements ICacheService
     
     private function sanitize($string)
     {
-        return preg_replace('/[^\w\-~_\.]+/u', '-', $string);
+        $result = preg_replace('/[^\w\-~_\.]+/u', '-', $string);
+        
+        //This is to prevent error on filename too long on disk
+        //The 80 is a arbitrary number
+        if(strlen($result) >= 80) {
+            return md5($result);
+        }
+        
+        return $result;
     }
     
     /**

@@ -11,6 +11,7 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Nucleus\DependencyInjection\NucleusCompilerPass;
 use Nucleus\DependencyInjection\PhpDumper;
 use Symfony\Component\Config\ConfigCache;
+use InvalidArgumentException;
 
 /**
  * Description of Nucleus
@@ -21,26 +22,25 @@ class Nucleus
 {
     private $serviceContainer;
 
-    public function __construct($configurationFile)
+    public function __construct(DnaConfiguration $dna)
     {
-        $this->serviceContainer = $this->loadServiceContainer($configurationFile);
+        $this->serviceContainer = $this->loadServiceContainer($dna);
     }
 
     /**
-     * @param type $configuration
+     * @param DnaConfiguration $dna
      * 
      * @return \Nucleus\IService\DependencyInjection\IServiceContainer
      */
-    protected function loadServiceContainer($configurationFile)
+    protected function loadServiceContainer($dna)
     {
-        $escaping = md5(serialize($configurationFile));
-        $class = 'ServiceContainer' . $escaping;
-        $file = __DIR__ . '/../../../cache/' . $escaping . '/' . $class . '.php';
+        $class = 'ServiceContainer';
+        $file = $dna->freezeCachePath()->getCachePath() . '/serviceContainer/' . $class . '.php';
         $containerConfigCache = new ConfigCache($file, true);
         if (!class_exists($class)) {
             if (!$containerConfigCache->isFresh()) {
                 $container = new ContainerBuilder();
-                $nucleusCompilerPass = new NucleusCompilerPass($configurationFile);
+                $nucleusCompilerPass = new NucleusCompilerPass($dna);
                 $container->addCompilerPass($nucleusCompilerPass);
                 $container->compile();
                 $dumper = new PhpDumper($container);
@@ -51,7 +51,9 @@ class Nucleus
             require($file);
         }
         $serviceContainer = new $class();
+        /* @var $serviceContainer \Nucleus\DependencyInjection\BaseServiceContainer */
         $serviceContainer->initialize();
+        
         return $serviceContainer;
     }
 
@@ -66,12 +68,19 @@ class Nucleus
 
     /**
      * 
-     * @param type $configurationFile
+     * @param DnaConfiguration $configurationFile
      * @return Nucleus
      */
-    public static function factory($configurationFile)
+    public static function factory($configuration)
     {
-        return new static($configurationFile);
+        if($configuration instanceof DnaConfiguration) {
+            $dna = $configuration;
+        } else {
+            $dna = new DnaConfiguration();
+            $dna->setConfiguration($configuration);
+        }
+        
+        return new static($dna);
     }
 
     /**
@@ -84,9 +93,9 @@ class Nucleus
      * @param string $serviceName
      * @return mixed
      */
-    public static function serviceFactory($configuration, $serviceName)
+    public static function serviceFactory($dna, $serviceName)
     {
-        $nucleus = new static($configuration);
+        $nucleus = self::factory($dna);
         return $nucleus->getServiceContainer()->getServiceByName($serviceName);
     }
 }

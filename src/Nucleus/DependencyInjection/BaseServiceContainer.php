@@ -8,6 +8,7 @@ use Nucleus\IService\DependencyInjection\IServiceContainer;
 use Nucleus\IService\DependencyInjection\ServiceDisabledException;
 use Nucleus\IService\DependencyInjection\ServiceDoesNotExistsException;
 use Symfony\Component\DependencyInjection\Container;
+use Go\Aop\Aspect;
 
 abstract class BaseServiceContainer extends Container implements IServiceContainer
 {
@@ -17,7 +18,12 @@ abstract class BaseServiceContainer extends Container implements IServiceContain
     
     //This is related to the alias array can be empty
     protected $aliases = array();
-
+    
+    /**
+     * @var Aspect[]
+     */
+    private $loadedAspects = array();
+    
     /**
      *
      * @var \Nucleus\IService\DependencyInjection\ILifeCycleAware[]
@@ -26,10 +32,11 @@ abstract class BaseServiceContainer extends Container implements IServiceContain
 
     public function initialize()
     {
+        $this->getServicesByTag('aspect');
         $this->getServicesByTag("autoStart");
         register_shutdown_function(array($this, 'shutdown'));
     }
-
+    
     public function shutdown()
     {
         foreach ($this->startedServices as $service) {
@@ -67,13 +74,41 @@ abstract class BaseServiceContainer extends Container implements IServiceContain
         }
 
         $service = parent::get($name);
-
+        
         if ($service instanceof ILifeCycleAware && !in_array($service, $this->startedServices)) {
             $this->startedServices[spl_object_hash($service)] = $service;
             $service->serviceStart();
         }
 
+        $this->loadAspect($service);
+        
         return $service;
+    }
+    
+    private function loadAspect($service)
+    {
+        if ($service instanceof Aspect && !in_array($service, $this->loadedAspects)) {
+            $aspectContainer = $this->getAspectContainer();
+            try {
+                $service = $aspectContainer->getAspect(get_class($service));
+            } catch (\OutOfBoundsException $e) {
+                $this->getAspectContainer()->registerAspect($service);
+            }
+   
+            if($service instanceof IServiceContainerAware) {
+                $service->setServiceContainer($this);
+            }
+            $this->loadedAspects[spl_object_hash($service)] = $service;
+        }
+    }
+    
+    /**
+     * 
+     * @return \Go\Core\AspectContainer
+     */
+    private function getAspectContainer()
+    {
+        return parent::get('aspectKernel')->getContainer();
     }
 
     public function getServiceByName($name)

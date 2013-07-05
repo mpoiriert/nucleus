@@ -22,7 +22,7 @@ class NucleusIntegrationTest extends \PHPUnit_Framework_TestCase
 
     public function setUp()
     {
-        $this->nucleus = new Nucleus(__DIR__ . '/fixtures/integrationTest.json');
+        $this->nucleus = Nucleus::factory(__DIR__ . '/fixtures/integrationTest.json');
     }
 
     public function testListenConnection()

@@ -1,11 +1,14 @@
 <?php
 
-require_once(__DIR__ . '/../vendor/autoload.php');
+require_once("../vendor/autoload.php");
+
+include __DIR__ . '/../demo/ApplicationKernel.php';
+
+$application = ApplicationKernel::createInstance();
 
 $request = Symfony\Component\HttpFoundation\Request::createFromGlobals();
 
-
-\Nucleus\Framework\Nucleus::factory(__DIR__ . '/../nucleus.json')
+$application->getNucleus()
   ->getServiceContainer()
   ->getServiceByName("frontController")
   ->handleRequest($request);

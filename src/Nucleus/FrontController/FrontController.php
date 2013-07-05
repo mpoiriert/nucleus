@@ -65,6 +65,9 @@ class FrontController
         $this->eventDispatcher = $eventDispatcher;
     }
 
+    /**
+     * @param \Symfony\Component\HttpFoundation\Request $request
+     */
     public function handleRequest(Request $request)
     {
         $result = $this->routing->match($request->getPathInfo());

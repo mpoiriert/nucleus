@@ -1,6 +1,7 @@
 {
     "imports": [
         "../EventDispatcher/nucleus.json",
+        "../Cache/nucleus.json",
         "../Invoker/nucleus.json",
         "../Configuration/nucleus.json",
         "../Routing/nucleus.json",

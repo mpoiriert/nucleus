@@ -28,7 +28,8 @@
         "symfony/config": "2.3.*",
         "maximebf/debugbar": "*",
         "monolog/monolog": "1.5.*",
-        "psr/log": "1.0.0"
+        "psr/log": "1.0.0",
+        "lisachenko/go-aop-php": "*"
     },
     "require-dev": {
         "phpunit/phpunit": "3.7.*",
