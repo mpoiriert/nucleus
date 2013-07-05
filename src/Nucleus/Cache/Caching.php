@@ -9,29 +9,54 @@ use Go\Lang\Annotation\After;
 use Go\Lang\Annotation\Before;
 use Go\Lang\Annotation\Around;
 use Go\Lang\Annotation\Pointcut;
+use Nucleus\IService\Cache\ICacheService;
 
 /**
  * Monitor aspect
+ * 
+ * @Annotation
  */
 class Caching implements Aspect
 {
-
     /**
-     * Method that will be called before real method
+     *
+     * @var ICacheService 
+     */
+    private $cache;
+    
+    /**
+     * @param ICacheService $cache
+     * 
+     * @Inject
+     */
+    public function setCache(ICacheService $cache)
+    {
+        $this->cache = $cache;
+    }
+    
+    /**
+     * Cacheable methods
      *
      * @param MethodInvocation $invocation Invocation
-     * @Before("execution(public **->*(*))")
+     *
+     * @Around("execution(public **->handleRequest(*))")
      */
-    public function beforeMethodExecution(MethodInvocation $invocation)
+    public function aroundCacheable(MethodInvocation $invocation)
     {
-        $obj = $invocation->getThis();
-        echo 'Calling Before Interceptor for method: ',
-             is_object($obj) ? get_class($obj) : $obj,
-             $invocation->getMethod()->isStatic() ? '::' : '->',
-             $invocation->getMethod()->getName(),
-             '()',
-             ' with arguments: ',
-             json_encode($invocation->getArguments()),
-             "<br>\n";
+        return $invocation->proceed();
+        
+        static $memoryCache = array();
+
+        $time  = microtime(true);
+
+        $obj   = $invocation->getThis();
+        $class = is_object($obj) ? get_class($obj) : $obj;
+        $key   = $class . ':' . $invocation->getMethod()->name;
+        if (!isset($memoryCache[$key])) {
+            $memoryCache[$key] = $invocation->proceed();
+        }
+
+        echo "Take ", sprintf("%0.3f", (microtime(true) - $time) * 1e3), "ms to call method<br>", PHP_EOL;
+        return $memoryCache[$key];
     }
 }

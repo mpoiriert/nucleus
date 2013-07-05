@@ -13,6 +13,7 @@ use Symfony\Component\DependencyInjection\DefinitionDecorator;
 use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
 use Symfony\Component\DependencyInjection\Reference;
 use ReflectionClass;
+use Nucleus\Framework\DnaConfiguration;
 
 class NucleusCompilerPass implements CompilerPassInterface
 {
@@ -20,14 +21,25 @@ class NucleusCompilerPass implements CompilerPassInterface
         'services' => array(
             'configuration' => array(
                 'class' => 'Nucleus\Configuration\Configuration'
-            )
+            ),
+            'aspectKernel' => array(
+                'class' => 'Nucleus\DependencyInjection\AspectKernel',
+                'factory_class' => 'Nucleus\DependencyInjection\AspectKernel',
+                'factory_method' => 'instanciate'
+            ),
         ),
         'nucleus' => array(
             'annotationNamespaces' => array(__NAMESPACE__)
         )
     );
+    
+    /**
+     * @var DnaConfiguration
+     */
+    private $dnaConfiguration;
+    
     private $configuration;
-
+    
     /**
      * @var ContainerBuilder
      */
@@ -39,11 +51,12 @@ class NucleusCompilerPass implements CompilerPassInterface
      */
     private $annotationParser;
 
-    public function __construct($configuration)
+    public function __construct(DnaConfiguration $dna)
     {
-        $this->configuration = $configuration;
+        $this->dnaConfiguration = $dna;
         $fileLoader = new ConfigurationFileLoader();
-        $this->configuration = $fileLoader->load($this->configuration);
+        $this->dnaConfiguration->setConfiguration($fileLoader->load($dna->getConfiguration()));
+        $this->configuration = $this->dnaConfiguration->getConfiguration();
         $this->loaderFiles = $fileLoader->getLoadedFiles();
         $this->setDefaultConfiguration();
     }
@@ -99,7 +112,13 @@ class NucleusCompilerPass implements CompilerPassInterface
 
     private function setDefaultConfiguration()
     {
-        $this->configuration = array_deep_merge(self::$defaultConfiguration, $this->configuration);
+        $defaultConfiguration = self::$defaultConfiguration;
+        
+        $defaultConfiguration['services']['aspectKernel']['arguments'] = array(
+            $this->dnaConfiguration->getAspectConfiguration()
+        );
+        
+        $this->configuration = array_deep_merge($defaultConfiguration, $this->configuration);
     }
 
     /**
@@ -131,8 +150,33 @@ class NucleusCompilerPass implements CompilerPassInterface
         $definition->setFactoryMethod("getThis");
         $this->container->setDefinition("serviceContainer", $definition);
         
+        uksort($this->configuration['services'], function($a, $b) {
+            if($a == 'aspectKernel') {
+                return -1;
+            }
+            
+            if($b == 'aspectKernel') {
+                return 1;
+            }
+            
+            if (strpos($a, 'aspect.') === 0 && strpos($b, 'aspect.') === false) {
+                return -1;
+            }
+
+            if (strpos($a, 'aspect.') === false && strpos($b, 'aspect.') === 0) {
+                return 1;
+            }
+            return strcmp($a, $b);
+        });
+
         foreach ($this->configuration['services'] as $id => $service) {
             $this->parseDefinition($id, $service);
+            if(strpos($id,'aspect.') === 0) {
+                $class = $definition = $this->container->getDefinition($id)->getClass();
+                $service = new $class(); 
+                $aspectContainer = $this->container->get('aspectKernel')->getContainer();
+                $aspectContainer->registerAspect($service);
+            }
         }
     }
 

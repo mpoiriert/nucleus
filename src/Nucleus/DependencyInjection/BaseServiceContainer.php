@@ -18,11 +18,6 @@ abstract class BaseServiceContainer extends Container implements IServiceContain
     
     //This is related to the alias array can be empty
     protected $aliases = array();
-
-    /**
-     * @var \Go\Core\AspectContainer 
-     */
-    protected $aspectContainer;
     
     /**
      * @var Aspect[]
@@ -37,7 +32,6 @@ abstract class BaseServiceContainer extends Container implements IServiceContain
 
     public function initialize()
     {
-        $this->aspectContainer = parent::get('aspectContainer');
         $this->getServicesByTag("autoStart");
         register_shutdown_function(array($this, 'shutdown'));
     }
@@ -94,8 +88,13 @@ abstract class BaseServiceContainer extends Container implements IServiceContain
     {
         if ($service instanceof Aspect && !in_array($service, $this->loadedAspects)) {
             $this->loadedAspects[spl_object_hash($service)] = $service;
-            $this->aspectContainer->registerAspect($service);
+            $this->getServiceContainer()->registerAspect($service);
         }
+    }
+    
+    private function getServiceContainer()
+    {
+        return parent::get('aspectKernel')->getContainer();
     }
 
     public function getServiceByName($name)
