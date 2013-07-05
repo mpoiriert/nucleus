@@ -2,7 +2,7 @@
 
 namespace Nucleus\Cache;
 
-use Go\Aop\Aspect;
+;
 use Go\Aop\Intercept\FieldAccess;
 use Go\Aop\Intercept\MethodInvocation;
 use Go\Lang\Annotation\After;
@@ -10,28 +10,22 @@ use Go\Lang\Annotation\Before;
 use Go\Lang\Annotation\Around;
 use Go\Lang\Annotation\Pointcut;
 use Nucleus\IService\Cache\ICacheService;
+use Nucleus\DependencyInjection\BaseAspect;
+use Nucleus\IService\Cache\EntryNotFoundException;
 
 /**
  * Monitor aspect
  * 
  * @Annotation
  */
-class Caching implements Aspect
+class Caching extends BaseAspect 
 {
     /**
-     *
-     * @var ICacheService 
+     * @return ICacheService
      */
-    private $cache;
-    
-    /**
-     * @param ICacheService $cache
-     * 
-     * @Inject
-     */
-    public function setCache(ICacheService $cache)
+    private function getCacheService()
     {
-        $this->cache = $cache;
+        return $this->getServiceContainer()->getServiceByName(ICacheService::NUCLEUS_SERVICE_NAME);
     }
     
     /**
@@ -43,20 +37,26 @@ class Caching implements Aspect
      */
     public function aroundCacheable(MethodInvocation $invocation)
     {
-        return $invocation->proceed();
+        $cacheService = $this->getCacheService();
+
+        $cacheEntryName = $this->getCacheEntryName($invocation);
         
-        static $memoryCache = array();
-
-        $time  = microtime(true);
-
-        $obj   = $invocation->getThis();
-        $class = is_object($obj) ? get_class($obj) : $obj;
-        $key   = $class . ':' . $invocation->getMethod()->name;
-        if (!isset($memoryCache[$key])) {
-            $memoryCache[$key] = $invocation->proceed();
+        try {
+            $result = $cacheService->get($cacheEntryName);
+        } catch (EntryNotFoundException $e) {
+            $result = $invocation->proceed();
+            $cacheService->set($cacheEntryName, $result);
         }
-
-        echo "Take ", sprintf("%0.3f", (microtime(true) - $time) * 1e3), "ms to call method<br>", PHP_EOL;
-        return $memoryCache[$key];
+        return $result;
+    }
+    
+    private function getCacheEntryName(MethodInvocation $invocation)
+    {
+        return sprintf(
+            '%s__%s__%s',
+            get_class($invocation->getThis()),
+            $invocation->getMethod()->getName(),
+            serialize($invocation->getArguments())
+        );
     }
 }

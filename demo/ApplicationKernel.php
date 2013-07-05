@@ -18,6 +18,6 @@ class ApplicationKernel extends SingletonApplicationKernel
     {
         return parent::getDnaConfiguration()
             ->setCachePath(realpath(__DIR__ . '/../cache'))
-            ->setDebug(false);
+            ->setDebug(true);
     }
 }

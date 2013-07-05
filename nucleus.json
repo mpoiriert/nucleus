@@ -8,6 +8,11 @@
             "configuration": {
                 "rootDirectory": "<?php echo str_replace('\\','/',__DIR__) . '/web' ?>"
             }
+        },
+        "configuration": {
+            "configuration": {
+                "generatedDirectory": "<?php echo str_replace('\\','/',__DIR__) . '/cache' ?>"
+            }
         }
      }
 }

@@ -32,10 +32,11 @@ abstract class BaseServiceContainer extends Container implements IServiceContain
 
     public function initialize()
     {
+        $this->getServicesByTag('aspect');
         $this->getServicesByTag("autoStart");
         register_shutdown_function(array($this, 'shutdown'));
     }
-
+    
     public function shutdown()
     {
         foreach ($this->startedServices as $service) {
@@ -87,12 +88,25 @@ abstract class BaseServiceContainer extends Container implements IServiceContain
     private function loadAspect($service)
     {
         if ($service instanceof Aspect && !in_array($service, $this->loadedAspects)) {
+            $aspectContainer = $this->getAspectContainer();
+            try {
+                $service = $aspectContainer->getAspect(get_class($service));
+            } catch (\OutOfBoundsException $e) {
+                $this->getAspectContainer()->registerAspect($service);
+            }
+   
+            if($service instanceof IServiceContainerAware) {
+                $service->setServiceContainer($this);
+            }
             $this->loadedAspects[spl_object_hash($service)] = $service;
-            $this->getServiceContainer()->registerAspect($service);
         }
     }
     
-    private function getServiceContainer()
+    /**
+     * 
+     * @return \Go\Core\AspectContainer
+     */
+    private function getAspectContainer()
     {
         return parent::get('aspectKernel')->getContainer();
     }
