@@ -84,10 +84,6 @@ class NucleusCompilerPass implements CompilerPassInterface
            
             $parsingResult = $annotationParser->parse($serviceConfiguration['class']);
             
-            if($this->isAspect($serviceConfiguration['class'])) {
-                $definition->addTag('autoStart');
-            }
-            
             $annotations = $parsingResult->getAllAnnotations(array(
                 function($annotation) {
                     return $annotation instanceof IServiceContainerGeneratorAnnotation;
@@ -99,15 +95,15 @@ class NucleusCompilerPass implements CompilerPassInterface
                 $generationContext = new GenerationContext($container, $name, $definition, $parsingNode);
                 $parsingNode['annotation']->processContainerBuilder($generationContext);
             }
+            
+            if(array_key_exists('configuration', $serviceConfiguration)) {
+                $this->container->getDefinition("configuration")
+                    ->addMethodCall(
+                        'merge',
+                        array(array($name=>$serviceConfiguration['configuration']))
+                    );
+            }
         }
-
-        $this->container->getDefinition("configuration")->addArgument(new Variable("this->serviceConfigurations"));
-    }
-    
-    private function isAspect($class)
-    {
-        $reflectionClass = new ReflectionClass($class);
-        return $reflectionClass->implementsInterface('\Go\Aop\Aspect');
     }
 
     private function setDefaultConfiguration()

@@ -74,8 +74,6 @@ class PhpDumper extends BasePhpDumper
     protected $tags = ' . var_export($tags, true) . ';
       
     protected $disabled = ' . var_export($disabled, true) . ';
-      
-    protected $serviceConfigurations = ' . var_export($configurations, true) . ';
 ';
     }
 

@@ -14,7 +14,6 @@ abstract class BaseServiceContainer extends Container implements IServiceContain
 {
     protected $tags = array();
     protected $disabled = array();
-    protected $serviceConfigurations = array();
     
     //This is related to the alias array can be empty
     protected $aliases = array();
@@ -127,7 +126,7 @@ abstract class BaseServiceContainer extends Container implements IServiceContain
             throw new ServiceDoesNotExistsException("The service named [$name] does not exists.");
         }
 
-        return isset($this->serviceConfigurations[$name]) ? $this->serviceConfigurations[$name] : null;
+        return $this->getServiceByName('configuration')->get('[' . $name . ']');
     }
 
     /**

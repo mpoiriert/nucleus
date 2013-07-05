@@ -10,6 +10,7 @@ namespace Nucleus\DependencyInjection;
 use Nucleus\IService\DependencyInjection\Inject as BaseInject;
 use Symfony\Component\DependencyInjection\Variable;
 use Symfony\Component\DependencyInjection\Reference;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * @Annotation
@@ -44,7 +45,10 @@ class Inject extends BaseInject implements IServiceContainerGeneratorAnnotation
                     $parameters[$parameter->getPosition()] = new Variable('this->getServiceByName("configuration")->get("' . $configuration . '")');
                     break;
                 default:
-                    $parameters[$parameter->getPosition()] = new Reference($serviceName);
+                    $parameters[$parameter->getPosition()] = new Reference(
+                        $serviceName,
+                        $parameter->allowsNull() ? ContainerInterface::NULL_ON_INVALID_REFERENCE : ContainerInterface::EXCEPTION_ON_INVALID_REFERENCE
+                    );
                     break;
             }
         }
