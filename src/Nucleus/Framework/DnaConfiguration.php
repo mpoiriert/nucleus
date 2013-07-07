@@ -18,7 +18,8 @@ class DnaConfiguration
     private $debug = true;
     private $cachePath;
     private $configuration;
-    private $aspectIncludesPaths;
+    private $aspectIncludePaths = array();
+    private $aspectExcludePaths = array();
     private $addSaltToCache = true;
     private $cachePathIsFreeze = false;
 
@@ -39,7 +40,6 @@ class DnaConfiguration
     protected function initializeDefaults()
     {
         $this->configuration = $this->rootDirectory . "/nucleus.json";
-        $this->aspectIncludesPaths = array();
         $this->cachePath = sys_get_temp_dir() . '/nucleus';
     }
 
@@ -82,6 +82,14 @@ class DnaConfiguration
         $this->cachePathIsFreeze = true;
         return $this;
     }
+    
+    /**
+     * @return boolean
+     */
+    public function getCachePathIsFreeze()
+    {
+        return $this->cachePathIsFreeze;
+    }
 
     /**
      * @param string $path
@@ -121,6 +129,14 @@ class DnaConfiguration
         $this->addSaltToCache = (boolean) $addSalt;
         return $this;
     }
+    
+    /**
+     * @return boolean
+     */
+    public function getAddSaltToCache()
+    {
+        return $this->addSaltToCache;
+    }
 
     public function getConfiguration()
     {
@@ -128,8 +144,8 @@ class DnaConfiguration
     }
 
     /**
-     * @param type $configuration
-     * @return \Nucleus\Framework\DnaConfiguration
+     * @param mixed $configuration
+     * @return DnaConfiguration
      * 
      */
     public function setConfiguration($configuration)
@@ -138,9 +154,42 @@ class DnaConfiguration
         return $this;
     }
 
+    /**
+     * @return array
+     */
     public function getAspectIncludePaths()
     {
-        return $this->aspectIncludesPaths;
+        return $this->aspectIncludePaths;
+    }
+    
+    /**
+     * 
+     * @param array $value
+     * @return DnaConfiguration
+     */
+    public function setAspectIncludePaths(array $value)
+    {
+        $this->aspectIncludePaths = $value;
+        return $this;
+    }
+    
+    /**
+     * @return array
+     */
+    public function getAspectExcludePaths()
+    {
+        return $this->aspectExcludePaths;
+    }
+    
+    /**
+     * 
+     * @param array $value
+     * @return DnaConfiguration
+     */
+    public function setAspectExcludePaths(array $value)
+    {
+        $this->aspectExcludePaths = $value;
+        return $this;
     }
 
     public function getAspectConfiguration()
@@ -151,7 +200,8 @@ class DnaConfiguration
             'appDir' => $this->getRootDirectory(),
             'debug' => $this->getDebug(),
             'cacheDir' => $cacheDir,
-            'includePaths' => $this->getAspectIncludePaths()
+            'includePaths' => $this->getAspectIncludePaths(),
+            'excludePaths'   => $this->getAspectExcludePaths()
         );
     }
 }
