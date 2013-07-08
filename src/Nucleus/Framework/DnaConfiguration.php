@@ -194,12 +194,10 @@ class DnaConfiguration
 
     public function getAspectConfiguration()
     {
-        $cacheDir = $this->getDebug() ? null : $this->getCachePath() . '/aop';
-        
         return array(
             'appDir' => $this->getRootDirectory(),
             'debug' => $this->getDebug(),
-            'cacheDir' => $cacheDir,
+            'cacheDir' => $this->getCachePath() . '/aop',
             'includePaths' => $this->getAspectIncludePaths(),
             'excludePaths'   => $this->getAspectExcludePaths()
         );
