@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Services Documentation</title>
+    <style type="text/css">
+        body {
+            padding: 0;
+            margin: 0;
+            font-family: arial;
+            font-size: 13px;
+        }
+        a {
+            text-decoration: none;
+        }
+        .clear {
+            clear: both;
+        }
+        #header {
+            height: 50px;
+            border-bottom: 2px solid #aaa;
+            padding: 10px;
+            background: #f3f3f3;
+        }
+            #header .title {
+                font-size: 20px;
+                font-weight: bold;
+                line-height: 50px;
+            }
+        #sidebar {
+            float: left;
+            width: 370px;
+            padding: 10px 0 0 10px;
+        }
+            #nav {
+                list-style: none;
+                margin: 0;
+                padding: 0;
+            }
+                #nav .sep {
+                    height: 20px;
+                }
+        #content {
+            width: 700px;
+            float: left;
+        }
+            #content hr {
+                margin: 50px 0;
+                border: 1px solid #ddd;
+            }
+        h1 {
+            margin-bottom: 20px;
+        }
+        .dl-horizontal dt {
+            float: left;
+            width: 160px;
+            overflow: hidden;
+            clear: left;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: bold;
+        }
+        .dl-horizontal dd {
+            margin-left: 180px;
+        }
+        .dl-horizontal:after {
+            clear: both;
+        }
+        .dl-horizontal:before, .dl-horizontal:after {
+            display: table;
+            line-height: 0;
+            content: "";
+        }
+        .service {
+            border-bottom: 1px solid #ddd;
+            padding: 20px 0;
+        }
+            .service p {
+                margin: 15px 0;
+            }
+            .service ul {
+                margin: 0;
+                padding: 0;
+                padding-left: 20px;
+            }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <div class="title">Services Documentation</div>
+    </div>
+    <div id="sidebar">
+        <ul id="nav">
+            {% if result.parameters %}<li><a href="#parameters">Parameters</a></li>{% endif %}
+            {% if result.tags %}<li><a href="#tags">Tags</a></li>{% endif %}
+            <li class="sep"></li>
+            {% for service in result.services %}
+            <li><a href="#{{ service.id }}">{{ service.id }}</a></li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div id="content">
+        {% if result.parameters %}
+        <h1><a name="parameters"></a>Parameters</h1>
+        <dl class="dl-horizontal">
+        {% for k,v in result.parameters %}
+            <dt>{{ k }}</dt>
+            <dd>{{ v }}</dd>
+        {% endfor %}
+        </dl>
+        <hr>
+        {% endif %}
+        {% if result.tags %}
+        <h1><a name="tags"></a>Tags</h1>
+        <dl>
+        {% for tag,services in result.tags %}
+            <dt><a name="tag-{{ tag }}"></a>{{ tag }}</dt>
+            <dd>
+                <ul>
+                    {% for service in services %}
+                        <li><a href="#{{ service }}">{{ service }}</a></li>
+                    {% endfor %}
+                </ul>
+            </dd>
+        {% endfor %}
+        </dl>
+        <hr>
+        {% endif %}
+        {% for service in result.services %}
+        <div class="service">
+            <a name="{{ service.id }}"></a>
+            <h2>{{ service.id }}</h2>
+            <h3>{{ service.class }}</h3>
+            <p>{{ service.shortDesc|nl2br }}</p>
+            <p>{{ service.longDesc|nl2br }}</p>
+            {% if service.docTags %}
+            <dl class="dl-horizontal">
+                {% for tag in service.docTags %}
+                    <dt>{{ tag[0] }}:</dt>
+                    <dd>{{ tag[1] }}</dt>
+                {% endfor %}
+            </dl>
+            {% endif %}
+            {% if service.tags %}
+            <p><strong>Tags:</strong></p>
+            <ul>
+                {% for tag in service.tags %}
+                    <li><a href="#tag-{{ tag }}">{{ tag }}</a></li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            {% if service.dependencies %}
+            <p><strong>Dependencies:</strong></p>
+            <ul>
+                {% for dep in service.dependencies %}
+                    <li><a href="#{{ dep }}">{{ dep }}</a></li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    <div class="clear"></div>
+</body>
+</html>
