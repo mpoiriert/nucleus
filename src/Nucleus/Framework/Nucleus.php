@@ -36,7 +36,9 @@ class Nucleus
     {
         $class = 'ServiceContainer';
         $file = $dna->freezeCachePath()->getCachePath() . '/serviceContainer/' . $class . '.php';
+        $docFile = $dna->getCachePath() . '/docs/docs.json';
         $containerConfigCache = new ConfigCache($file, true);
+        $docConfigCache = new ConfigCache($docFile, true);
         if (!class_exists($class)) {
             if (!$containerConfigCache->isFresh()) {
                 $container = new ContainerBuilder();
@@ -47,12 +49,18 @@ class Nucleus
                 $containerConfigCache->write(
                     $dumper->dump(array('class' => $class, 'nucleus' => $nucleusCompilerPass->getConfiguration())), $container->getResources()
                 );
+
+
+                $docs = new \Nucleus\ServicesDoc\DocDumper($container);
+                $docConfigCache->write($docs->dump(array()), $container->getResources());
             }
             require($file);
         }
         $serviceContainer = new $class();
         /* @var $serviceContainer \Nucleus\DependencyInjection\BaseServiceContainer */
         $serviceContainer->initialize();
+        $serviceContainer->getServiceByName('configuration')
+            ->merge(array('servicesDoc' => array('filename' => $docFile)));
         
         return $serviceContainer;
     }
