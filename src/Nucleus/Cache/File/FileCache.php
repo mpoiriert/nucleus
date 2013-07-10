@@ -11,14 +11,14 @@ use Nucleus\IService\Cache\ICacheService;
 use Nucleus\Framework\Nucleus;
 use Nucleus\IService\FileSystem\IFileSystemService;
 use Nucleus\IService\Cache\EntryNotFoundException;
-use Nucleus\Cache\Entry;
+use Nucleus\Cache\BaseCacheService;
 
 /**
  * Description of FileCache
  *
  * @author Martin
  */
-class FileCache implements ICacheService
+class FileCache extends BaseCacheService
 {
     /**
      * @var IFileSystemService 
@@ -55,26 +55,7 @@ class FileCache implements ICacheService
             throw new EntryNotFoundException(EntryNotFoundException::formatMessage($name, $namespace));
         }
         
-        $entry = $this->loadEntry($file);
-        
-        if(!($entry instanceof Entry)) {
-            throw new EntryNotFoundException(EntryNotFoundException::formatMessage($name, $namespace));
-        }
-        
-        if($entry->isExpired()) {
-            throw new EntryNotFoundException(EntryNotFoundException::formatMessage($name, $namespace));
-        }
-        
-        return $entry->getValue();
-    }
-    
-    /**
-     * @param string $file
-     * @return Entry
-     */
-    private function loadEntry($file)
-    {
-        return unserialize(file_get_contents($file));
+        return $this->getEntryValue(file_get_contents($file), $name, $namespace);
     }
 
     public function has($name, $namespace = ICacheService::NAMESPACE_DEFAULT)
@@ -89,9 +70,9 @@ class FileCache implements ICacheService
 
     public function set($name, $value, $timeToLive = 0, $namespace = ICacheService::NAMESPACE_DEFAULT)
     {
-        $entry = new Entry($name, $namespace, $value, $timeToLive, time());
+        $entry = $this->createEntry($name, $value, $timeToLive, $namespace);
         $file = $this->getFile($name, $namespace);
-        $this->fileSystem->dumpFile($file, serialize($entry));
+        $this->fileSystem->dumpFile($file, $entry);
     }
     
     private function getFile($name, $namespace)
@@ -116,7 +97,7 @@ class FileCache implements ICacheService
     
     /**
      * @param mixed $configuration
-     * @return BusinessRuleEngine
+     * @return FileCache
      */
     public static function factory($configuration = null)
     {

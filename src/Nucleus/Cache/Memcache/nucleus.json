@@ -1,0 +1,10 @@
+{
+    "imports": [
+        ".."
+    ],
+    "services": {
+        "cache.memcache": {
+            "class": "Nucleus\\Cache\\Memcache\\Memcache"
+        }
+    }
+}
