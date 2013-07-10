@@ -1,0 +1,12 @@
+{
+    "services": {
+        "servicesDoc": {
+            "class": "Nucleus\\ServicesDoc\\ServicesDoc"
+        },
+        "viewFileLoader": {
+            "configuration": {
+                "paths": ["<?php echo str_replace('\\','/',__DIR__) . '/resources/views' ?>"]
+            }
+        }
+    }
+}
