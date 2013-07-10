@@ -36,7 +36,7 @@ class Caching extends BaseAspect
         $annotation = $this->getCacheableAnnotation($invocation);
         
         try {
-            $result = $cacheService->get($cacheEntryName);
+            $result = $cacheService->get($cacheEntryName, $annotation->namespace);
         } catch (EntryNotFoundException $e) {
             $result = $invocation->proceed();
             $cacheService->set(
