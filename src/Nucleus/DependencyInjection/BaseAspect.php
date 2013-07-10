@@ -10,6 +10,7 @@ namespace Nucleus\DependencyInjection;
 use Nucleus\IService\DependencyInjection\IServiceContainer;
 use LogicException;
 use Go\Aop\Aspect;
+use Go\Aop\Intercept\MethodInvocation;
 
 /**
  * Description of BaseAspect
