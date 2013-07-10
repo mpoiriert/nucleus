@@ -12,7 +12,8 @@
         "../Security/nucleus.json",
         "../Session/nucleus.json",
         "../Log/nucleus.json",
-        "../DebugBar/nucleus.json"
+        "../DebugBar/nucleus.json",
+        "../ServicesDoc/nucleus.json"
     ],
     "services": {
         "clock": {

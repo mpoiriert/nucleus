@@ -37,8 +37,8 @@ class Nucleus
         $class = 'ServiceContainer';
         $file = $dna->freezeCachePath()->getCachePath() . '/serviceContainer/' . $class . '.php';
         $docFile = $dna->getCachePath() . '/docs/docs.json';
-        $containerConfigCache = new ConfigCache($file, true);
-        $docConfigCache = new ConfigCache($docFile, true);
+        $containerConfigCache = new ConfigCache($file, $dna->getDebug());
+        $docConfigCache = new ConfigCache($docFile, $dna->getDebug());
         if (!class_exists($class)) {
             if (!$containerConfigCache->isFresh()) {
                 $container = new ContainerBuilder();
