@@ -10,7 +10,6 @@ namespace Nucleus\Cache\File;
 use Nucleus\IService\Cache\ICacheService;
 use Nucleus\Framework\Nucleus;
 use Nucleus\IService\FileSystem\IFileSystemService;
-use Nucleus\IService\Cache\EntryNotFoundException;
 use Nucleus\Cache\BaseCacheService;
 
 /**
@@ -48,29 +47,18 @@ class FileCache extends BaseCacheService
         $this->fileSystem->remove($this->cachePath . '/' . $this->sanitize($namespace));
     }
 
-    public function get($name, $namespace = ICacheService::NAMESPACE_DEFAULT)
+    public function recoverEntry($name, $namespace)
     {
         $file = $this->getFile($name, $namespace);
         if(!$this->fileSystem->exists($file)) {
-            throw new EntryNotFoundException(EntryNotFoundException::formatMessage($name, $namespace));
+            return null;
         }
         
-        return $this->getEntryValue(file_get_contents($file), $name, $namespace);
+        return file_get_contents($file);
     }
 
-    public function has($name, $namespace = ICacheService::NAMESPACE_DEFAULT)
+    public function storeEntry($name, $entry, $timeToLive, $namespace)
     {
-        try {
-            $this->get($name,$namespace);
-            return true;
-        } catch(EntryNotFoundException $e) {
-            return false;
-        }
-    }
-
-    public function set($name, $value, $timeToLive = 0, $namespace = ICacheService::NAMESPACE_DEFAULT)
-    {
-        $entry = $this->createEntry($name, $value, $timeToLive, $namespace);
         $file = $this->getFile($name, $namespace);
         $this->fileSystem->dumpFile($file, $entry);
     }

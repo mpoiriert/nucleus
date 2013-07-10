@@ -5,13 +5,13 @@
     ],
     "services": {
         "cache": {
-            "class": "Nucleus\\Cache\\File\\FileCache"
+            "class": "Nucleus\\Cache\\File\\FileCache",
+            "calls": [
+                ["setInactiveNamespaces",[["assets"]]]
+            ]
         },
         "aspect.caching": {
             "class": "Nucleus\\Cache\\Caching"
         }
-    },
-    "nucleus": {
-        "annotationNamespaces": ["Nucleus\\Cache"]
     }
 }

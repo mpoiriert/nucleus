@@ -46,4 +46,13 @@ class BaseAspect implements IServiceContainerAware, Aspect
         
         return $this->serviceContainer;
     }
+    
+    protected function getAnnotation(MethodInvocation $invocation, $annotation)
+    {
+        return $this->getServiceContainer()
+            ->getServiceByName('aspectKernel')
+            ->getContainer()
+            ->get('aspect.annotation.reader')
+            ->getMethodAnnotation($invocation->getMethod(), $annotation);
+    }
 }

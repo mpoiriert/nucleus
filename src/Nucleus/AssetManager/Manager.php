@@ -63,6 +63,8 @@ class Manager implements \Nucleus\IService\AssetManager\IAssetManager
      * @param AssetInterface $asset
      * @param string $fileType
      * @return string Absolute URI 
+     * 
+     * @\Nucleus\IService\Cache\Cacheable(namespace="assets")
      */
     public function getAssetUrl(AssetInterface $asset, $fileType = 'css')
     {

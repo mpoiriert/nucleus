@@ -10,7 +10,6 @@ namespace Nucleus\Cache\Memcache;
 use Nucleus\IService\Cache\ICacheService;
 use Nucleus\Cache\BaseCacheService;
 use Nucleus\Framework\Nucleus;
-use Nucleus\IService\Cache\EntryNotFoundException;
 
 /**
  * Description of Memcache
@@ -57,32 +56,17 @@ class Memcache extends BaseCacheService
         $this->namespaceSalts[$namespace] = $salt;
     }
 
-    public function get($name, $namespace = ICacheService::NAMESPACE_DEFAULT)
+    protected function recoverEntry($name, $namespace)
     {
         $key = $this->getKey($name, $namespace);
         $entry = $this->memcache->get($key);
-        if(!$entry) {
-            throw new EntryNotFoundException(EntryNotFoundException::formatMessage($name, $namespace));
-        }
-        
-        return $this->getEntryValue($entry, $name, $namespace);
+        return $entry !== false ? $entry : null;
     }
 
-    public function has($name, $namespace = ICacheService::NAMESPACE_DEFAULT)
+    public function storeEntry($name, $entry, $timeToLive, $namespace)
     {
-        try {
-            $this->get($name,$namespace);
-            return true;
-        } catch(EntryNotFoundException $e) {
-            return false;
-        }
-    }
-
-    public function set($name, $value, $timeToLive = 0, $namespace = ICacheService::NAMESPACE_DEFAULT)
-    {
-        $entry = $this->createEntry($name, $value, $timeToLive, $namespace);
         $key = $this->getKey($name, $namespace);
-        $this->memcache->set($key,$entry);
+        $this->memcache->set($key,$entry,null,$timeToLive);
     }
     
     private function getKey($name, $namespace)

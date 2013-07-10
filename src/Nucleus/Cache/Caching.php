@@ -9,8 +9,6 @@ use Nucleus\IService\Cache\EntryNotFoundException;
 
 /**
  * Monitor aspect
- * 
- * @Annotation
  */
 class Caching extends BaseAspect 
 {
@@ -27,7 +25,7 @@ class Caching extends BaseAspect
      *
      * @param MethodInvocation $invocation Invocation
      *
-     * @Go\Lang\Annotation\Around("@annotation(Nucleus\Cache\Caching)")
+     * @Go\Lang\Annotation\Around("@annotation(Nucleus\IService\Cache\Cacheable)")
      */
     public function aroundCacheable(MethodInvocation $invocation)
     {
@@ -35,13 +33,29 @@ class Caching extends BaseAspect
 
         $cacheEntryName = $this->getCacheEntryName($invocation);
         
+        $annotation = $this->getCacheableAnnotation($invocation);
+        
         try {
             $result = $cacheService->get($cacheEntryName);
         } catch (EntryNotFoundException $e) {
             $result = $invocation->proceed();
-            $cacheService->set($cacheEntryName, $result);
+            $cacheService->set(
+                $cacheEntryName, 
+                $result, 
+                $annotation->timeToLive, 
+                $annotation->namespace
+            );
         }
         return $result;
+    }
+    
+    /**
+     * @param MethodInvocation $invocation
+     * @return \Nucleus\IService\Cache\Cacheable
+     */
+    private function getCacheableAnnotation(MethodInvocation $invocation)
+    {
+        return $this->getAnnotation($invocation, 'Nucleus\IService\Cache\Cacheable');
     }
     
     private function getCacheEntryName(MethodInvocation $invocation)
