@@ -11,7 +11,6 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Nucleus\DependencyInjection\NucleusCompilerPass;
 use Nucleus\DependencyInjection\PhpDumper;
 use Symfony\Component\Config\ConfigCache;
-use InvalidArgumentException;
 
 /**
  * Description of Nucleus

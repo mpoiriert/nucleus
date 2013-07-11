@@ -2,9 +2,17 @@
     "imports": [
         "../Configuration/nucleus.json",
         "../Annotation/nucleus.json",
-        "../FileSystem/nucleus.json"
+        "../FileSystem/nucleus.json",
+        "../EventDispatcher"
     ],
+    "services": {
+        "aspectKernel": {
+            "class": "Nucleus\\DependencyInjection\\AspectKernel",
+            "factory_class": "Nucleus\\DependencyInjection\\AspectKernel",
+            "factory_method": "instanciate"
+        }
+    },
     "nucleus": {
-        "annotationNamespaces": []
+        "annotationNamespaces": ["Nucleus\\DependencyInjection"]
     }
 }

@@ -9,6 +9,7 @@ use Nucleus\IService\DependencyInjection\ServiceDisabledException;
 use Nucleus\IService\DependencyInjection\ServiceDoesNotExistsException;
 use Symfony\Component\DependencyInjection\Container;
 use Go\Aop\Aspect;
+use Nucleus\IService\EventDispatcher\IEventDispatcherService;
 
 abstract class BaseServiceContainer extends Container implements IServiceContainer
 {
@@ -38,8 +39,12 @@ abstract class BaseServiceContainer extends Container implements IServiceContain
     
     public function shutdown()
     {
-        foreach ($this->startedServices as $service) {
-            $service->serviceShutdown();
+        foreach ($this->startedServices as $name => $service) {
+            $this->getEventDispatcher()->dispatch('Service.preShutdown', $service);
+            $this->getEventDispatcher()->dispatch('Service.' . $name . '.preShutdown', $service);
+            if($service instanceof ILifeCycleAware) {
+                $service->serviceShutdown();
+            }
         }
     }
 
@@ -72,16 +77,35 @@ abstract class BaseServiceContainer extends Container implements IServiceContain
             throw new ServiceDoesNotExistsException("The service named [$name] does not exists.");
         }
 
+        $name = strtolower($name);
+
+        // resolve aliases
+        if (isset($this->aliases[$name])) {
+            $name = $this->aliases[$name];
+        }
+        
         $service = parent::get($name);
         
-        if ($service instanceof ILifeCycleAware && !in_array($service, $this->startedServices)) {
-            $this->startedServices[spl_object_hash($service)] = $service;
-            $service->serviceStart();
+        if (!in_array($service, $this->startedServices)) {
+            $this->startedServices[$name] = $service;
+            $this->getEventDispatcher()->dispatch('Service.postInitialized', $service);
+            $this->getEventDispatcher()->dispatch('Service.' . $name . '.postInitialized', $service);
+            if($service instanceof ILifeCycleAware) {
+                $service->serviceStart();
+            }
         }
 
         $this->loadAspect($service);
         
         return $service;
+    }
+    
+    /**
+     * @return IEventDispatcherService
+     */
+    private function getEventDispatcher()
+    {
+        return $this->getServiceByName(IEventDispatcherService::NUCLEUS_SERVICE_NAME);
     }
     
     private function loadAspect($service)

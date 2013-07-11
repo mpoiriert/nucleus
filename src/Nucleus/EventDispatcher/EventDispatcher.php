@@ -64,7 +64,7 @@ class EventDispatcher implements IEventDispatcherService
 
     public function getListeners($eventName = null)
     {
-        return $this->eventDispatcher->getListeners($eventName);
+        return array_filter($this->eventDispatcher->getListeners($eventName));
     }
 
     public function hasListeners($eventName = null)

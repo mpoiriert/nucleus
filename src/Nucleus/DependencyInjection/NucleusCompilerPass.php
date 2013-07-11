@@ -6,7 +6,6 @@ use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Nucleus\Framework\ConfigurationFileLoader;
 use Nucleus\Annotation\AnnotationParser;
-use Symfony\Component\DependencyInjection\Variable;
 use Symfony\Component\Config\Resource\FileResource;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\DefinitionDecorator;
@@ -17,22 +16,6 @@ use Nucleus\Framework\DnaConfiguration;
 
 class NucleusCompilerPass implements CompilerPassInterface
 {
-    private static $defaultConfiguration = array(
-        'services' => array(
-            'configuration' => array(
-                'class' => 'Nucleus\Configuration\Configuration'
-            ),
-            'aspectKernel' => array(
-                'class' => 'Nucleus\DependencyInjection\AspectKernel',
-                'factory_class' => 'Nucleus\DependencyInjection\AspectKernel',
-                'factory_method' => 'instanciate'
-            ),
-        ),
-        'nucleus' => array(
-            'annotationNamespaces' => array(__NAMESPACE__)
-        )
-    );
-    
     /**
      * @var DnaConfiguration
      */
@@ -55,6 +38,7 @@ class NucleusCompilerPass implements CompilerPassInterface
     {
         $this->dnaConfiguration = $dna;
         $fileLoader = new ConfigurationFileLoader();
+        $dna->prependConfiguration(__DIR__ . "/nucleus.json");
         $this->dnaConfiguration->setConfiguration($fileLoader->load($dna->getConfiguration()));
         $this->configuration = $this->dnaConfiguration->getConfiguration();
         $this->loaderFiles = $fileLoader->getLoadedFiles();
@@ -108,8 +92,7 @@ class NucleusCompilerPass implements CompilerPassInterface
 
     private function setDefaultConfiguration()
     {
-        $defaultConfiguration = self::$defaultConfiguration;
-        
+        $defaultConfiguration = array();
         $defaultConfiguration['services']['aspectKernel']['arguments'] = array(
             $this->dnaConfiguration->getAspectConfiguration()
         );
@@ -180,8 +163,8 @@ class NucleusCompilerPass implements CompilerPassInterface
 
     private function addFileResource($class)
     {
-        if (!($class instanceof \ReflectionClass)) {
-            $class = new \ReflectionClass($class);
+        if (!($class instanceof ReflectionClass)) {
+            $class = new ReflectionClass($class);
         }
 
         $this->container->addResource(new FileResource($class->getFileName()));

@@ -8,7 +8,6 @@
 namespace Nucleus\Framework\Tests;
 
 use Nucleus\Framework\Nucleus;
-use Nucleus\IService\EventDispatcher\IEvent;
 use Nucleus\IService\EventDispatcher\IEventDispatcherService;
 
 /**
@@ -23,6 +22,13 @@ class NucleusIntegrationTest extends \PHPUnit_Framework_TestCase
     public function setUp()
     {
         $this->nucleus = Nucleus::factory(__DIR__ . '/fixtures/integrationTest.json');
+    }
+    
+    public function testInitializedEvent()
+    {
+        $serviceContainer = $this->nucleus->getServiceContainer();
+        $serviceForTest = $serviceContainer->getServiceByName("serviceForTest");
+        $this->assertTrue($serviceForTest->postInitialized);
     }
 
     public function testListenConnection()
@@ -72,6 +78,18 @@ class NucleusIntegrationTest extends \PHPUnit_Framework_TestCase
         $result = $serviceRouter->generate('test-i18n');
         $this->assertEquals('/test-en-us', $result);
     }
+    
+    public function testCache()
+    {
+        $serviceContainer = $this->nucleus->getServiceContainer();
+        $serviceForTest = $serviceContainer->getServiceByName("serviceForTest");
+        $uniqid = uniqid();
+        $this->assertSame(0, $serviceForTest->cacheCall);
+        $serviceForTest->cache($uniqid);
+        $this->assertSame(1, $serviceForTest->cacheCall);
+        $serviceForTest->cache($uniqid);
+        $this->assertSame(1, $serviceForTest->cacheCall);
+    }
 
     public function testLoadServices()
     {
@@ -81,44 +99,5 @@ class NucleusIntegrationTest extends \PHPUnit_Framework_TestCase
         }
         //If we reach that point this mean that no exception have been triggered
         $this->assertTrue(true);
-    }
-}
-
-class ServiceForTest
-{
-    public $event = null;
-    public $namedParameter = null;
-    public $typedParameter = null;
-    public $defaultValue = null;
-
-    public function reset()
-    {
-        foreach (get_object_vars($this) as $key => $value) {
-            $this->{$key} = $value;
-        }
-    }
-
-    /**
-     * @Listen("Test")
-     */
-    public function listen(IEvent $event, $namedParameter, NucleusIntegrationTest $typedParameter, $defaultValue = 10)
-    {
-        foreach (get_defined_vars() as $key => $value) {
-            $this->{$key} = $value;
-        }
-    }
-
-    /**
-     * @Route(name="test",path="/test",defaults={"test" = 0})
-     * @I18nRoute(
-     *      name="test-i18n",path="/test-i18n",defaults={"test" = 0},
-     *      routes={
-     *          "en-us" = @Route(path="/test-en-us")
-     *      }
-     * )
-     */
-    public function route()
-    {
-        
     }
 }

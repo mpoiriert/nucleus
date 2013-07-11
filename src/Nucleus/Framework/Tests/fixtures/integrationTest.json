@@ -4,7 +4,7 @@
     ],
     "services": {
         "serviceForTest": {
-            "class": "Nucleus\\Framework\\Tests\\ServiceForTest"
+            "class": "Nucleus\\Framework\\Tests\\TestableService"
         },
         "sessionStorage": {
             "class": "Symfony\\Component\\HttpFoundation\\Session\\Storage\\MockArraySessionStorage"
