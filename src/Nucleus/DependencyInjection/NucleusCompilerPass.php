@@ -97,7 +97,7 @@ class NucleusCompilerPass implements CompilerPassInterface
             $this->dnaConfiguration->getAspectConfiguration()
         );
         
-        $defaultConfiguration['configuration']['configuration']['generatedDirectory'] = $this->dnaConfiguration->getCachePath();
+        $defaultConfiguration['services']['configuration']['configuration']['generatedDirectory'] = $this->dnaConfiguration->getCachePath();
         
         $this->configuration = array_deep_merge($defaultConfiguration, $this->configuration);
     }
