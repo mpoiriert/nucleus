@@ -39,6 +39,7 @@ class ConfigurationFileLoaderTest extends \PHPUnit_Framework_TestCase
             array(__DIR__ . "/fixtures/eval.json", array("eval" => "eval")),
             array(__DIR__ . "/fixtures/importOverride.json", array("overriden" => true)),
             array("testincludepath", array("loaded" => true)),
+            array(__DIR__ . "/fixtures/append.json", array("overriden" => false)),
         );
     }
 

@@ -9,6 +9,7 @@ namespace Nucleus\Framework;
 
 use Nucleus\IService\FileSystem\FileNotFoundException;
 use RuntimeException;
+use InvalidArgumentException;
 
 /**
  * Description of Nucleus
@@ -79,22 +80,48 @@ class ConfigurationFileLoader
             $result = $filename;
         }
 
-        if (array_key_exists('imports', $result)) {
-            $result = array_deep_merge($this->imports($result['imports'], $basePath), $result);
-            unset($result['imports']);
-        }
+        $result = $this->imports($result, $basePath);
 
         return $result;
     }
 
-    private function imports($files, $basePath)
+    private function imports($currentResult,$basePath)
     {
-        $result = array();
-        foreach ($files as $file) {
-            $file = $this->getFilePath($file, $basePath);
-            $result[] = $this->loadFile($file);
+        if(!array_key_exists('imports', $currentResult)) {
+            return $currentResult;
         }
-
-        return call_user_func_array('array_deep_merge', $result);
+        
+        $files = $currentResult['imports'];
+        unset($currentResult['imports']);
+        $prepend = array();
+        $append = array();
+        foreach ($files as $fileInformation) {
+            if(is_string($fileInformation)) {
+                $fileInformation = array('file'=>$fileInformation);
+            }
+            
+            if(!isset($fileInformation['file'])) {
+                throw new InvalidArgumentException('No file specified');
+            }
+            
+            $filename = $fileInformation['file'];
+                
+            $file = $this->getFilePath($filename, $basePath);
+            $result = $this->loadFile($file);
+            if(isset($fileInformation['append']) && $fileInformation['append']) {
+                $append[] = $result;
+            } else {
+                $prepend[] = $result;
+            }
+        }
+        
+        return call_user_func_array(
+            'array_deep_merge', 
+            array_merge(
+                $prepend,
+                array($currentResult),
+                $append
+            )
+        );
     }
 }
