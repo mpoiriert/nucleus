@@ -7,6 +7,8 @@
 
 namespace Nucleus\Framework;
 
+use InvalidArgumentException;
+
 /**
  * This is the configuration class need to initialize a nucleus instance.
  *
@@ -39,7 +41,9 @@ class DnaConfiguration
 
     protected function initializeDefaults()
     {
-        $this->configuration = $this->rootDirectory . "/nucleus.json";
+        if(file_exists($file = $this->rootDirectory . "/nucleus.json")) {
+            $this->configuration = $file;
+        }
         $this->cachePath = sys_get_temp_dir() . '/nucleus';
     }
 
@@ -144,13 +148,69 @@ class DnaConfiguration
     }
 
     /**
-     * @param mixed $configuration
+     * @param mixed $configuration A file name or a array of configuration
      * @return DnaConfiguration
-     * 
+     * @throws InvalidArgumentException
      */
     public function setConfiguration($configuration)
     {
+        if(!is_array($configuration) && !is_string($configuration)) {
+            throw new InvalidArgumentException('Configuration argument must be a array or file name, [' . gettype($configuration . '] have be pass.'));
+        }
         $this->configuration = $configuration;
+        return $this;
+    }
+    
+    /**
+     * @param mixed $configuration A file name or a array of configuration
+     * @return DnaConfiguration
+     * @throws InvalidArgumentException
+     */
+    public function prependConfiguration($configuration)
+    {
+        switch(true) {
+            case is_null($this->configuration):
+                $this->setConfiguration($configuration);
+                break;
+            case is_array($this->configuration) && is_array($configuration):
+                $this->configuration = array_deep_merge($configuration, $this->configuration);
+                break;
+            case is_array($this->configuration) && is_string($configuration):
+                $this->configuration = array_deep_merge(
+                    array('imports'=>array($configuration)),
+                    $this->configuration
+                );
+                break;
+            case is_string($this->configuration) && is_array($configuration):
+                $this->configuration = array_deep_merge(
+                    $configuration,
+                    array('imports'=>array(array('file' => $this->configuration, 'append'=>true)))
+                );
+                break;
+            case is_string($this->configuration) && is_string($configuration):
+                $this->configuration = array(
+                    'imports' => array($configuration, $this->configuration)
+                );
+                break;
+            default:
+                throw new InvalidArgumentException('Configuration argument must be a array or file name, [' . gettype($configuration . '] have be pass.'));
+                break;
+        }
+        return $this;
+    }
+    
+    /**
+     * @param mixed $configuration
+     * @return DnaConfiguration
+     */
+    public function appendConfiguration($configuration)
+    {
+        $currentConfiguration = $this->configuration;
+        $this->setConfiguration($configuration);
+        if(!is_null($currentConfiguration)) {
+            $this->prependConfiguration($currentConfiguration);
+        }
+        
         return $this;
     }
 
