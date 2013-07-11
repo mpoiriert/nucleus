@@ -6,8 +6,7 @@
         "configuration": {
             "class": "Nucleus\\Configuration\\Configuration",
             "configuration": {
-                "debug": true,
-                "generatedDirectory": "<?php echo str_replace('\\','/',sys_get_temp_dir() . '/nucleus') ?>"
+                "debug": true
             }
         }
     }
