@@ -1,7 +1,7 @@
 {
     "imports": [
-        "../Invoker/nucleus.json",
-        "../Framework/nucleus.json"
+        "../Invoker",
+        "../Framework"
     ],
     "services": {
         "businessRuleEngine": {

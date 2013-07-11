@@ -1,6 +1,6 @@
 {
     "imports": [
-        "../BusinessRule/nucleus.json"
+        "../BusinessRule"
     ],
     "services": {
         "session": {

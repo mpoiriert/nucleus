@@ -1,6 +1,6 @@
 {
     "imports": [
-        "../Invoker/nucleus.json"
+        "../Invoker"
     ],
     "services": {
         "eventDispatcher": {

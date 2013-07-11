@@ -1,6 +1,6 @@
 {
     "imports": [
-        "../FileSystem/nucleus.json"
+        "../FileSystem"
     ],
     "services": {
         "assetManager": {

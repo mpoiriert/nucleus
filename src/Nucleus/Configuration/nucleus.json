@@ -1,6 +1,6 @@
 {
     "imports": [
-        "../EventDispatcher/nucleus.json"
+        "../EventDispatcher"
     ],
     "services": {
         "configuration": {

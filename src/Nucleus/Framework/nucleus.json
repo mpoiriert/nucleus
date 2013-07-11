@@ -1,19 +1,19 @@
 {
     "imports": [
-        "../EventDispatcher/nucleus.json",
-        "../Cache/nucleus.json",
-        "../Invoker/nucleus.json",
-        "../Configuration/nucleus.json",
-        "../Routing/nucleus.json",
-        "../View/nucleus.json",
-        "../Twig/nucleus.json",
-        "../AssetManager/nucleus.json",
-        "../FrontController/nucleus.json",
-        "../Security/nucleus.json",
-        "../Session/nucleus.json",
-        "../Log/nucleus.json",
-        "../DebugBar/nucleus.json",
-        "../ServicesDoc/nucleus.json"
+        "../EventDispatcher",
+        "../Cache",
+        "../Invoker",
+        "../Configuration",
+        "../Routing",
+        "../View",
+        "../Twig",
+        "../AssetManager",
+        "../FrontController",
+        "../Security",
+        "../Session",
+        "../Log",
+        "../DebugBar",
+        "../ServicesDoc"
     ],
     "services": {
         "clock": {
