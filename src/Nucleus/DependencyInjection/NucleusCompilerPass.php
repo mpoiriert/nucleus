@@ -152,7 +152,7 @@ class NucleusCompilerPass implements CompilerPassInterface
 
         foreach ($this->configuration['services'] as $id => $service) {
             $this->parseDefinition($id, $service);
-            if(strpos($id,'aspect.') === 0) {
+            if(strpos($id,'aspect.') === 0 && (!isset($service['disabled']) || !$service['disabled'])) {
                 $class = $definition = $this->container->getDefinition($id)->getClass();
                 $service = new $class(); 
                 $aspectContainer = $this->container->get('aspectKernel')->getContainer();
