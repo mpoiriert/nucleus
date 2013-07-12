@@ -2,16 +2,21 @@
 
 namespace Nucleus\ServicesDoc;
 
+use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Nucleus\ServicesDoc\DocDumper;
+
 class ServicesDoc
 {
+    private $docFilename;
+    
     /**
      * @param \Nucleus\Routing\Router $routing
      * 
-     * @Inject(docFilename="$[servicesDoc][filename]")
+     * @Inject(cacheDirectory="$[configuration][generatedDirectory]")
      */
-    public function initialize($docFilename)
+    public function initialize($cacheDirectory)
     {
-        $this->docFilename = $docFilename;
+        $this->docFilename = $cacheDirectory . '/docs/docs.json';
     }
 
     /**
@@ -21,5 +26,16 @@ class ServicesDoc
     {
         $doc = json_decode(file_get_contents($this->docFilename), true);
         return $doc;
+    }
+    
+    /**
+     * @Listen(eventName="ServiceContainer.postDump")
+     *
+     * @param ContainerBuilder $containerBuilder
+     */
+    public function generateDoc(ContainerBuilder $containerBuilder)
+    {
+        $docs = new DocDumper($containerBuilder);
+        file_put_contents($this->docFilename, $docs->dump(array()));
     }
 }
