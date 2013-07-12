@@ -47,14 +47,18 @@ class AssetCopier
         $this->fileSystem = $fileSystem;
     }
     
+    /**
+     * @Listen(eventName="ServiceContainer.postDump")
+     */
     public function mirror()
     {
+        $this->fileSystem->remove(glob($this->rootDirectory . '/*'));
         foreach($this->configuration['toMirror'] as $sectionName => $mirrorConfiguration) {
             $endTarget =  isset($mirrorConfiguration['target']) ? $mirrorConfiguration['target'] : $sectionName;
             $target = $this->rootDirectory . '/' . $endTarget;
             $source = $mirrorConfiguration['source'];
             $sourcePath = stream_resolve_include_path($source);
-            $this->fileSystem->mirror($sourcePath, $target, null, array('copy_on_windows'=>true,'delete'=>true));
+            $this->fileSystem->mirror($sourcePath, $target, null, array('copy_on_windows'=>true,'delete'=>false));
         }
     }
 }
