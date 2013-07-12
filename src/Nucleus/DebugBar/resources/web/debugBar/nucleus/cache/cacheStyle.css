@@ -1,0 +1,11 @@
+div.nucleus-phpdebugbar-widgets li.list-item span.field[title=Namespace]:before {
+  content: "\f115";
+}
+
+div.nucleus-phpdebugbar-widgets li.list-item span.get:before {
+  content: "\f177";
+}
+
+div.nucleus-phpdebugbar-widgets li.list-item span.set:before {
+  content: "\f178";
+}

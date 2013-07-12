@@ -68,8 +68,9 @@ class TwigDebugBarExtension extends Twig_Extension
         if(strpos($result, '</head>') === false || strpos($result, '</body>') === false){
             return $result;
         }
-        
+
         $includes = $this->debugBarRenderer->renderHead();
+        
         $this->debugBar->collect();
         $toolbar = $this->debugBarRenderer->render();
         

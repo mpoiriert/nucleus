@@ -11,6 +11,7 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Nucleus\DependencyInjection\NucleusCompilerPass;
 use Nucleus\DependencyInjection\PhpDumper;
 use Symfony\Component\Config\ConfigCache;
+use Nucleus\IService\EventDispatcher\IEventDispatcherService;
 
 /**
  * Description of Nucleus
@@ -38,6 +39,7 @@ class Nucleus
         $docFile = $dna->getCachePath() . '/docs/docs.json';
         $containerConfigCache = new ConfigCache($file, $dna->getDebug());
         $docConfigCache = new ConfigCache($docFile, $dna->getDebug());
+        $isNew = false;
         if (!class_exists($class)) {
             if (!$containerConfigCache->isFresh()) {
                 $container = new ContainerBuilder();
@@ -49,17 +51,23 @@ class Nucleus
                     $dumper->dump(array('class' => $class, 'nucleus' => $nucleusCompilerPass->getConfiguration())), $container->getResources()
                 );
 
-
                 $docs = new \Nucleus\ServicesDoc\DocDumper($container);
                 $docConfigCache->write($docs->dump(array()), $container->getResources());
+                $isNew = true;
             }
             require($file);
+            
         }
         $serviceContainer = new $class();
         /* @var $serviceContainer \Nucleus\DependencyInjection\BaseServiceContainer */
         $serviceContainer->initialize();
         $serviceContainer->getServiceByName('configuration')
             ->merge(array('servicesDoc' => array('filename' => $docFile)));
+        
+        if($isNew) {
+            $serviceContainer->getServiceByName(IEventDispatcherService::NUCLEUS_SERVICE_NAME)
+                ->dispatch('ServiceContainer.postDump',$serviceContainer);
+        }
         
         return $serviceContainer;
     }

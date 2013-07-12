@@ -9,18 +9,23 @@
         },
         
         "debugBar": {
-            "class": "DebugBar\\StandardDebugBar"
+            "class": "Nucleus\\DebugBar\\NucleusDebugBar"
         },
         
         "debugBarRenderer": {
-            "class": "DebugBar\\JavascriptRenderer",
+            "class": "Nucleus\\DebugBar\\NucleusJavascriptRenderer",
             "arguments": ["@debugBar","/nucleus/asset/debugBar"]
+        },
+        
+        "aspect.debugBarCacheDataCollector": {
+            "class": "Nucleus\\DebugBar\\DataCollector\\CacheDataCollector"
         },
         
         "assetCopier": {
             "configuration": {
                 "toMirror": {
-                    "debugBar": { "source" : "maximebf/debugbar/src/DebugBar/Resources" }
+                    "debugBar": { "source" : "maximebf/debugbar/src/DebugBar/Resources" },
+                    "nucleusDebugBar": { "source" : "Nucleus/DebugBar/resources/web", "target" : "" }
                 }
             }
         }

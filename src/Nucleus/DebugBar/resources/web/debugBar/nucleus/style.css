@@ -1,0 +1,31 @@
+
+div.nucleus-phpdebugbar-widgets .status {
+  font-family: monospace;
+  padding: 6px 6px;
+  border-bottom: 1px solid #ddd;
+  font-weight: bold;
+  color: #555;
+  background: #fafafa;
+}
+
+div.nucleus-phpdebugbar-widgets li.list-item.error {
+  color: red;
+}
+
+div.nucleus-phpdebugbar-widgets li.list-item {
+  margin-left: 8px;
+  color: #888;
+}
+
+div.nucleus-phpdebugbar-widgets li.list-item span.field:before {
+  font-family: FontAwesome;
+  margin-right: 4px;
+  margin-left: 4px;
+  font-size: 13px;
+  content: "\f105";
+}
+
+div.nucleus-phpdebugbar-widgets li.list-item span.error {
+  display: block;
+  font-weight: bold;
+}
