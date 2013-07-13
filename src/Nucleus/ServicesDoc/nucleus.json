@@ -1,4 +1,7 @@
 {
+    "imports": [
+        "../FileSystem"  
+    ],
     "services": {
         "servicesDoc": {
             "class": "Nucleus\\ServicesDoc\\ServicesDoc"

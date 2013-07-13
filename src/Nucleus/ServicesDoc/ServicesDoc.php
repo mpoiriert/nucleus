@@ -4,19 +4,26 @@ namespace Nucleus\ServicesDoc;
 
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Nucleus\ServicesDoc\DocDumper;
+use Nucleus\IService\FileSystem\IFileSystemService;
 
 class ServicesDoc
 {
     private $docFilename;
     
     /**
+     * @var IFileSystemService 
+     */
+    private $fileSystem;
+    
+    /**
      * @param \Nucleus\Routing\Router $routing
      * 
      * @Inject(cacheDirectory="$[configuration][generatedDirectory]")
      */
-    public function initialize($cacheDirectory)
+    public function initialize($cacheDirectory, IFileSystemService $fileSystem)
     {
         $this->docFilename = $cacheDirectory . '/docs/docs.json';
+        $this->fileSystem = $fileSystem;
     }
 
     /**
@@ -36,6 +43,6 @@ class ServicesDoc
     public function generateDoc(ContainerBuilder $containerBuilder)
     {
         $docs = new DocDumper($containerBuilder);
-        file_put_contents($this->docFilename, $docs->dump(array()));
+        $this->fileSystem->dumpFile($this->docFilename, $docs->dump(array()));
     }
 }
