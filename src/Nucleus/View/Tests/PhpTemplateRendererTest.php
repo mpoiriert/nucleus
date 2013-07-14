@@ -7,7 +7,7 @@
 
 namespace Nucleus\View\Tests;
 
-use Nucleus\View\PhpRenderer;
+use Nucleus\View\PhpTemplateRenderer;
 use Nucleus\View\FileSystemLoader;
 
 /**
@@ -15,13 +15,13 @@ use Nucleus\View\FileSystemLoader;
  *
  * @author Martin
  */
-class PhpRendererTest extends \PHPUnit_Framework_TestCase
+class PhpTemplateRendererTest extends \PHPUnit_Framework_TestCase
 {
     private $renderer = null;
 
     public function setUp()
     {
-        $this->renderer = new PhpRenderer();
+        $this->renderer = new PhpTemplateRenderer();
         $this->renderer->setFileLoader(new FileSystemLoader(array(__DIR__)));
     }
 

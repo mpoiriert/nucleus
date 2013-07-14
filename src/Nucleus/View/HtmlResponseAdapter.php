@@ -10,7 +10,7 @@ namespace Nucleus\View;
 use Nucleus\IService\FrontController\IResponseAdapter;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Nucleus\IService\View\IViewRendererService;
+use Nucleus\IService\View\ITemplateRendererService;
 
 /**
  * Description of HtmlResponseAdapter
@@ -20,18 +20,18 @@ use Nucleus\IService\View\IViewRendererService;
 class HtmlResponseAdapter implements IResponseAdapter
 {
     /**
-     * @var Nucleus\IService\View\IViewRendererService
+     * @var IViewRendererService
      */
-    private $viewRenderer;
+    private $templateRenderer;
 
     /**
-     * @param \Nucleus\IService\View\IViewRendererService $viewRenderer
+     * @param ITemplateRendererService $templateRenderer
      * 
      * @Inject
      */
-    public function initialize(IViewRendererService $viewRenderer)
+    public function initialize(ITemplateRendererService $templateRenderer)
     {
-        $this->viewRenderer = $viewRenderer;
+        $this->templateRenderer = $templateRenderer;
     }
 
     public function adaptResponse($contentType, Request $request, Response $response, array $result)
@@ -42,11 +42,11 @@ class HtmlResponseAdapter implements IResponseAdapter
         $service = $request->request->get('_service');
         $controller = $service['name'] . '/' . $service['method'];
 
-        if (!$this->viewRenderer->canRender($controller)) {
+        if (!$this->templateRenderer->canRender($controller)) {
             return false;
         }
 
-        $response->setContent($this->viewRenderer->render($controller, $result));
+        $response->setContent($this->templateRenderer->render($controller, $result));
         return true;
     }
 }

@@ -12,31 +12,31 @@ namespace Nucleus\IService\View;
  *
  * @author Martin
  * 
- * @Tag("viewRenderer")
+ * @Tag("templateRenderer")
  */
-interface IViewRendererService
+interface ITemplateRendererService
 {
     /**
      * The service name use as a reference
      */
-    const NUCLEUS_SERVICE_NAME = 'viewRenderer';
+    const NUCLEUS_SERVICE_NAME = 'templateRenderer';
 
     /**
-     * @param type $file
-     * @param array $parameters
+     * @param string $template
+     * @param array $variables
      * 
      * @return string
      */
-    public function render($file, array $parameters = array());
+    public function render($template, array $variables = array());
 
     /**
      * Check if the render is able to render this specific file
      * 
-     * @param string $file
+     * @param string $template
      * 
      * @return boolean
      */
-    public function canRender($file);
+    public function canRender($template);
 
     /**
      * @return array

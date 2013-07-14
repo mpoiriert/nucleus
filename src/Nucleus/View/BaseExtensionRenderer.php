@@ -7,34 +7,34 @@
 
 namespace Nucleus\View;
 
-use \Nucleus\IService\View\IViewRendererService;
+use \Nucleus\IService\View\ITemplateRendererService;
 
 /**
  * Description of BaseExtensionRenderer
  *
  * @author Martin
  */
-abstract class BaseExtensionRenderer implements IViewRendererService
+abstract class BaseExtensionRenderer implements ITemplateRendererService
 {
     private $extensions;
 
     /**
-     * @var \Nucleus\View\FileSystemLoader
+     * @var FileSystemLoader
      */
     private $fileLoader;
 
     /**
-     * @param \Nucleus\View\FileSystemLoader $loader
+     * @param FileSystemLoader $loader
      * 
      * @Inject
      */
-    public function setFileLoader(FileSystemLoader $viewFileLoader)
+    public function setFileLoader(FileSystemLoader $templateFileLoader)
     {
-        $this->fileLoader = $viewFileLoader;
+        $this->fileLoader = $templateFileLoader;
     }
 
     /**
-     * @return \Nucleus\View\FileSystemLoader
+     * @return FileSystemLoader
      */
     public function getFileSystemLoader()
     {
@@ -51,18 +51,18 @@ abstract class BaseExtensionRenderer implements IViewRendererService
         return $this->extensions;
     }
 
-    public function canRender($file)
+    public function canRender($template)
     {
-        $extension = pathinfo($file, PATHINFO_EXTENSION);
+        $extension = pathinfo($template, PATHINFO_EXTENSION);
         if (!$extension) {
             foreach ($this->getExtensions() as $extension) {
-                if ($this->canRender($file . '.' . $extension)) {
+                if ($this->canRender($template . '.' . $extension)) {
                     return true;
                 }
             }
             return false;
         }
 
-        return in_array(strtolower($extension), $this->extensions) && $this->fileLoader->exists($file);
+        return in_array(strtolower($extension), $this->extensions) && $this->fileLoader->exists($template);
     }
 }

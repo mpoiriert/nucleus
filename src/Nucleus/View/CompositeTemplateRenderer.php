@@ -7,7 +7,7 @@
 
 namespace Nucleus\View;
 
-use Nucleus\IService\View\IViewRendererService;
+use Nucleus\IService\View\ITemplateRendererService;
 use Nucleus\Framework\Nucleus;
 
 /**
@@ -15,46 +15,46 @@ use Nucleus\Framework\Nucleus;
  *
  * @author Martin
  */
-class CompositeRenderer implements IViewRendererService
+class CompositeTemplateRenderer implements ITemplateRendererService
 {
     /**
-     * @var \Nucleus\IService\View\IViewRendererService[] 
+     * @var ITemplateRendererService[] 
      */
     private $renderers = array();
 
     /**
-     * @param string $file
+     * @param string $template
      * @param array $parameters
      * 
      * @return string
      */
-    public function render($file, array $parameters = array())
+    public function render($template, array $variables = array())
     {
-        $ext = pathinfo($file, PATHINFO_EXTENSION);
+        $ext = pathinfo($template, PATHINFO_EXTENSION);
         if ($ext == null) {
-            return $this->autoRender($file, $parameters);
+            return $this->autoRender($template, $variables);
         }
         foreach ($this->renderers as $renderer) {
-            if ($renderer->canRender($file)) {
-                return $renderer->render($file, $parameters);
+            if ($renderer->canRender($template)) {
+                return $renderer->render($template, $variables);
             }
         }
     }
 
-    private function autoRender($file, array $parameters = array())
+    private function autoRender($template, array $variables = array())
     {
         foreach ($this->getExtensions() as $ext) {
-            $result = $this->render($file . '.' . $ext, $parameters);
+            $result = $this->render($template . '.' . $ext, $variables);
             if ($result) {
                 return $result;
             }
         }
     }
 
-    public function canRender($file)
+    public function canRender($template)
     {
         foreach ($this->renderers as $renderer) {
-            if ($renderer->canRender($file)) {
+            if ($renderer->canRender($template)) {
                 return true;
             }
         }
@@ -63,9 +63,9 @@ class CompositeRenderer implements IViewRendererService
     }
 
     /**
-     * @param \Nucleus\IService\View\IViewRendererService[] $renderers
+     * @param ITemplateRendererService[] $renderers
      * 
-     * @Inject(renderers="@viewRenderer")
+     * @Inject(renderers="@templateRenderer")
      */
     public function setRenderers($renderers)
     {
@@ -93,7 +93,7 @@ class CompositeRenderer implements IViewRendererService
 
     /**
      * @param mixed $configuration
-     * @return IViewRenderer
+     * @return ITemplateRenderer
      */
     public static function factory($configuration = null)
     {
@@ -101,6 +101,6 @@ class CompositeRenderer implements IViewRendererService
             $configuration = __DIR__ . '/nucleus.json';
         }
 
-        return Nucleus::serviceFactory($configuration, 'routing');
+        return Nucleus::serviceFactory($configuration, ITemplateRendererService::NUCLEUS_SERVICE_NAME);
     }
 }

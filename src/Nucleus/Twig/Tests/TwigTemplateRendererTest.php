@@ -7,8 +7,7 @@
 
 namespace Nucleus\Twig\Tests;
 
-use Nucleus\Twig\TwigRenderer;
-use Nucleus\View\FileSystemLoader;
+use Nucleus\Twig\TwigTemplateRenderer;
 use PHPUnit_Framework_TestCase;
 
 /**
@@ -16,13 +15,13 @@ use PHPUnit_Framework_TestCase;
  *
  * @author Martin
  */
-class TwigRendererTest extends PHPUnit_Framework_TestCase
+class TwigTemplateRendererTest extends PHPUnit_Framework_TestCase
 {
     private $renderer = null;
 
     public function setUp()
     {
-        $this->renderer = TwigRenderer::factory(
+        $this->renderer = TwigTemplateRenderer::factory(
             array(
                 'imports' => array(__DIR__ . '/..'),
                 'services' => array(

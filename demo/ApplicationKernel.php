@@ -17,7 +17,6 @@ class ApplicationKernel extends SingletonApplicationKernel
     protected function getDnaConfiguration()
     {
         return parent::getDnaConfiguration()
-            ->setCachePath(realpath(__DIR__ . '/../cache'))
-            ->setDebug(true);
+            ->setCachePath(realpath(__DIR__ . '/../cache'));
     }
 }

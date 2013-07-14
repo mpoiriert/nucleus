@@ -1,20 +1,20 @@
 {
     "services": {
-        "viewRenderer": {
-            "class": "Nucleus\\View\\CompositeRenderer"
+        "templateRenderer": {
+            "class": "Nucleus\\View\\CompositeTemplateRenderer"
         },
-        "viewFileLoader": {
+        "templateFileLoader": {
             "class": "Nucleus\\View\\FileSystemLoader",
             "configuration": []
         },
-        "viewRenderer.php": {
-            "class": "Nucleus\\View\\PhpRenderer"
-        },
-        "viewRenderer.twig": {
-            "class": "Nucleus\\View\\TwigRenderer"
+        "templateRenderer.php": {
+            "class": "Nucleus\\View\\PhpTemplateRenderer"
         },
         "viewRendererReponseAdapter": {
             "class": "Nucleus\\View\\HtmlResponseAdapter"
+        },
+        "viewConciliator": {
+            "class": "Nucleus\\View\\ViewConciliator"
         }
     }
 }

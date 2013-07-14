@@ -16,8 +16,8 @@
                   "cache":"%generatedDirectory%/twig"
               }
         },
-        "viewRenderer.twig": {
-            "class": "Nucleus\\Twig\\TwigRenderer"
+        "templateRenderer.twig": {
+            "class": "Nucleus\\Twig\\TwigTemplateRenderer"
         }
     }
 }

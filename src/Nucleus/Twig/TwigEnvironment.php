@@ -48,9 +48,9 @@ class TwigEnvironment extends Twig_Environment
      * @param \Nucleus\View\FileSystemLoader $loader
      * @Inject
      */
-    public function importNucleusFileSystemLoader(FileSystemLoader $viewFileLoader)
+    public function importNucleusFileSystemLoader(FileSystemLoader $templateFileLoader)
     {
-        $this->loader->addLoader($viewFileLoader);
+        $this->loader->addLoader($templateFileLoader);
     }
 
     public function getArrayLoader()

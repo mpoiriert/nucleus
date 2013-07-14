@@ -12,7 +12,7 @@ namespace Nucleus\View;
  *
  * @author Martin
  */
-class PhpRenderer extends BaseExtensionRenderer
+class PhpTemplateRenderer extends BaseExtensionRenderer
 {
 
     public function __construct()

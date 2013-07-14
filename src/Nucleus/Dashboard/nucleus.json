@@ -3,7 +3,7 @@
         "nucleusDashboard": {
             "class": "Nucleus\\Dashboard\\Dashboard"
         },
-        "viewFileLoader": {
+        "templateFileLoader": {
             "configuration": {
                 "paths": ["<?php echo str_replace('\\','/',__DIR__) . '/resources/views' ?>"]
             }

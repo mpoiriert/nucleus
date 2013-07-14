@@ -1,0 +1,42 @@
+PHPUnit 3.7.22 by Sebastian Bergmann.
+
+Configuration read from D:\nucleus\nucleus\phpunit.xml.dist
+
+...............................................................  63 / 146 ( 43%)
+............................................................... 126 / 146 ( 86%)
+............EE......
+
+Time: 01:01, Memory: 10.75Mb
+
+There were 2 errors:
+
+1) Nucleus\Twig\Tests\TwigRendererTest::testCanRender
+PHPUnit_Framework_Exception: Fatal error: Class 'Nucleus\Twig\TwigRenderer' not found in D:\nucleus\nucleus\src\Nucleus\Twig\Tests\TwigRendererTest.php on line 25
+
+Call Stack:
+    0.0004     117280   1. {main}() -:0
+    0.0013     148904   2. require_once('C:\Users\Martin\AppData\Local\Temp\PHP6732.tmp') -:1
+    0.0339    2701424   3. __phpunit_run_isolated_test() C:\Users\Martin\AppData\Local\Temp\PHP6732.tmp:183
+    0.0370    2875648   4. PHPUnit_Framework_TestCase->run() C:\Users\Martin\AppData\Local\Temp\PHP6732.tmp:34
+    0.0382    2930968   5. PHPUnit_Framework_TestResult->run() D:\nucleus\nucleus\vendor\phpunit\phpunit\PHPUnit\Framework\TestCase.php:776
+    0.0740    2997000   6. PHPUnit_Framework_TestCase->runBare() D:\nucleus\nucleus\vendor\phpunit\phpunit\PHPUnit\Framework\TestResult.php:648
+    0.0743    3014400   7. Nucleus\Twig\Tests\TwigRendererTest->setUp() D:\nucleus\nucleus\vendor\phpunit\phpunit\PHPUnit\Framework\TestCase.php:828
+
+
+2) Nucleus\Twig\Tests\TwigRendererTest::testRender
+PHPUnit_Framework_Exception: Fatal error: Class 'Nucleus\Twig\TwigRenderer' not found in D:\nucleus\nucleus\src\Nucleus\Twig\Tests\TwigRendererTest.php on line 25
+
+Call Stack:
+    0.0004     117280   1. {main}() -:0
+    0.0013     148904   2. require_once('C:\Users\Martin\AppData\Local\Temp\PHP67DE.tmp') -:1
+    0.0379    2701424   3. __phpunit_run_isolated_test() C:\Users\Martin\AppData\Local\Temp\PHP67DE.tmp:183
+    0.0416    2875648   4. PHPUnit_Framework_TestCase->run() C:\Users\Martin\AppData\Local\Temp\PHP67DE.tmp:34
+    0.0428    2930968   5. PHPUnit_Framework_TestResult->run() D:\nucleus\nucleus\vendor\phpunit\phpunit\PHPUnit\Framework\TestCase.php:776
+    0.0809    2997000   6. PHPUnit_Framework_TestCase->runBare() D:\nucleus\nucleus\vendor\phpunit\phpunit\PHPUnit\Framework\TestResult.php:648
+    0.0812    3014400   7. Nucleus\Twig\Tests\TwigRendererTest->setUp() D:\nucleus\nucleus\vendor\phpunit\phpunit\PHPUnit\Framework\TestCase.php:828
+
+
+FAILURES!
+Tests: 146, Assertions: 312, Errors: 2.
+
+Generating code coverage report in HTML format ... done

@@ -16,7 +16,7 @@ use Nucleus\Framework\Nucleus;
  *
  * @author Martin
  */
-class TwigRenderer extends BaseExtensionRenderer
+class TwigTemplateRenderer extends BaseExtensionRenderer
 {
     /**
      * @var Twig_Environment 
@@ -36,9 +36,9 @@ class TwigRenderer extends BaseExtensionRenderer
         $this->twig = $twigEnvironment;
     }
 
-    public function render($file, array $parameters = array())
+    public function render($template, array $parameters = array())
     {
-        return $this->twig->render($file, $parameters);
+        return $this->twig->render($template, $parameters);
     }
     
     /**
@@ -51,6 +51,6 @@ class TwigRenderer extends BaseExtensionRenderer
             $configuration = __DIR__ . '/nucleus.json';
         }
 
-        return Nucleus::serviceFactory($configuration, 'viewRenderer.twig');
+        return Nucleus::serviceFactory($configuration, 'templateRenderer.twig');
     }
 }
