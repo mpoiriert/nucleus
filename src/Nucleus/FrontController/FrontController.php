@@ -66,7 +66,7 @@ class FrontController
     }
 
     /**
-     * @param \Symfony\Component\HttpFoundation\Request $request
+     * @param Request $request
      */
     public function handleRequest(Request $request)
     {
@@ -74,9 +74,17 @@ class FrontController
         $request->request->add($result);
         $this->execute(
             $result['_service']['name'], $result['_service']['method'], $request
-        );
+        )->send();
     }
 
+    /**
+     * 
+     * @param type $serviceName
+     * @param type $methodName
+     * @param Request $request
+     * 
+     * @return Response
+     */
     public function execute($serviceName, $methodName, Request $request)
     {
         $response = new Response();
@@ -86,16 +94,9 @@ class FrontController
             array($service, $methodName), $parameters, array($request, $response)
         );
         $result = array('result' => $executionResult);
-        /*  $controller = $serviceName . '/' . $methodName;
-          $this->eventDispatcher->dispatch(
-          'Request.postExecution',
-          $request,
-          array('result'=>$result,'response'=>$response)
-          ); */
-
         $this->completeResponse($request, $response, $result);
         $response->prepare($request);
-        $response->send();
+        return $response;
     }
 
     private function completeResponse(Request $request, Response $response, $result)
