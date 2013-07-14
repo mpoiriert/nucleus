@@ -50,6 +50,6 @@ class ControllerViewConciliator
             return null;
         }
         
-        return $this->viewConciliator[$controller];
+        return $this->viewDefinitions[$controller];
     }
 }
