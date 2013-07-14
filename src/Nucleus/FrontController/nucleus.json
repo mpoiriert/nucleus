@@ -5,6 +5,16 @@
         },
         "jsonResponseAdapter": {
             "class": "Nucleus\\FrontController\\JsonResponseAdapter"
+        },
+        "controllerViewConciliator": {
+            "class": "Nucleus\\FrontController\\ControllerViewConciliator"
+        }
+    },
+    "nucleus": {
+        "annotationContainerGenerator": {
+            "Nucleus\\IService\\FrontController\\ViewDefinition": {
+                "class": "Nucleus\\FrontController\\ViewDefinitionAnnotationContainerGenerator"
+            }
         }
     }
 }

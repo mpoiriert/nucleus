@@ -68,16 +68,16 @@ class NucleusCompilerPass implements CompilerPassInterface
            
             $parsingResult = $annotationParser->parse($serviceConfiguration['class']);
             
-            $annotations = $parsingResult->getAllAnnotations(array(
-                function($annotation) {
-                    return $annotation instanceof IServiceContainerGeneratorAnnotation;
-                }
-            ));
+            $annotations = $parsingResult->getAllAnnotations();
 
             foreach ($annotations as $parsingNode) {
                 $this->addFileResource(get_class($parsingNode['annotation']));
                 $generationContext = new GenerationContext($container, $name, $definition, $parsingNode);
-                $parsingNode['annotation']->processContainerBuilder($generationContext);
+                if($parsingNode['annotation'] instanceof IServiceContainerGeneratorAnnotation) {
+                    $parsingNode['annotation']->processContainerBuilder($generationContext);
+                } elseif(!is_null($builder = $this->getAnnotationContainerBuilder($parsingNode['annotation']))){
+                    $builder->processContainerBuilder($generationContext);
+                }
             }
             
             if(array_key_exists('configuration', $serviceConfiguration)) {
@@ -88,6 +88,16 @@ class NucleusCompilerPass implements CompilerPassInterface
                     );
             }
         }
+    }
+    
+    private function getAnnotationContainerBuilder($annotation)
+    {
+        $annotationClass = get_class($annotation);
+        if(isset($this->configuration['nucleus']['annotationContainerGenerator'][$annotationClass]['class'])) {
+            $class = $this->configuration['nucleus']['annotationContainerGenerator'][$annotationClass]['class'];
+            return new $class();
+        }
+        
     }
 
     private function setDefaultConfiguration()

@@ -32,7 +32,8 @@ class Dashboard
     }
 
     /**
-     * @View("dashboard")
+     * @\Nucleus\IService\FrontController\ViewDefinition(template="nucleus/dashboard/home.twig")
+     * 
      * @Route(name="dashboard", path="/nucleus/dashboard")
      */
     public function home()

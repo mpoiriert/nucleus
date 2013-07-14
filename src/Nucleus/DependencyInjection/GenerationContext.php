@@ -51,6 +51,11 @@ class GenerationContext
     {
         return $this->parsingNode['contextName'];
     }
+    
+    public function getAnnotation()
+    {
+        return $this->parsingNode['annotation'];
+    }
 
     /**
      * return Symfony\Component\DependencyInjection\ContainerBuilder;

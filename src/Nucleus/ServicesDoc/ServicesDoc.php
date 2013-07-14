@@ -28,6 +28,7 @@ class ServicesDoc
 
     /**
      * @\Nucleus\Routing\Route(name="servicesdoc", path="/nucleus/servicesdoc")
+     * @\Nucleus\IService\FrontController\ViewDefinition(template="documentation/services.twig")
      */
     public function index()
     {

@@ -5,7 +5,7 @@
  * and open the template in the editor.
  */
 
-namespace Nucleus\IService\View;
+namespace Nucleus\IService\FrontController;
 
 /**
  * Description of ViewDefinition

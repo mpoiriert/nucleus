@@ -14,7 +14,13 @@
             "class": "Nucleus\\View\\HtmlResponseAdapter"
         },
         "viewConciliator": {
-            "class": "Nucleus\\View\\ViewConciliator"
+            "class": "Nucleus\\View\\ViewConciliator",
+            "calls": [
+                ["setView",["default","@view.default"]]
+            ]
+        },
+        "view.default": {
+            "class": "Nucleus\\View\\DefaultView"
         }
     }
 }
