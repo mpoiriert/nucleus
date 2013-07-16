@@ -130,14 +130,14 @@
         <div class="service">
             <a name="{{ service.id }}"></a>
             <h2>{{ service.id }}</h2>
-            <h3>{{ service.class }}</h3>
+            <h3>Class Name : {{ service.class }}</h3>
             <p>{{ service.shortDesc|nl2br }}</p>
             <p>{{ service.longDesc|nl2br }}</p>
             {% if service.docTags %}
             <dl class="dl-horizontal">
                 {% for tag in service.docTags %}
                     <dt>{{ tag[0] }}:</dt>
-                    <dd>{{ tag[1] }}</dt>
+                    <dd>{{ tag[1] }}</dd>
                 {% endfor %}
             </dl>
             {% endif %}
