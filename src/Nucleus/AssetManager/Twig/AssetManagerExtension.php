@@ -15,7 +15,7 @@ use Nucleus\AssetManager\Manager;
  *
  * @author Martin
  * 
- * @Tag("twigRenderer.twigExtension")
+ * @\Nucleus\IService\DependencyInjection\Tag(name="twigRenderer.twigExtension")
  */
 class AssetManagerExtension extends Twig_Extension
 {

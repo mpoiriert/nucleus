@@ -13,6 +13,11 @@
         }
     },
     "nucleus": {
-        "annotationNamespaces": ["Nucleus\\DependencyInjection"]
+        "annotationNamespaces": ["Nucleus\\DependencyInjection"],
+        "annotationContainerGenerator": {
+            "Nucleus\\IService\\DependencyInjection\\Tag": {
+                "class": "Nucleus\\DependencyInjection\\TagAnnotationContainerGenerator"
+            }
+        }
     }
 }

@@ -19,7 +19,7 @@ use Nucleus\IService\Cache\EntryNotFoundException;
  *
  * @author Martin
  * 
- * @Tag("debugBar.dataCollector")
+ * @\Nucleus\IService\DependencyInjection\Tag(name="debugBar.dataCollector")
  */
 class CacheDataCollector extends BaseAspect implements Renderable, DataCollectorInterface, IAssetProvider
 {

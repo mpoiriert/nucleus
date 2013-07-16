@@ -14,7 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * @author Martin
  * 
- * @Tag("responseAdapter")
+ * @\Nucleus\IService\DependencyInjection\Tag(name="responseAdapter")
  */
 interface IResponseAdapter
 {

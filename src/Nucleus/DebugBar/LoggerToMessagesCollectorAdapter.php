@@ -15,7 +15,7 @@ use Monolog\Handler\AbstractProcessingHandler;
  *
  * @author Martin
  * 
- * @Tag("logger.handler")
+ * @\Nucleus\IService\DependencyInjection\Tag(name="logger.handler")
  */
 class LoggerToMessagesCollectorAdapter extends AbstractProcessingHandler
 {
