@@ -40,6 +40,7 @@ class DocDumper extends Dumper
                 }
                 $data['tags'][$tag][] = $service['id'];
             }
+            $data['class'] = $service['class'];
         }
 
         return json_encode($data);
@@ -47,6 +48,7 @@ class DocDumper extends Dumper
 
     private function getServiceInfo($id, $definition)
     {
+        
         $info = array('id' => $id);
 
         if ($definition->getClass()) {
