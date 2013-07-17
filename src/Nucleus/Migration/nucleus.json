@@ -1,6 +1,9 @@
 {
+    "imports": [
+        "../Application"
+    ],
     "services": {
-        "Migration": {
+        "migrator": {
             "class": "Nucleus\\Migration\\Migrator",
             "configuration": {
                 "versions": {}

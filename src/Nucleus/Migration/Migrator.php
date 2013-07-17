@@ -32,15 +32,15 @@ class Migrator implements IMigrator
 
     /**
      * 
-     * @param \Nucleus\IService\DependencyInjection\IServiceContainer $serviceContainer
-     * @param \Nucleus\IService\Application\IVariableRegistry $applicationVariable
+     * @param IServiceContainer $serviceContainer
+     * @param IVariableRegistry $applicationVariableRegistry
      * 
      * @Inject
      */
-    public function initialize(IServiceContainer $serviceContainer, IVariableRegistry $applicationVariable)
+    public function initialize(IServiceContainer $serviceContainer, IVariableRegistry $applicationVariableRegistry)
     {
         $this->serviceContainer = $serviceContainer;
-        $this->applicationVariable = $applicationVariable;
+        $this->applicationVariable = $applicationVariableRegistry;
     }
 
     /**

@@ -17,7 +17,7 @@ use Nucleus\IService\Application\IVariableRegistry;
 class NotPersistentVariableRegistry implements IVariableRegistry
 {
     private $data = array();
-
+    
     public function delete($name, $namespace = 'default')
     {
         unset($this->data[$namespace][$name]);
