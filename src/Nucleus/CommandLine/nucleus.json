@@ -1,0 +1,14 @@
+{
+    "services": {
+        "console": {
+            "class": "Nucleus\\CommandLine\\CommandLine"
+        }
+    },
+    "nucleus": {
+        "annotationContainerGenerator": {
+            "Nucleus\\IService\\CommandLine\\Consolable": {
+                "class": "Nucleus\\CommandLine\\ConsolableContainerGenerator"
+            }
+        }
+    }
+}
