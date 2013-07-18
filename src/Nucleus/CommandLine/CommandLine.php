@@ -5,14 +5,13 @@
  * and open the template in the editor.
  */
 namespace Nucleus\CommandLine;
+
 use Nucleus\Framework\Nucleus;
 use Nucleus\IService\CommandLine\ICommandLineService;
 use Symfony\Component\Console\Application;
-use \Symfony\Component\Console\Input\InputInterface;
-use \Symfony\Component\Console\Output\OutputInterface;
 use Nucleus\IService\Invoker\IInvokerService;
 use Nucleus\IService\DependencyInjection\IServiceContainer;
-use Nucleus\IService\DependencyInjection\ILifeCycleAware;
+
 /**
  * Description of CommandLine
  *
@@ -61,20 +60,10 @@ class CommandLine extends Application implements ICommandLineService  {
         $command->setInvoker($this->invoker);
         $this->add($command);
     }
-   
-    /**
-     * 
-     * @param InputInterface $input
-     * @param OutputInterface $output
-     */
-    public function run($input = null, $output = null) 
-    {
-        parent::run($input, $output);
-    }
     
     /**
      * @param mixed $configuration
-     * @return CommandLine
+     * @return ICommandLineService
      */
     public static function factory($configuration = null)
     {
@@ -83,14 +72,6 @@ class CommandLine extends Application implements ICommandLineService  {
         }
 
         return Nucleus::serviceFactory($configuration, ICommandLineService::NUCLEUS_SERVICE_NAME);
-    }
-
-    public function serviceShutdown() {
-        
-    }
-
-    public function serviceStart() {
-        
     }
 }
 

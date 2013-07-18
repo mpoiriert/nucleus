@@ -56,6 +56,9 @@ class Migrator implements IMigrator
         $this->configuration = $configuration;
     }
 
+    /**
+     * @\Nucleus\IService\CommandLine\Consolable(name="migration:runAll")
+     */
     public function runAll()
     {
         foreach ($this->configuration['versions'] as $version => $tasks) {
@@ -70,6 +73,9 @@ class Migrator implements IMigrator
         }
     }
 
+    /**
+     * @\Nucleus\IService\CommandLine\Consolable(name="migration:markAllAsRun")
+     */
     public function markAllAsRun()
     {
         foreach ($this->configuration['versions'] as $version => $tasks) {
