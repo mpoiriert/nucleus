@@ -37,11 +37,19 @@ class FileCache extends BaseCacheService
         $this->cachePath = $cachePath . '/fileCache';
     }
     
+    /**
+     * @\Nucleus\IService\CommandLine\Consolable
+     */
     public function clearAllNamespaces()
     {
         $this->fileSystem->remove($this->cachePath);
     }
 
+    /**
+     * @param string $namespace
+     * 
+     * @\Nucleus\IService\CommandLine\Consolable
+     */
     public function clearNamespace($namespace = ICacheService::NAMESPACE_DEFAULT)
     {
         $this->fileSystem->remove($this->cachePath . '/' . $this->sanitize($namespace));

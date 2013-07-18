@@ -43,11 +43,19 @@ class Memcache extends BaseCacheService
         $this->memcache = $memcache;
     }
     
+    /**
+     * @\Nucleus\IService\CommandLine\Consolable
+     */
     public function clearAllNamespaces()
     {
         $this->clearNamespace(self::$globalSalt);
     }
 
+    /**
+     * @param string $namespace
+     * 
+     * @\Nucleus\IService\CommandLine\Consolable
+     */
     public function clearNamespace($namespace = ICacheService::NAMESPACE_DEFAULT)
     {
         $salt = $this->getNamespaceSalt($namespace);
