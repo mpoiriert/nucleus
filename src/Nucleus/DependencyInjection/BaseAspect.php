@@ -17,8 +17,8 @@ use Go\Aop\Intercept\MethodInvocation;
  *
  * @author Martin
  * 
- * @Tag("autoStart")
- * @Tag("aspect")
+ * @\Nucleus\IService\DependencyInjection\Tag(name="autoStart")
+ * @\Nucleus\IService\DependencyInjection\Tag(name="aspect")
  */
 class BaseAspect implements IServiceContainerAware, Aspect
 {

@@ -203,7 +203,7 @@ if (!class_exists('Nucleus\DependencyInjection\Tests\TestService')) {
     }
 
     /**
-     * @Tag("Test")
+     * @\Nucleus\IService\DependencyInjection\Tag("Test")
      */
     class Tagged
     {
@@ -211,7 +211,7 @@ if (!class_exists('Nucleus\DependencyInjection\Tests\TestService')) {
     }
 
     /**
-     * @Tag("ITest")
+     * @\Nucleus\IService\DependencyInjection\Tag("ITest")
      */
     interface ITagged
     {
@@ -219,7 +219,7 @@ if (!class_exists('Nucleus\DependencyInjection\Tests\TestService')) {
     }
 
     /**
-     * @Tag("Test")
+     * @\Nucleus\IService\DependencyInjection\Tag("Test")
      */
     class TaggedViaInterface implements ITagged
     {

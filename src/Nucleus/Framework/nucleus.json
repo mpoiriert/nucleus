@@ -14,7 +14,8 @@
         "../Log",
         "../DebugBar",
         "../ServicesDoc",
-        "../CommandLine"
+        "../CommandLine",
+        "../Migration"
     ],
     "services": {
         "clock": {

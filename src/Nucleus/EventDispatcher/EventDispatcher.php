@@ -9,7 +9,7 @@ use Nucleus\Framework\Nucleus;
 use Nucleus\IService\Invoker\IInvokerService;
 
 /**
- * @Tag("autoStart")
+ * @\Nucleus\IService\DependencyInjection\Tag(name="autoStart")
  */
 class EventDispatcher implements IEventDispatcherService
 {

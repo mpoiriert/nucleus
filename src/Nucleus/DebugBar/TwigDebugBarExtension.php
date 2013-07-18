@@ -17,7 +17,7 @@ use Twig_Template;
  *
  * @author Martin
  * 
- * @Tag("twigRenderer.twigExtension")
+ * @\Nucleus\IService\DependencyInjection\Tag(name="twigRenderer.twigExtension")
  */
 class TwigDebugBarExtension extends Twig_Extension
 {

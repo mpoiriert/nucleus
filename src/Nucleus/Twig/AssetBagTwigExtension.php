@@ -16,7 +16,7 @@ use Twig_Template;
  *
  * @author Martin
  * 
- * @Tag("twigRenderer.twigExtension")
+ * @\Nucleus\IService\DependencyInjection\Tag(name="twigRenderer.twigExtension")
  */
 class AssetBagTwigExtension extends Twig_Extension
 {

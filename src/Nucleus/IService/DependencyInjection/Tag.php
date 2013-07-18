@@ -8,23 +8,14 @@
 namespace Nucleus\IService\DependencyInjection;
 
 /**
- * Description of Tag
- *
  * @Annotation
- * @Attributes({
- *   @Attribute("tagName", type = "string"),
- * })
+ * 
+ * @Target({"CLASS"})
  */
 class Tag
 {
-
-    public function __construct($values)
-    {
-        $this->tagName = $values['value'];
-    }
-
-    public function getTagName()
-    {
-        return $this->tagName;
-    }
+    /**
+     * @var string
+     */
+    public $name;
 }

@@ -13,6 +13,8 @@ use RuntimeException;
 
 class Migrator implements IMigrator
 {
+    private static $variableNamespace = 'migration';
+    
     /**
      *
      * @var array
@@ -32,15 +34,15 @@ class Migrator implements IMigrator
 
     /**
      * 
-     * @param \Nucleus\IService\DependencyInjection\IServiceContainer $serviceContainer
-     * @param \Nucleus\IService\Application\IVariableRegistry $applicationVariable
+     * @param IServiceContainer $serviceContainer
+     * @param IVariableRegistry $applicationVariableRegistry
      * 
      * @Inject
      */
-    public function initialize(IServiceContainer $serviceContainer, IVariableRegistry $applicationVariable)
+    public function initialize(IServiceContainer $serviceContainer, IVariableRegistry $applicationVariableRegistry)
     {
         $this->serviceContainer = $serviceContainer;
-        $this->applicationVariable = $applicationVariable;
+        $this->applicationVariable = $applicationVariableRegistry;
     }
 
     /**
@@ -61,7 +63,7 @@ class Migrator implements IMigrator
                 $migrationTask = $this->loadTask($task);
                 $id = $version . ":" . $migrationTask->getUniqueId();
 
-                if (!$this->applicationVariable->has($id)) {
+                if (!$this->applicationVariable->has($id, self::$variableNamespace)) {
                     $this->runTask($migrationTask, $id);
                 }
             }
@@ -74,7 +76,7 @@ class Migrator implements IMigrator
             foreach ($tasks as $task) {
                 $migrationTask = $this->loadTask($task);
                 $id = $version . ":" . $migrationTask->getUniqueId();
-                $this->applicationVariable->set($id, true);
+                $this->applicationVariable->set($id, true, self::$variableNamespace);
             }
         }
     }
@@ -114,7 +116,7 @@ class Migrator implements IMigrator
     {
         try {
             $task->run();
-            $this->applicationVariable->set($id, true);
+            $this->applicationVariable->set($id, true, self::$variableNamespace);
         } catch (Exception $e) {
             throw $e;
         }

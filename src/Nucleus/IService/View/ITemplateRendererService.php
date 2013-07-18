@@ -12,7 +12,7 @@ namespace Nucleus\IService\View;
  *
  * @author Martin
  * 
- * @Tag("templateRenderer")
+ * @\Nucleus\IService\DependencyInjection\Tag(name="templateRenderer")
  */
 interface ITemplateRendererService
 {
