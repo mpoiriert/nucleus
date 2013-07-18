@@ -13,7 +13,8 @@
         "../Session",
         "../Log",
         "../DebugBar",
-        "../ServicesDoc"
+        "../ServicesDoc",
+        "../CommandLine"
     ],
     "services": {
         "clock": {
