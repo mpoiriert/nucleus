@@ -1,0 +1,10 @@
+{
+    "imports": [
+        "../nucleus.json"
+    ],
+    "services": {
+        "commandLineServiceTest": {
+            "class": "Nucleus\\CommandLine\\Tests\\TestableCommandLineService"
+        }
+    }
+}
