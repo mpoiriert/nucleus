@@ -1,0 +1,4 @@
+{
+    "base_url": "../web/app.php",
+    "services_url": "/nucleus/dashboard/_services"
+}

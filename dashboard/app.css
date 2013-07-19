@@ -1,0 +1,26 @@
+body {
+    padding-top: 40px;
+}
+
+.navbar .brand {
+    margin-left: 0px;
+}
+
+.service > .btn-toolbar {
+    background: #efefef;
+    margin: 0;
+    padding-left: 8px;
+}
+    .service > .btn-toolbar .btn {
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+        padding: 7px 11px;
+    }
+.service > .body {
+    padding: 10px;
+}
+    .service > .body > .btn-toolbar {
+        margin: 0;
+        margin-bottom: 7px;
+    }
