@@ -21,6 +21,10 @@
             "class": "Nucleus\\DebugBar\\DataCollector\\CacheDataCollector"
         },
         
+        "aspect.twigDataCollector": {
+            "class": "Nucleus\\DebugBar\\DataCollector\\TwigDataCollector"
+        },
+        
         "assetCopier": {
             "configuration": {
                 "toMirror": {
