@@ -24,6 +24,8 @@ class TwigDataCollector extends BaseAspect implements Renderable, DataCollectorI
 {
     private $renderedTemplates = array();   
     
+    private $deepness = 0;
+    
     /**
      * Cacheable methods
      *
@@ -33,6 +35,7 @@ class TwigDataCollector extends BaseAspect implements Renderable, DataCollectorI
      */
     public function aroundDisplay(MethodInvocation $invocation)
     {
+        $this->deepness++;
         $start = microtime(true);
         $result = $invocation->proceed();
         $end = microtime(true);
@@ -44,10 +47,10 @@ class TwigDataCollector extends BaseAspect implements Renderable, DataCollectorI
 
         $this->renderedTemplates[] = 
             array(
-            'name' => $invocation->getThis()->getTemplateName(),
+            'name' => str_repeat('-', $this->deepness) . '> ' . $invocation->getThis()->getTemplateName(),
             'render_time' => $end - $start
         );
-        
+        $this->deepness--;
         return $result;
     }
     
@@ -76,7 +79,7 @@ class TwigDataCollector extends BaseAspect implements Renderable, DataCollectorI
         $templates = array();
         $accuRenderTime = 0;
 
-        foreach ($this->renderedTemplates as $tpl) {
+        foreach (array_reverse($this->renderedTemplates) as $tpl) {
             $accuRenderTime += $tpl['render_time'];
             $templates[] = array(
                 'name' => $tpl['name'],
