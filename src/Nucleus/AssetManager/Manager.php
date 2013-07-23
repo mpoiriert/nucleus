@@ -97,6 +97,7 @@ class Manager implements \Nucleus\IService\AssetManager\IAssetManager
         if ($fileType == 'css') {
             $asset->ensureFilter(new CssRewriteFilter()); //NECESSARY FOR IMAGE PATHS
         }
+        
     }
 
     /**
@@ -144,6 +145,13 @@ class Manager implements \Nucleus\IService\AssetManager\IAssetManager
         return new FileAsset($rootDirectory . $path, array(), $rootDirectory, $path);
     }
 
+    /**
+     * @param array $files
+     * @return string
+     * @throws Exception
+     * 
+     * @\Nucleus\IService\Cache\Cacheable(namespace="assets")
+     */
     public function getHtmTags(array $files)
     {
         $cssFiles = array();
