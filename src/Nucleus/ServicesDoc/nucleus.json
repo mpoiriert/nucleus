@@ -1,10 +1,28 @@
 {
     "imports": [
-        "../FileSystem"  
+        "../FileSystem"
     ],
     "services": {
         "servicesDoc": {
             "class": "Nucleus\\ServicesDoc\\ServicesDoc"
+        },
+        "apiDoc": {
+            "class": "Nucleus\\ServicesDoc\\ApiDoc",
+            "configuration": {
+                "docParam":{
+                    "webDirectory" : "<?php echo str_replace('\\','/',realpath(__DIR__ . '/../../../web')) ?>",
+                    "pathsDoc": [
+                        "<?php echo str_replace('\\','/',__DIR__) . '/../../Nucleus' ?>"
+                    ],
+                    "excludePaths" : [
+                        "Tests"
+                    ],
+                    "fileTypes": [
+                        "*.php"
+                    ],
+                    "docTitle": "Nucleus API Doc"
+                }
+            }
         },
         "templateFileLoader": {
             "configuration": {
@@ -12,4 +30,7 @@
             }
         }
     }
+
+
+
 }
