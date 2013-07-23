@@ -9,7 +9,6 @@
 namespace Nucleus\ServicesDoc;
 use Sami\Sami;
 use Symfony\Component\Finder\Finder;
-use Sami\Project;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 
 class ApiDoc
@@ -28,9 +27,9 @@ class ApiDoc
     /**
      * @param \Nucleus\Routing\Router $routing
      *
-     * @Inject(params="$")
+     * @Inject(params="$", cacheDirectory="$[configuration][generatedDirectory]")
      */
-    public function initialize($params)
+    public function initialize($params, $cacheDirectory)
     {
         $webDir = $params['docParam']['webDirectory'];
         if(!isset($params['docParam']['buildPath'])){
@@ -62,7 +61,7 @@ class ApiDoc
         $this->sami = new Sami($this->iteratorFiles, array(
             'title'                => $this->docTitle,
             'build_dir'            => $this->buildDir,
-            'cache_dir'            => __DIR__.'/resources/cache/',
+            'cache_dir'            => $cacheDirectory . '/sami',
             'default_opened_level' => 2,
         ));
     }
@@ -73,9 +72,10 @@ class ApiDoc
     public function index()
     {
         if(!file_exists($this->buildDir.'/index.html')){
-            $this->sami['project']->render(null, true);
+            $this->update(true);
+        } else {
+            $this->update(false);
         }
-        //echo $this->redirect;die;
         return new RedirectResponse($this->redirect);
     }
 

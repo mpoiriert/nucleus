@@ -12,7 +12,7 @@
                 "docParam":{
                     "webDirectory" : "<?php echo str_replace('\\','/',realpath(__DIR__ . '/../../../web')) ?>",
                     "pathsDoc": [
-                        "<?php echo str_replace('\\','/',__DIR__) . '/../../Nucleus' ?>"
+                        "<?php echo str_replace('\\','/',__DIR__) . '/..' ?>"
                     ],
                     "excludePaths" : [
                         "Tests"
