@@ -12,6 +12,7 @@ use Nucleus\IService\DependencyInjection\IServiceContainer;
 use Symfony\Component\HttpFoundation\Request;
 use Nucleus\Routing\Router;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Nucleus\IService\EventDispatcher\IEventDispatcherService;
 
 /**
@@ -93,6 +94,10 @@ class FrontController
         $executionResult = $this->invoker->invoke(
             array($service, $methodName), $parameters, array($request, $response)
         );
+        if($executionResult instanceof RedirectResponse){
+            $response->prepare($request);
+            return $executionResult;
+        }
         $result = array('result' => $executionResult);
         $this->completeResponse($request, $response, $result);
         $response->prepare($request);

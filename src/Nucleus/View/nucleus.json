@@ -10,6 +10,9 @@
         "templateRenderer.php": {
             "class": "Nucleus\\View\\PhpTemplateRenderer"
         },
+        "templateRenderer.html": {
+            "class": "Nucleus\\View\\HtmlTemplateRenderer"
+        },
         "viewRendererReponseAdapter": {
             "class": "Nucleus\\View\\HtmlResponseAdapter"
         },
