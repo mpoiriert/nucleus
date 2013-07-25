@@ -18,4 +18,10 @@ interface IAccessControlUser
      * @return array
      */
     public function getPermissions();
+    
+    public function addPermission($permission);
+    
+    public function addPermissions($permissions);
+    
+    public function clearPermissions();
 }

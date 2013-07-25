@@ -27,6 +27,11 @@ class SessionAccessControlUser implements IAccessControlUser
     {
         return $this->permissions;
     }
+    
+    public function clearPermissions()
+    {
+        $this->permissions = array();
+    }
 
     public function addPermission($permission)
     {

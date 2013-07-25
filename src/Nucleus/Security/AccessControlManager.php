@@ -44,7 +44,7 @@ class AccessControlManager implements IAccessControlService
     /**
      * @param \Nucleus\IService\Security\IAccessControlUser $accessControlUser
      * 
-     * @Injects
+     * @Inject
      */
     public function setAccessControlUser(IAccessControlUser $accessControlUser)
     {
@@ -58,7 +58,7 @@ class AccessControlManager implements IAccessControlService
         }
 
         return $this->businessRuleEngine->check(
-                $permissionRules, self::BUSINESS_RULE_CONTEXT, array($accessControlerUser)
+            $permissionRules, self::BUSINESS_RULE_CONTEXT, array($accessControlerUser)
         );
     }
 

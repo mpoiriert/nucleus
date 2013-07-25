@@ -9,5 +9,3 @@ class CommandLineException extends \Exception
 {
     
 }
-
-?>

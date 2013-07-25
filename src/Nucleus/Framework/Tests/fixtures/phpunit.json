@@ -1,0 +1,7 @@
+{
+    "services": {
+        "sessionStorage": {
+            "class": "Symfony\\Component\\HttpFoundation\\Session\\Storage\\MockArraySessionStorage"
+        }
+    }
+}
