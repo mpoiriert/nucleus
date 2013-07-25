@@ -3,40 +3,90 @@
 namespace Nucleus\Dashboard;
 
 /**
- * @\Nucleus\IService\Dashboard\Service(name="Home")
+ * @\Nucleus\IService\Dashboard\Controller(name="home", title="Home")
  */
 class HomeController
 {
-    /**
-     * @\Nucleus\IService\Dashboard\Action(title="List", icon="list", type="list", default=true)
-     * @\Nucleus\IService\Dashboard\ListColumn(name="ID", property="id")
-     * @\Nucleus\IService\Dashboard\ListColumn(name="First name", property="firstname")
-     * @\Nucleus\IService\Dashboard\ListColumn(name="Last name", property="lastname")
-     * @\Nucleus\IService\Dashboard\ListAction(name="delete", icon="trash", title="Delete")
-     */
-    public function listAll()
+    protected $data = array();
+
+    public function __construct()
     {
-        return array(
-            array(1, 'foo', 'bar'),
-            array(2, 'paul', 'baz')
+        $this->data = array(
+            new HomeModel(0, 'foo', 'bar'),
+            new HomeModel(1, 'paul', 'baz', 'pwd')
         );
     }
 
     /**
-     * @\Nucleus\IService\Dashboard\Action(title="Add", icon="plus", type="form")
-     * @\Nucleus\IService\Dashboard\FormField(name="firstname", label="First name", type="text")
-     * @\Nucleus\IService\Dashboard\FormField(name="lastname", label="Last name", type="text")
+     * @\Nucleus\IService\Dashboard\Action(title="List", icon="list", default=true)
+     *
+     * @return \Nucleus\Dashboard\HomeModel[]
      */
-    public function add($firstname, $lastname)
+    public function listAll()
     {
-        return array('added' => "$firstname $lastname");
+        return $this->data;
     }
 
     /**
-     * @\Nucleus\IService\Dashboard\Action(title="Delete", icon="plus", global=false)
+     * @\Nucleus\IService\Dashboard\Action(title="Add", icon="plus")
+     * @return Nucleus\Dashboard\HomeModel
      */
-    public function delete($id)
+    public function add(HomeModel $model)
     {
-        return array('deleted' => $id);
+        $model->id = 2;
+        return $model;
+    }
+
+    /**
+     * @\Nucleus\IService\Dashboard\Action(title="Add (args)", icon="plus")
+     *
+     * @param string $firstname Firstname
+     * @param string $lastname Lastname
+     * @param string $password Password
+     */
+    public function createAndAdd($firstname, $lastname, $password = null)
+    {
+        return new HomeModel(2, $firstname, $lastname, $password);
+    }
+
+    /**
+     * @\Nucleus\IService\Dashboard\Action(title="Search", icon="search")
+     *
+     * @return \Nucleus\Dashboard\HomeModel[]
+     */
+    public function search($firstname)
+    {
+        return array_filter($this->data, function($m) {
+            return $m->firstname == $firstname;
+        });
+    }
+
+    /**
+     * @\Nucleus\IService\Dashboard\Action(title="Show", visible=false)
+     * @param int $id
+     * @return Nucleus\Dashboard\HomeModel
+     */
+    public function get($id)
+    {
+        return $this->data[$id];
+    }
+
+    /**
+     * @\Nucleus\IService\Dashboard\Action(title="Edit", icon="edit", pipe="save")
+     * @param int $id
+     * @return Nucleus\Dashboard\HomeModel
+     */
+    public function edit($id)
+    {
+        return $this->data[$id];
+    }
+
+    /**
+     * @\Nucleus\IService\Dashboard\Action(visible=false)
+     * @return Nucleus\Dashboard\HomeModel
+     */
+    public function save(HomeModel $model)
+    {
+        return $model;
     }
 }

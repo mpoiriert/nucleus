@@ -5,7 +5,8 @@ namespace Nucleus\IService\Dashboard;
 /**
  * @Annotation
  */
-class Service
+class Controller
 {
     public $name;
+    public $title;
 }

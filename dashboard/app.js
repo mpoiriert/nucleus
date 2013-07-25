@@ -74,21 +74,24 @@ $(function() {
      * Base view class for actions
      */
     Dashboard.ActionView = Backbone.View.extend({
-        tagName: 'div',
+        tagName: 'form',
         events: {
-            "submit form": "submitForm"
+            "submit": "handleFormSubmited"
         },
-        initialize: function() {
-            this.service = this.options.service;
-            this.action = this.options.action;
+        renderToolbar: function() {
+            if (this.options.actions) {
+                var tb = new Dashboard.ToolbarView({ buttons: this.options.actions });
+                this.listenTo(tb, 'btn-click', this.toolbarClick);
+                this.$el.append(tb.render().el);
+            }
+            return this.$el;
         },
-        submitForm: function(e) {
-            var form = this.$('form');
-            Dashboard.api.call(form.attr('method'), form.attr('action'), form.serialize(), _.bind(function(data) {
-                this.handleFormSubmited(data);
-            }, this));
+        toolbarClick: function(url) {
+            this.$el.attr('action', url).submit();
+        },
+        handleFormSubmited: function(e) {
+            this.trigger('submit', this.$el.serialize());
             e.preventDefault();
-            return false;
         }
     });
 
@@ -99,16 +102,25 @@ $(function() {
         className: 'form-action-view',
         template: _.template($('#form-action-tpl').html()),
         render: function() {
-            var values = {};
-            if (this.model) {
-                values = this.model;
-            }
-            this.$el.append(this.template({ action: this.action, values: values }));
+            var values = this.model || {};
+            this.$el.attr('method', 'post').html(
+                this.template({ fields: this.options.fields, values: values }));
             return this;
         },
-        handleFormSubmited: function() {
-            this.trigger('done');
-        }
+    });
+
+    /*
+     * Represents an action to show a form
+     */
+    Dashboard.ObjectActionView = Dashboard.ActionView.extend({
+        className: 'object-action-view',
+        template: _.template($('#object-action-tpl').html()),
+        render: function() {
+            var values = this.model || {};
+            this.$el.empty();
+            this.renderToolbar().append(this.template({ fields: this.options.fields, model: this.model }));
+            return this;
+        },
     });
 
     /*
@@ -119,71 +131,97 @@ $(function() {
         template: _.template($('#list-action-tpl').html()),
         render: function() {
             this.$el.empty();
-            if (this.action.actions) {
-                var tb = new Dashboard.ToolbarView({ buttons: this.action.actions });
-                this.listenTo(tb, 'btn-click', this.toolbarClick);
-                this.$el.append(tb.render().el);
-            }
-            this.$el.append(this.template({ action: this.action }));
+            this.renderToolbar().append(this.template({ fields: this.options.fields }));
             this.$('table').tablesorter();
             this.refresh();
             return this;
         },
-        toolbarClick: function(url) {
-            Dashboard.api.get(url, _.bind(function(action) {
-                if (action.type != 'call') {
-                    throw new Exception('Only call action is supported in this toolbar');
-                }
-                var form = this.$('form');
-                form.attr('action', action.url).attr('method', action.method).submit();
-            }, this));
-        },
-        handleFormSubmited: function() {
-            this.refresh();
-        },
         refresh: function() {
-            Dashboard.api.call(this.action.method, this.action.url, _.bind(function(data) {
-                var table = '';
-                _.each(data, _.bind(function(row) {
-                    table += '<tr><td><input type="checkbox" name="' + this.action.columns[0] + '[]" value="' + row[0] + '"></td>';
-                    _.each(row, function(col) {
-                        table += '<td>' + col + '</td>';
+            var table = '', id;
+            _.each(this.options.fields, function(f) {
+                if (f.identifier) {
+                    id = f;
+                }
+            });
+            _.each(this.model, _.bind(function(row) {
+                table += '<tr><td><input type="radio" name="' + id.name + '" value="' + row[id.name] + '"></td>';
+                _.each(this.options.fields, function(f) {
+                    table += '<td>';
+                    if (f.link) {
+                        table += '<a href="' + f.link + '" class="action-link" data-' + f.name + '="' + row[f.name] + '">' + row[f.name] + '</a>';
+                    } else {
+                        table += row[f.name];
+                    }
+                    table += '</td>';
+                });
+                table += '</tr>';
+            }, this));
+            this.$('table tbody').html(table);
+            this.$('table').trigger('update');
+        }
+    });
+
+    Dashboard.ActionView = Backbone.View.extend({
+        tagName: 'div',
+        className: 'action',
+        render: function() {
+            if (this.model.input.type == 'form') {
+                var view = new Dashboard.FormActionView({ fields: this.model.input.fields });
+                this.listenTo(view, 'submit', this.executeAction);
+                this.$el.empty().append(view.render().el);
+            } else {
+                this.executeAction();
+            }
+            return this;
+        },
+        renderResponse: function(data) {
+            if (this.model.output.type == 'list') {
+                var view = new Dashboard.ListActionView(this.model.output);
+            } else if (this.model.output.type == 'object') {
+                var view = new Dashboard.ObjectActionView(this.model.output);
+            } else if (this.model.output.type == 'form') {
+                var view = new Dashboard.FormActionView(this.model.output);
+                if (this.model.output.url) {
+                    this.listenTo(view, 'submit', function(data) {
+                        this.trigger('pipe', this.model.output.url, data);
                     });
-                    table += '</tr>';
-                }, this));
-                this.$('table tbody').html(table);
-                this.$('table').trigger('update');
+                }
+            } else {
+                this.trigger('done');
+                return;
+            }
+            view.model = data;
+            this.$el.empty().append(view.render().el);
+        },
+        executeAction: function(data) {
+            var method = this.model.input.type == 'form' ? 'post' : 'get',
+                data = data || {};
+
+            this.$el.html('<span class="loading">Loading...</span>');
+            Dashboard.api.call(method, this.model.input.url, data, _.bind(function(resp) {
+                this.renderResponse(resp);
             }, this));
         }
     });
 
-    Dashboard.ActionHandlers = {
-        "list": {
-            "view": Dashboard.ListActionView
-        },
-        "form": {
-            "view": Dashboard.FormActionView
-        },
-        "call": {
-            "execute": function(action) {
-                Dashboard.api.call(action.method, action.url, function(data) {
-                    alert(data);
-                });
-            }
-        }
-    };
-
     // ----------------------------------------------------
 
     /*
-     * Loads the service definition and creates the service toolbar
+     * Loads the controller definition and creates the controller toolbar
      * Loads the default action if there is one
      */
-    Dashboard.ServiceView = Backbone.View.extend({
+    Dashboard.ControllerView = Backbone.View.extend({
         tagName: 'div',
-        className: 'service',
+        className: 'controller',
+        initialize: function() {
+            var self = this;
+            this.$el.on('click', 'a.action-link', function(e) {
+                self.runAction($(this).attr('href'), $(this).data());
+                e.preventDefault();
+            });
+        },
         render: function() {
-            this.$el.html('loading...');
+            this.$el.html('<span class="loading">Loading...</span>');
             this.body = $('<div class="body" />');
             Dashboard.api.get(this.options.url, _.bind(function(actions) {
                 var tb = new Dashboard.ToolbarView({buttons: actions});
@@ -200,18 +238,17 @@ $(function() {
             }, this));
             return this;
         },
-        runAction: function(url) {
+        runAction: function(url, params) {
+            this.body.empty().html('<span class="loading">Loading...</span>');
             Dashboard.api.get(url, _.bind(function(action) {
-                if (!Dashboard.ActionHandlers[action.type]) {
-                    throw new Exception("Unsupported action: " + action.type);
-                }
-                var handler = Dashboard.ActionHandlers[action.type];
-                if (handler.view) {
-                    view = new handler.view({service: this, action: action});
-                    this.listenTo(view, 'done', this.runDefaultAction);
-                    this.body.empty().append(view.render().el);
+                var view = new Dashboard.ActionView({ model: action });
+                this.listenTo(view, 'done', this.runDefaultAction);
+                this.listenTo(view, 'pipe', this.runAction);
+                this.body.empty().append(view.el);
+                if (params) {
+                    view.executeAction(params);
                 } else {
-                    handler.execute(action);
+                    view.render();
                 }
             }, this));
         },
@@ -225,21 +262,23 @@ $(function() {
     Dashboard.App = Backbone.View.extend({
         el: "body",
         events: {
-            "click .navbar .nav a": "showService"
+            "click .navbar .nav a": "showController"
         },
         initialize: function() {
-            this.refreshServiceList();
+            this.$('#main').html('<span class="loading">Loading...</span>');
+            this.refreshControllersList();
         },
-        refreshServiceList: function() {
-            var serviceList = this.$('.navbar .nav').empty();
-            Dashboard.api.get(Dashboard.config.services_url, function(data) {
-                _(data).each(function(service) {
-                    serviceList.append($('<li><a href="' + service.url + '" data-url="' + service.url + '">' + service.name + '</a></li>'));
+        refreshControllersList: function() {
+            var nav = this.$('.navbar .nav').empty();
+            Dashboard.api.get(Dashboard.config.controllers_url, function(data) {
+                _(data).each(function(controller) {
+                    nav.append($('<li><a href="' + controller.url + '">' + controller.name + '</a></li>'));
                 });
+                nav.children().first().children().click();
             });
         },
-        showService: function(e) {
-            this.$('#main').empty().append(new Dashboard.ServiceView({url: $(e.currentTarget).data('url')}).render().el);
+        showController: function(e) {
+            this.$('#main').empty().append(new Dashboard.ControllerView({url: $(e.currentTarget).attr('href')}).render().el);
             e.preventDefault();
         }
     });
@@ -249,7 +288,7 @@ $(function() {
     $.getJSON('config.json', function(data) {
         Dashboard.config = data;
         Dashboard.ensure_config("base_url");
-        Dashboard.ensure_config("services_url");
+        Dashboard.ensure_config("controllers_url");
         Dashboard.api = new RestEndpoint(Dashboard.config.base_url);
         var app = new Dashboard.App();
     });

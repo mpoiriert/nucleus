@@ -5,12 +5,12 @@ namespace Nucleus\Dashboard;
 use Nucleus\DependencyInjection\BaseAnnotationContainerGenerator;
 use Nucleus\DependencyInjection\GenerationContext;
 
-class ServiceAnnotationContainerGenerator extends BaseAnnotationContainerGenerator
+class ControllerAnnotationContainerGenerator extends BaseAnnotationContainerGenerator
 {
     /**
      * 
      * @param GenerationContext $context
-     * @param \Nucleus\IService\Dashboard\Service $annotation
+     * @param \Nucleus\IService\Dashboard\Controller $annotation
      */
     public function generate(GenerationContext $context, $annotation)
     {
@@ -18,11 +18,8 @@ class ServiceAnnotationContainerGenerator extends BaseAnnotationContainerGenerat
         $dashboard = $context->getContainerBuilder()->getDefinition('dashboard');
         
         $dashboard->addMethodCall(
-            'addService',
-            array(
-                $serviceName,
-                $annotation->name
-            )
+            'addServiceAsController',
+            array($serviceName)
         );
     }
 }

@@ -9,8 +9,8 @@
     },
     "nucleus": {
         "annotationContainerGenerator": {
-            "Nucleus\\IService\\Dashboard\\Service": {
-                "class": "Nucleus\\Dashboard\\ServiceAnnotationContainerGenerator"
+            "Nucleus\\IService\\Dashboard\\Controller": {
+                "class": "Nucleus\\Dashboard\\ControllerAnnotationContainerGenerator"
             }
         }
     }

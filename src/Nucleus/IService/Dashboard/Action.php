@@ -9,15 +9,10 @@ class Action
 {
     public $title;
     public $icon;
-    public $type = 'call';
+    public $in;
+    public $out;
+    public $model;
     public $default = false;
-    public $global = true;
-
-    public function asArray()
-    {
-        return array(
-            'type' => $this->type,
-            'method' => $this->type == 'form' ? 'post' : 'get'
-        );
-    }
+    public $visible = true;
+    public $pipe;
 }

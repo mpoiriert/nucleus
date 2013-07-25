@@ -6,21 +6,31 @@ body {
     margin-left: 0px;
 }
 
-.service > .btn-toolbar {
-    background: #efefef;
-    margin: 0;
-    padding-left: 8px;
+.controller {
+    position: relative;
 }
-    .service > .btn-toolbar .btn {
-        border: 0;
-        background: transparent;
-        box-shadow: none;
-        padding: 7px 11px;
-    }
-.service > .body {
-    padding: 10px;
-}
-    .service > .body > .btn-toolbar {
+    .controller > .btn-toolbar {
+        background: #efefef;
         margin: 0;
-        margin-bottom: 7px;
+        padding-left: 8px;
     }
+        .controller > .btn-toolbar .btn {
+            border: 0;
+            background: transparent;
+            box-shadow: none;
+            padding: 7px 11px;
+        }
+    .controller > .body {
+        padding: 10px;
+    }
+        .controller > .body > .btn-toolbar {
+            margin: 0;
+            margin-bottom: 7px;
+        }
+
+.loading {
+    display: block;
+    font-size: 15px;
+    font-family: monospace;
+    margin: 10px;
+}

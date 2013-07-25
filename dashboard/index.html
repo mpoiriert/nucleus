@@ -40,42 +40,52 @@
   </script>
 
   <script type="text/template" id="form-action-tpl">
-    <form action="<%= action.url %>" method="<%= action.method %>">
-      <% _.each(action.fields, function(field) { %>
-        <div class="control-group">
-          <label class="control-label" for="<%= field.name %>"><%= field.label %></label>
-          <div class="controls">
-            <% if (field.type == 'textarea') { %>
-              <textarea name="<%= field.name %>"><%= values[field.name] %></textarea>
-            <% } else if (field.type == 'checkbox' || field.type == 'radio') { %>
-              <input type="<%= field.type %>" name="<%= field.name %>" value="<%= field.value %>"
-                <% if (values[field.name] == field.value) print("checked"); %>>
-            <% } else { %>
-              <input type="<%= field.type %>" name="<%= field.name %>" value="<%= values[field.name] %>">
-            <% } %>
-          </div>
+    <% _.each(fields, function(field) { %>
+      <div class="control-group">
+        <label class="control-label" for="<%= field.name %>"><%= field.title %></label>
+        <div class="controls">
+          <% if (field.type == 'textarea') { %>
+            <textarea name="<%= field.name %>"><%= values[field.name] %></textarea>
+          <% } else if (field.type == 'checkbox' || field.type == 'radio') { %>
+            <input type="<%= field.type %>" name="<%= field.name %>" value="<%= field.value %>"
+              <% if (values[field.name] == field.value) print("checked"); %>>
+          <% } else { %>
+            <input type="<%= field.type %>" name="<%= field.name %>" value="<%= values[field.name] %>">
+          <% } %>
         </div>
-      <% }) %>
-      <div class="form-actions">
-        <button type="submit" class="btn btn-primary"><%= action.btn_text || "Save" %></button>
       </div>
-    </form>
+    <% }) %>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Submit</button>
+    </div>
+  </script>
+
+  <script type="text/template" id="object-action-tpl">
+    <dl>
+    <% _.each(fields, function(field) { %>
+      <dt><%= field.title %></dt>
+      <dd>
+        <%= model[field.name] %>
+        <% if (field.identifier) { %>
+          <input type="hidden" name="<%= field.name %>" value="<%= model[field.name] %>">
+        <% } %>
+      </dd>
+    <% }) %>
+    </dl>
   </script>
 
   <script type="text/template" id="list-action-tpl">
-    <form>
-      <table class="tablesorter">
-        <thead>
-          <tr>
-            <th></th>
-          <% _.each(action.columns, function(col) { %>
-            <th><%= col %></th>
-          <% }) %>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </form>
+    <table class="tablesorter">
+      <thead>
+        <tr>
+          <th></th>
+        <% _.each(fields, function(f) { %>
+          <th><%= f.title %></th>
+        <% }) %>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </script>
 
 </body>
