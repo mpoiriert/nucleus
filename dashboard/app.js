@@ -313,7 +313,7 @@ $(function() {
             this.listenTo(view, 'done', this.runDefaultAction);
             this.listenTo(view, 'pipe', this.runAction);
             this.body.empty().append(view.render().el);
-            Dashboard.router.navigate(this.options.name + "/" + name + "?" + $.param(params || {}));
+            Dashboard.router.navigate(this.options.name + "/" + name + "?" + $.param(params || {}));
         },
         runDefaultAction: function() {
             this.runAction(this.defaultAction);

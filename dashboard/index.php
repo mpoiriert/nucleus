@@ -1,6 +1,6 @@
 <?php
   $config = json_decode(file_get_contents('config.json'), true);
-  $baseurl = $config['base_url'];
+  $baseurl = $config['base_url'] = dirname($_SERVER['SCRIPT_NAME']);
 ?>
 <!doctype html>
 <html>
