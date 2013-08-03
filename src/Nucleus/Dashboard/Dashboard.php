@@ -12,6 +12,7 @@ use Nucleus\Routing\Router;
 use Nucleus\IService\DependencyInjection\IServiceContainer;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use ReflectionClass;
 
 /**
  * Description of Dashboard
@@ -69,15 +70,16 @@ class Dashboard
     }
 
     /**
-     * @Route(name="dashboard.controllerUrls", path="/nucleus/dashboard/_controllers")
+     * @Route(name="dashboard.controllerUrls", path="/nucleus/dashboard/_schema")
      */
     public function getControllerUrls()
     {
         $controllers = array();
         foreach ($this->controllers as $controller) {
             $controllers[] = array(
-                'name' => $controller->getTitle(),
-                'url' => $this->routing->generate('dashboard.controller', 
+                'name' => $controller->getName(),
+                'title' => $controller->getTitle(),
+                'url' => $this->routing->generate('dashboard.controllerSchema', 
                     array('controllerName' => $controller->getName()))
             );
         }
@@ -85,7 +87,7 @@ class Dashboard
     }
 
     /**
-     * @Route(name="dashboard.controller", path="/nucleus/dashboard/{controllerName}/_actions")
+     * @Route(name="dashboard.controllerSchema", path="/nucleus/dashboard/{controllerName}/_schema")
      */
     public function getControllerActions($controllerName)
     {
@@ -97,14 +99,14 @@ class Dashboard
         return array_map(function($action) use ($controller, $self) {
             return array_merge($self->formatAction($action), array(
                 'default' => $action->isDefault(),
-                'url' => $self->routing->generate('dashboard.action', 
+                'url' => $self->routing->generate('dashboard.actionSchema', 
                     array('controllerName' => $controller->getName(), 'actionName' => $action->getName()))
             ));
         }, $controller->getVisibleActions());
     }
 
     /**
-     * @Route(name="dashboard.action", path="/nucleus/dashboard/{controllerName}/_actions/{actionName}")
+     * @Route(name="dashboard.actionSchema", path="/nucleus/dashboard/{controllerName}/{actionName}/_schema")
      */
     public function getAction($controllerName, $actionName)
     {
@@ -147,7 +149,7 @@ class Dashboard
         $result = $this->invoker->invoke(
             array($service, $action->getName()), $params, array($request, $response));
 
-        return $result;
+        return $this->formatResponse($action, $result);
     }
 
     /**
@@ -170,8 +172,10 @@ class Dashboard
         $params = array_merge($request->query->all(), $request->request->all());
         $model = $this->instanciateModel($action->getInputModel(), $params);
 
-        return $this->invoker->invoke(
+        $result = $this->invoker->invoke(
             array($model, $modelAction->getName()), $params, array($request, $response));
+
+        return $this->formatResponse($action, $result, $model);
     }
 
     public function formatAction(ActionDefinition $action)
@@ -223,7 +227,7 @@ class Dashboard
         }
 
         if ($action->isPiped()) {
-            $json['url'] = $this->routing->generate('dashboard.action',
+            $json['url'] = $this->routing->generate('dashboard.actionSchema',
                 array('controllerName' => $controller->getName(), 'actionName' => $action->getPipe()));
         }
 
@@ -236,8 +240,12 @@ class Dashboard
         return array_values(array_map(function($f) use ($self) {
             if ($link = $f->getLink()) {
                 list($controller, $action) = explode('::', $link, 2);
-                $link = $self->routing->generate('dashboard.action',
-                    array('controllerName' => $controller, 'actionName' => $action));
+                $link = array(
+                    'controller' => $controller,
+                    'action' => $action,
+                    'url' => $self->routing->generate('dashboard.actionSchema',
+                        array('controllerName' => $controller, 'actionName' => $action))
+                );
             }
 
             return array(
@@ -253,13 +261,50 @@ class Dashboard
         }, $fields));
     }
 
+    protected function formatResponse($action, $result, $obj = null)
+    {
+        $model = $action->getReturnModel();
+        if ($action->getReturnType() === ActionDefinition::RETURN_LIST) {
+            $list = array();
+            foreach ($result as $item) {
+                $list[] = $this->convertObjectToJson($item, $model);
+            }
+            return $list;
+        }
+        return $this->convertObjectToJson($result, $model);
+    }
+
+    protected function convertObjectToJson($obj, $model)
+    {
+        $json = array();
+        $class = new ReflectionClass($obj);
+        foreach ($model->getListableFields() as $f) {
+            $p = $f->getProperty();
+            $getter = 'get' . ucfirst($p);
+            if ($class->hasProperty($p) && $class->getProperty($p)->isPublic()) {
+                $json[$p] = $class->getProperty($p)->getValue($obj);
+            } else if ($class->hasMethod($getter)) {
+                $json[$p] = $class->getMethod($getter)->invoke($obj);
+            }
+        }
+        return $json;
+    }
+
     protected function instanciateModel(ModelDefinition $model, $data = array())
     {
         $className = $model->getClassName();
-        $obj = new $className();
+        $class = new ReflectionClass($className);
+        $obj = $class->newInstance();
         foreach ($model->getEditableFields() as $f) {
-            if (isset($data[$f->getProperty()])) {
-                $obj->{$f->getProperty()} = $data[$f->getProperty()];
+            $p = $f->getProperty();
+            $setter = 'set' . ucfirst($p);
+            if (!isset($data[$p])) {
+                continue;
+            }
+            if ($class->hasProperty($p)) {
+                $class->getProperty($p)->setValue($obj, $data[$p]);
+            } else if ($class->hasMethod($setter)) {
+                $class->getMethod($setter)->invoke($obj, $data[$p]);
             }
         }
         return $obj;

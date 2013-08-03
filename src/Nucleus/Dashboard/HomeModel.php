@@ -11,7 +11,7 @@ class HomeModel
     /**
      * @var int
      */
-    public $id;
+    protected $id;
 
     /**
      * @\Nucleus\IService\Dashboard\ModelField(name="First name")
@@ -39,5 +39,15 @@ class HomeModel
     public function delete()
     {
 
+    }
+
+    public function getId()
+    {
+        return $this->id;
+    }
+
+    public function setId($id)
+    {
+        $this->id = $id;
     }
 }

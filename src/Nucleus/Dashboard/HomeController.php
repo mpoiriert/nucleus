@@ -33,7 +33,7 @@ class HomeController
      */
     public function add(HomeModel $model)
     {
-        $model->id = 2;
+        $model->setId(2);
         return $model;
     }
 
@@ -56,7 +56,7 @@ class HomeController
      */
     public function search($firstname)
     {
-        return array_filter($this->data, function($m) {
+        return array_filter($this->data, function($m) use ($firstname) {
             return $m->firstname == $firstname;
         });
     }

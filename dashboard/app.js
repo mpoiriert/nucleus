@@ -76,14 +76,18 @@ $(function() {
         className: 'btn-toolbar',
         template: _.template($('#toolbar-tpl').html()),
         events: {
-            "click button": "btnClick"
+            "click a": "btnClick"
+        },
+        initialize: function() {
+            this.base_url = this.options.base_url || '';
         },
         render: function() {
-            this.$el.html(this.template({buttons: this.options.buttons}));
+            this.$el.html(this.template({ base_url: this.base_url, buttons: this.options.buttons }));
             return this;
         },
         btnClick: function(e) {
-            this.trigger("btn-click", $(e.currentTarget).data('url'));
+            this.trigger("btn-click", $(e.currentTarget).data('action'));
+            e.preventDefault();
         }
     });
 
@@ -165,7 +169,8 @@ $(function() {
                 _.each(this.options.fields, function(f) {
                     table += '<td>';
                     if (f.link) {
-                        table += '<a href="' + f.link + '" class="action-link" data-' + f.name + '="' + row[f.name] + '">' + row[f.name] + '</a>';
+                        table += '<a href="' + Dashboard.config.base_url + "/" + f.link.controller + "/" + f.link.action + '?' + f.name + '=' + row[f.name] + 
+                            '" class="action-link" data-action="' + f.link.action + '" data-params=\'{"' + f.name + '": "' + row[f.name] + '"}\'>' + row[f.name] + '</a>';
                     } else {
                         table += row[f.name];
                     }
@@ -181,26 +186,37 @@ $(function() {
     Dashboard.ActionView = Backbone.View.extend({
         tagName: 'div',
         className: 'action',
+        initialize: function() {
+            this.action_url = "/" + this.options.controller + "/" + this.options.name;
+            this.schema_url = Dashboard.config.schema_base_url + this.action_url + "/_schema";
+        },
         render: function() {
-            if (this.model.input.type == 'form') {
-                var view = new Dashboard.FormActionView({ fields: this.model.input.fields });
-                this.listenTo(view, 'submit', this.executeAction);
-                this.$el.empty().append(view.render().el);
-            } else {
-                this.executeAction();
-            }
+            this.$el.html('<span class="loading">Loading...</span>');
+            Dashboard.api.get(RestEndpoint.cached(this.schema_url), _.bind(function(schema) {
+                this.schema = schema;
+                if ((this.options.params && !$.isEmptyObject(this.options.params)) || schema.input.type != 'form') {
+                    this.executeAction(this.options.params || {});
+                } else {
+                    this.renderInput();
+                }
+            }, this));
             return this;
         },
+        renderInput: function() {
+            var view = new Dashboard.FormActionView({ fields: this.schema.input.fields });
+            this.listenTo(view, 'submit', this.executeAction);
+            this.$el.empty().append(view.render().el);
+        },
         renderResponse: function(data) {
-            if (this.model.output.type == 'list') {
-                var view = new Dashboard.ListActionView(this.model.output);
-            } else if (this.model.output.type == 'object') {
-                var view = new Dashboard.ObjectActionView(this.model.output);
-            } else if (this.model.output.type == 'form') {
-                var view = new Dashboard.FormActionView(this.model.output);
-                if (this.model.output.url) {
+            if (this.schema.output.type == 'list') {
+                var view = new Dashboard.ListActionView(this.schema.output);
+            } else if (this.schema.output.type == 'object') {
+                var view = new Dashboard.ObjectActionView(this.schema.output);
+            } else if (this.schema.output.type == 'form') {
+                var view = new Dashboard.FormActionView(this.schema.output);
+                if (this.schema.output.url) {
                     this.listenTo(view, 'submit', function(data) {
-                        this.trigger('pipe', this.model.output.url, data);
+                        this.trigger('pipe', this.schema.output.url, data);
                     });
                 }
             } else {
@@ -211,11 +227,14 @@ $(function() {
             this.$el.empty().append(view.render().el);
         },
         executeAction: function(data) {
-            var method = this.model.input.type == 'form' ? 'post' : 'get',
+            var method = this.schema.input.type == 'form' ? 'post' : 'get',
                 data = data || {};
 
             this.$el.html('<span class="loading">Loading...</span>');
-            Dashboard.api.call(method, this.model.input.url, data, _.bind(function(resp) {
+            Dashboard.api.call(method, this.schema.input.url, data, _.bind(function(resp) {
+                if (method == 'get') {
+                    Dashboard.router.navigate(this.action_url + '?' + $.param(data));
+                }
                 this.renderResponse(resp);
             }, this));
         }
@@ -232,42 +251,45 @@ $(function() {
         className: 'controller',
         initialize: function() {
             var self = this;
+            this.schema_url = Dashboard.config.schema_base_url + "/" + this.options.name + "/_schema";
             this.$el.on('click', 'a.action-link', function(e) {
-                self.runAction($(this).attr('href'), $(this).data());
+                self.runAction($(this).data('action'), $(this).data('params'));
                 e.preventDefault();
             });
         },
         render: function() {
             this.$el.html('<span class="loading">Loading...</span>');
             this.body = $('<div class="body" />');
-            Dashboard.api.get(RestEndpoint.cached(this.options.url), _.bind(function(actions) {
-                var tb = new Dashboard.ToolbarView({buttons: actions});
+            Dashboard.api.get(RestEndpoint.cached(this.schema_url), _.bind(function(schema) {
+                this.schema = schema;
+
+                var tb_base_url = Dashboard.config.base_url + "/" + this.options.name + "/",
+                    tb = new Dashboard.ToolbarView({ base_url: tb_base_url, buttons: schema });
                 this.listenTo(tb, "btn-click", this.runAction);
                 this.$el.empty().append(tb.render().el).append(this.body);
-                this.defaultAction = actions[0].url;
-                _.each(actions, _.bind(function(action) {
+
+                this.defaultAction = schema[0].name;
+                _.each(schema, _.bind(function(action) {
                     if (action.default) {
-                        this.defaultAction = action.url;
-                        this.runAction(action.url);
+                        this.defaultAction = action.name;
                         return;
                     }
                 }, this));
+
+                if (this.options.action) {
+                    this.runAction(this.options.action, this.options.params);
+                } else {
+                    this.runAction(this.defaultAction);
+                }
             }, this));
             return this;
         },
-        runAction: function(url, params) {
-            this.body.empty().html('<span class="loading">Loading...</span>');
-            Dashboard.api.get(RestEndpoint.cached(url), _.bind(function(action) {
-                var view = new Dashboard.ActionView({ model: action });
-                this.listenTo(view, 'done', this.runDefaultAction);
-                this.listenTo(view, 'pipe', this.runAction);
-                this.body.empty().append(view.el);
-                if (params) {
-                    view.executeAction(params);
-                } else {
-                    view.render();
-                }
-            }, this));
+        runAction: function(name, params) {
+            var view = new Dashboard.ActionView({ controller: this.options.name, name: name, params: params });
+            this.listenTo(view, 'done', this.runDefaultAction);
+            this.listenTo(view, 'pipe', this.runAction);
+            this.body.empty().append(view.render().el);
+            Dashboard.router.navigate(this.options.name + "/" + name + "?" + $.param(params || {}));
         },
         runDefaultAction: function() {
             this.runAction(this.defaultAction);
@@ -279,35 +301,90 @@ $(function() {
     Dashboard.App = Backbone.View.extend({
         el: "body",
         events: {
-            "click .navbar .nav a": "showController"
+            "click .navbar .nav a": "onNavClick"
         },
         initialize: function() {
             this.$('#main').html('<span class="loading">Loading...</span>');
+            this.loaded = false;
+            this.runDefaultControllerOnLoad = false;
             this.refreshControllersList();
         },
         refreshControllersList: function() {
             var nav = this.$('.navbar .nav').empty();
-            Dashboard.api.get(Dashboard.config.controllers_url, function(data) {
-                _(data).each(function(controller) {
-                    nav.append($('<li><a href="' + controller.url + '">' + controller.name + '</a></li>'));
+            Dashboard.api.get(Dashboard.config.schema_base_url + Dashboard.config.schema_url, _.bind(function(schema) {
+                this.schema = schema;
+                _(schema).each(function(controller) {
+                    nav.append($('<li><a href="' + Dashboard.config.base_url + "/" + controller.name + 
+                        '" data-controller="' + controller.name + '">' + controller.title + '</a></li>'));
                 });
-                nav.children().first().children().click();
-            });
+                this.loaded = true;
+                if (this.runDefaultControllerOnLoad) {
+                    this.runDefaultControllerOnLoad = false;
+                    this.runDefaultController();
+                }
+            }, this));
         },
-        showController: function(e) {
-            this.$('#main').empty().append(new Dashboard.ControllerView({url: $(e.currentTarget).attr('href')}).render().el);
+        runDefaultController: function() {
+            if (this.loaded) {
+                this.$('.navbar .nav').children().first().children().click();
+            } else {
+                this.runDefaultControllerOnLoad = true;
+            }
+        },
+        runController: function(name, action, params) {
+            this.$('#main').empty().append(new Dashboard.ControllerView({name: name, action: action, params: params}).render().el);
+        },
+        onNavClick: function(e) {
+            var name = $(e.currentTarget).data('controller');
+            Dashboard.router.navigate(name);
+            this.runController(name);
             e.preventDefault();
+        }
+    });
+
+    Dashboard.Router = Backbone.Router.extend({
+        initialize: function(options) {
+            this.route(":controller/:action", "action");
+            this.route(":controller", "controller");
+            this.route("", "home");
+        },
+        home: function() {
+            Dashboard.app.runDefaultController();
+        },
+        controller: function(controller) {
+            Dashboard.app.runController(controller);
+        },
+        action: function(controller, action) {
+            Dashboard.app.runController(controller, action, this._parseQueryString());
+        },
+        _parseQueryString: function() {
+            var qs = window.location.search.substring(1), result = {};
+            if(!qs){
+                return result;
+            }
+            $.each(qs.split('&'), function(index, value){
+                if(value){
+                    var param = value.split('=');
+                    result[param[0]] = param[1];
+                }
+            });
+            return result;
         }
     });
 
     // ----------------------------------------------------
 
-    $.getJSON('config.json', function(data) {
-        Dashboard.config = data;
+    Dashboard.start = function(config) {
+        Dashboard.config = config;
         Dashboard.ensure_config("base_url");
-        Dashboard.ensure_config("controllers_url");
-        Dashboard.api = new RestEndpoint(Dashboard.config.base_url);
-        var app = new Dashboard.App();
-    });
+        Dashboard.ensure_config("api_base_url");
+        Dashboard.ensure_config("schema_base_url");
+        Dashboard.ensure_config("schema_url");
+
+        Dashboard.api = new RestEndpoint(Dashboard.config.base_url + Dashboard.config.api_base_url);
+        Dashboard.app = new Dashboard.App();
+        Dashboard.router = new Dashboard.Router();
+        Backbone.history.start({ pushState: true, root: Dashboard.config.base_url });
+    };
 
 });

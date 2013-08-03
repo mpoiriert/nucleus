@@ -1,4 +1,6 @@
 {
-    "base_url": "../web/app.php",
-    "controllers_url": "/nucleus/dashboard/_controllers"
+    "base_url": "/projects/Code/PHP/nucleus/dashboard",
+    "api_base_url": "/../web/app.php",
+    "schema_base_url": "/nucleus/dashboard",
+    "schema_url": "/_schema"
 }

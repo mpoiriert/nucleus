@@ -55,14 +55,11 @@ class DefinitionBuilder
             if (!$anno->property) {
                 throw new DefinitionBuilderException("Field '{$anno->name}' of model '$className' is missing the 'property' attribute");
             }
-            if ($class->hasProperty($anno->property) && !$class->getProperty($anno->property)->isPublic()) {
-                throw new DefinitionBuilderException("Property '{$anno->property}' of model '$className' must be public to be used as a field");
-            }
             $classProperties[$anno->property] = $anno;
         }
 
         $fields = array();
-        foreach ($class->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
+        foreach ($class->getProperties() as $property) {
             $annos = $annotations->getPropertyAnnotations($property->getName(), array($annoFilter));
             if (empty($annos)) {
                 if (!isset($classProperties[$property->getName()])) {

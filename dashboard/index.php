@@ -1,3 +1,7 @@
+<?php
+  $config = json_decode(file_get_contents('config.json'), true);
+  $baseurl = $config['base_url'];
+?>
 <!doctype html>
 <html>
 <head>
@@ -5,27 +9,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard</title>
 
-  <link rel="stylesheet" type="text/css" href="vendor/bootstrap/css/bootstrap.min.css" />
-  <link rel="stylesheet" type="text/css" href="vendor/bootstrap/css/bootstrap-responsive.min.css" />
-  <link rel="stylesheet" type="text/css" href="vendor/tablesorter/themes/blue/style.css" />
-  <link rel="stylesheet" type="text/css" href="app.css" />
+  <link rel="stylesheet" type="text/css" href="<?php echo $baseurl ?>/vendor/bootstrap/css/bootstrap.min.css" />
+  <link rel="stylesheet" type="text/css" href="<?php echo $baseurl ?>/vendor/bootstrap/css/bootstrap-responsive.min.css" />
+  <link rel="stylesheet" type="text/css" href="<?php echo $baseurl ?>/vendor/tablesorter/themes/blue/style.css" />
+  <link rel="stylesheet" type="text/css" href="<?php echo $baseurl ?>/app.css" />
 
-  <script type="text/javascript" src="vendor/jquery-1.10.1.min.js"></script>
-  <script type="text/javascript" src="vendor/json2.js"></script>
-  <script type="text/javascript" src="vendor/underscore-min.js"></script>
-  <script type="text/javascript" src="vendor/backbone-min.js"></script>
-  <script type="text/javascript" src="vendor/bootstrap/js/bootstrap.min.js"></script>
-  <script type="text/javascript" src="vendor/tablesorter/jquery.tablesorter.min.js"></script>
+  <script type="text/javascript" src="<?php echo $baseurl ?>/vendor/jquery-1.10.1.min.js"></script>
+  <script type="text/javascript" src="<?php echo $baseurl ?>/vendor/json2.js"></script>
+  <script type="text/javascript" src="<?php echo $baseurl ?>/vendor/underscore-min.js"></script>
+  <script type="text/javascript" src="<?php echo $baseurl ?>/vendor/backbone-min.js"></script>
+  <script type="text/javascript" src="<?php echo $baseurl ?>/vendor/bootstrap/js/bootstrap.min.js"></script>
+  <script type="text/javascript" src="<?php echo $baseurl ?>/vendor/tablesorter/jquery.tablesorter.min.js"></script>
 
-  <script type="text/javascript" src="app.js"></script>
+  <script type="text/javascript" src="<?php echo $baseurl ?>/app.js"></script>
+  <script type="text/javascript">
+    $(function() {
+      Dashboard.start(<?php echo json_encode($config); ?>);
+    });
+  </script>
 </head>
 <body>
   <div class="navbar navbar-inverse navbar-fixed-top">
     <div class="navbar-inner">
       <a class="brand" href="#">Dashboard</a>
-      <ul class="nav">
-
-      </ul>
+      <ul class="nav"></ul>
     </div>
   </div>
 
@@ -34,7 +41,7 @@
   <script type="text/template" id="toolbar-tpl">
     <div class="btn-group">
     <% _.each(buttons, function(btn) { %>
-        <button data-url="<%= btn.url %>" class="btn"><i class="icon-<%= btn.icon %>"></i> <%= btn.title %></button>
+        <a href="<%= base_url + btn.name %>" data-action="<%= btn.name %>" class="btn"><i class="icon-<%= btn.icon %>"></i> <%= btn.title %></a>
     <% }); %>
     </div>
   </script>
