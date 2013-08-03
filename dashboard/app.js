@@ -94,32 +94,47 @@ $(function() {
     /*
      * Base view class for actions
      */
-    Dashboard.ActionView = Backbone.View.extend({
+    Dashboard.BaseWidgetView = Backbone.View.extend({
         tagName: 'form',
         events: {
             "submit": "handleFormSubmited"
         },
         renderToolbar: function() {
             if (this.options.actions) {
-                var tb = new Dashboard.ToolbarView({ buttons: this.options.actions });
+                var tb = new Dashboard.ToolbarView({ base_url: "#", buttons: this.options.actions });
                 this.listenTo(tb, 'btn-click', this.toolbarClick);
                 this.$el.append(tb.render().el);
             }
             return this.$el;
         },
-        toolbarClick: function(url) {
-            this.$el.attr('action', url).submit();
+        toolbarClick: function(action, url) {
+            this.trigger('pipe', action, this.serialize());
         },
         handleFormSubmited: function(e) {
-            this.trigger('submit', this.$el.serialize());
+            this.trigger('submit', this.serialize());
             e.preventDefault();
+        },
+        serialize: function() {
+            var o = {};
+            var a = this.$el.serializeArray();
+            $.each(a, function() {
+                if (o[this.name] !== undefined) {
+                    if (!o[this.name].push) {
+                        o[this.name] = [o[this.name]];
+                    }
+                    o[this.name].push(this.value || '');
+                } else {
+                    o[this.name] = this.value || '';
+                }
+            });
+            return o;
         }
     });
 
     /*
      * Represents an action to show a form
      */
-    Dashboard.FormActionView = Dashboard.ActionView.extend({
+    Dashboard.FormWidgetView = Dashboard.BaseWidgetView.extend({
         className: 'form-action-view',
         template: _.template($('#form-action-tpl').html()),
         render: function() {
@@ -133,7 +148,7 @@ $(function() {
     /*
      * Represents an action to show a form
      */
-    Dashboard.ObjectActionView = Dashboard.ActionView.extend({
+    Dashboard.ObjectWidgetView = Dashboard.BaseWidgetView.extend({
         className: 'object-action-view',
         template: _.template($('#object-action-tpl').html()),
         render: function() {
@@ -147,7 +162,7 @@ $(function() {
     /*
      * Represents an action to show a table of item
      */
-    Dashboard.ListActionView = Dashboard.ActionView.extend({
+    Dashboard.ListWidgetView = Dashboard.BaseWidgetView.extend({
         className: 'list-action-view',
         template: _.template($('#list-action-tpl').html()),
         render: function() {
@@ -187,7 +202,9 @@ $(function() {
         tagName: 'div',
         className: 'action',
         initialize: function() {
-            this.action_url = "/" + this.options.controller + "/" + this.options.name;
+            this.controller = this.options.controller;
+            this.name = this.options.name;
+            this.action_url = "/" + this.controller.name + "/" + this.name;
             this.schema_url = Dashboard.config.schema_base_url + this.action_url + "/_schema";
         },
         render: function() {
@@ -203,27 +220,33 @@ $(function() {
             return this;
         },
         renderInput: function() {
-            var view = new Dashboard.FormActionView({ fields: this.schema.input.fields });
+            var view = new Dashboard.FormWidgetView({ fields: this.schema.input.fields });
             this.listenTo(view, 'submit', this.executeAction);
             this.$el.empty().append(view.render().el);
         },
         renderResponse: function(data) {
             if (this.schema.output.type == 'list') {
-                var view = new Dashboard.ListActionView(this.schema.output);
+                var view = new Dashboard.ListWidgetView(this.schema.output);
             } else if (this.schema.output.type == 'object') {
-                var view = new Dashboard.ObjectActionView(this.schema.output);
+                var view = new Dashboard.ObjectWidgetView(this.schema.output);
             } else if (this.schema.output.type == 'form') {
-                var view = new Dashboard.FormActionView(this.schema.output);
-                if (this.schema.output.url) {
-                    this.listenTo(view, 'submit', function(data) {
-                        this.trigger('pipe', this.schema.output.url, data);
-                    });
-                }
+                var view = new Dashboard.FormWidgetView(this.schema.output);
             } else {
                 this.trigger('done');
                 return;
             }
+
             view.model = data;
+            this.listenTo(view, 'pipe', function(action, data) {
+                this.trigger('pipe', action, data);
+            });
+
+            if (this.schema.output.pipe) {
+                this.listenTo(view, 'submit', function(data) {
+                    this.trigger('pipe', this.schema.output.pipe, data);
+                });
+            }
+
             this.$el.empty().append(view.render().el);
         },
         executeAction: function(data) {
@@ -251,7 +274,8 @@ $(function() {
         className: 'controller',
         initialize: function() {
             var self = this;
-            this.schema_url = Dashboard.config.schema_base_url + "/" + this.options.name + "/_schema";
+            this.name = this.options.name;
+            this.schema_url = Dashboard.config.schema_base_url + "/" + this.name + "/_schema";
             this.$el.on('click', 'a.action-link', function(e) {
                 self.runAction($(this).data('action'), $(this).data('params'));
                 e.preventDefault();
@@ -263,7 +287,7 @@ $(function() {
             Dashboard.api.get(RestEndpoint.cached(this.schema_url), _.bind(function(schema) {
                 this.schema = schema;
 
-                var tb_base_url = Dashboard.config.base_url + "/" + this.options.name + "/",
+                var tb_base_url = Dashboard.config.base_url + "/" + this.name + "/",
                     tb = new Dashboard.ToolbarView({ base_url: tb_base_url, buttons: schema });
                 this.listenTo(tb, "btn-click", this.runAction);
                 this.$el.empty().append(tb.render().el).append(this.body);
@@ -285,7 +309,7 @@ $(function() {
             return this;
         },
         runAction: function(name, params) {
-            var view = new Dashboard.ActionView({ controller: this.options.name, name: name, params: params });
+            var view = new Dashboard.ActionView({ controller: this, name: name, params: params });
             this.listenTo(view, 'done', this.runDefaultAction);
             this.listenTo(view, 'pipe', this.runAction);
             this.body.empty().append(view.render().el);

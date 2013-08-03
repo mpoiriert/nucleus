@@ -126,6 +126,37 @@ class Dashboard
     }
 
     /**
+     * @Route(name="dashboard.modelActionSchema", path="/nucleus/dashboard/{controllerName}/{actionName}/{modelActionName}/_schema")
+     */
+    public function getModelAction($controllerName, $actionName, $modelActionName)
+    {
+        if (($controller = $this->getController($controllerName)) === false) {
+            throw new DashboardException("Controller '$controllerName' not found");
+        }
+
+        if (($action = $controller->getAction($actionName)) === false) {
+            throw new DashboardException("Action '$actionName' of '$controllerName' not found");
+        }
+
+        if (($modelAction = $action->getReturnModel()->getAction($modelActionName)) === false) {
+            throw new DashboardException("Action '$modelActionName' from model of action '$actionName' of '$controllerName' not found");
+        }
+
+        return array_merge(
+            $this->formatAction($modelAction),
+            array('name' => $action->getName() . '/' . $modelAction->getName()),
+            array('input' => array_merge(
+                $this->formatActionInput($controller, $action),
+                array('url' => $this->routing->generate('dashboard.invokeModel', array(
+                    'controllerName' => $controller->getName(), 'actionName' => $action->getName(), 
+                    'modelActionName' => $modelAction->getName()))
+                )
+            )),
+            array('output' => $this->formatActionOutput($controller, $modelAction))
+        );
+    }
+
+    /**
      * @Route(name="dashboard.invoke", path="/nucleus/dashboard/{controllerName}/{actionName}")
      */
     public function invokeAction($controllerName, $actionName, Request $request, Response $response)
@@ -170,12 +201,12 @@ class Dashboard
         }
 
         $params = array_merge($request->query->all(), $request->request->all());
-        $model = $this->instanciateModel($action->getInputModel(), $params);
+        $model = $this->instanciateModel($action->getReturnModel(), $params);
 
         $result = $this->invoker->invoke(
             array($model, $modelAction->getName()), $params, array($request, $response));
 
-        return $this->formatResponse($action, $result, $model);
+        return $this->formatResponse($modelAction, $result, $model);
     }
 
     public function formatAction(ActionDefinition $action)
@@ -212,13 +243,23 @@ class Dashboard
         $json = array('type' => $action->getReturnType());
 
         $self = $this;
-        $json['actions'] = array_map(function($modelAction) use ($controller, $action, $self) {
-            return array_merge($self->formatAction($modelAction), array(
-                'url' => $self->routing->generate('dashboard.invokeModel', 
-                    array('controllerName' => $controller->getName(), 'actionName' => $action->getName(), 
-                        'modelActionName' => $modelAction->getName()))
-            ));
-        }, $action->getReturnModel()->getActions());
+        $json['actions'] = array_merge(
+            array_map(function($modelAction) use ($controller, $action, $self) {
+                return array_merge($self->formatAction($modelAction), array(
+                    'name' => $action->getName() . '/' . $modelAction->getName(),
+                    'url' => $self->routing->generate('dashboard.invokeModel', 
+                        array('controllerName' => $controller->getName(), 'actionName' => $action->getName(), 
+                            'modelActionName' => $modelAction->getName()))
+                ));
+            }, $action->getReturnModel()->getActions()),
+
+            array_map(function($action) use ($controller, $self) {
+                return array_merge($self->formatAction($action), array(
+                    'url' => $self->routing->generate('dashboard.invoke', 
+                        array('controllerName' => $controller->getName(), 'actionName' => $action->getName()))
+                ));
+            }, $controller->getActionsForModel($action->getReturnModel()->getClassName()))
+        );
 
         if ($action->getReturnType() === ActionDefinition::RETURN_FORM) {
             $json['fields'] = $this->formatFields($action->getReturnModel()->getEditableFields());
@@ -227,6 +268,7 @@ class Dashboard
         }
 
         if ($action->isPiped()) {
+            $json['pipe'] = $action->getPipe();
             $json['url'] = $this->routing->generate('dashboard.actionSchema',
                 array('controllerName' => $controller->getName(), 'actionName' => $action->getPipe()));
         }
@@ -270,6 +312,8 @@ class Dashboard
                 $list[] = $this->convertObjectToJson($item, $model);
             }
             return $list;
+        } else if ($action->getReturnType() === ActionDefinition::RETURN_NONE) {
+            return null;
         }
         return $this->convertObjectToJson($result, $model);
     }

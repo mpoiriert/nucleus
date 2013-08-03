@@ -14,7 +14,7 @@ class ModelDefinition
 
     public function setClassName($className)
     {
-        $this->className = $className;
+        $this->className = trim($className, '\\');
         return $this;
     }
 

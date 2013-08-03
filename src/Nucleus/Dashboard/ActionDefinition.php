@@ -35,6 +35,8 @@ class ActionDefinition
 
     protected $pipe;
 
+    protected $appliedToModel;
+
     public function setName($name)
     {
         $this->name = $name;
@@ -178,5 +180,21 @@ class ActionDefinition
     public function getPipe()
     {
         return $this->pipe;
+    }
+
+    public function applyToModel($className)
+    {
+        $this->appliedToModel = trim($className, '\\');
+        return $this;
+    }
+
+    public function isAppliedToModel()
+    {
+        return $this->appliedToModel !== null;
+    }
+
+    public function getAppliedToModel()
+    {
+        return $this->appliedToModel;
     }
 }

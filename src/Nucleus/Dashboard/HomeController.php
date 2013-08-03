@@ -72,8 +72,7 @@ class HomeController
     }
 
     /**
-     * @\Nucleus\IService\Dashboard\Action(title="Edit", icon="edit", pipe="save")
-     * @param int $id
+     * @\Nucleus\IService\Dashboard\Action(title="Edit", icon="edit", on_model="Nucleus\Dashboard\HomeModel", pipe="save")
      * @return Nucleus\Dashboard\HomeModel
      */
     public function edit($id)

@@ -30,7 +30,7 @@ class ControllerDefinition
 
     public function setClassName($className)
     {
-        $this->className = $className;
+        $this->className = trim($className, '\\');
         if ($this->name === null) {
             $this->name = basename(str_replace('\\', '/', $this->className));
         }
@@ -104,6 +104,15 @@ class ControllerDefinition
 
     public function getVisibleActions()
     {
-        return array_filter($this->actions, function($a) { return $a->isVisible(); });
+        return array_filter($this->actions, function($a) { 
+            return $a->isVisible() && !$a->isAppliedToModel();
+        });
+    }
+
+    public function getActionsForModel($className)
+    {
+        return array_filter($this->actions, function($a) use ($className) { 
+            return $a->isAppliedToModel() && $a->getAppliedToModel() === $className;
+        });
     }
 }

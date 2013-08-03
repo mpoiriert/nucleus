@@ -15,4 +15,5 @@ class Action
     public $default = false;
     public $visible = true;
     public $pipe;
+    public $on_model = false;
 }

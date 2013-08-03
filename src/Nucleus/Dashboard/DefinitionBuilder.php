@@ -115,6 +115,10 @@ class DefinitionBuilder
             if ($annotation->pipe) {
                 $action->setPipe($annotation->pipe);
             }
+
+            if ($annotation->on_model) {
+                $action->applyToModel($annotation->on_model);
+            }
         }
 
         if (!$annotation || $annotation->in === null) {
