@@ -17,16 +17,24 @@ $(function() {
      */
     var RestEndpoint= function(base_url) {
         this.base_url = base_url;
+        this.cache = {};
     };
 
     RestEndpoint.prototype.call = function(method, action, params, callback) {
         if (typeof(action) == 'function') {
-            callback = action;
-            action = '';
+            action = action();
         }
         if (typeof(params) == 'function') {
             callback = params;
             params = {};
+        }
+        var options = {};
+        if (typeof(action) != 'string') {
+            _.extend(options, action);
+            action = action.url;
+        }
+        if (options.cached && this.cache[options.cache_id]) {
+            return callback(this.cache[options.cache_id]);
         }
         $.ajax({
             url: this.base_url + action,
@@ -34,9 +42,14 @@ $(function() {
             dataType: 'json',
             crossDomain: true,
             data: params || {}
-        }).done(function(data) {
+        }).done(_.bind(function(data) {
+            this.cache[options.cache_id] = data.result;
             callback(data.result);
-        });
+        }, this));
+    };
+
+    RestEndpoint.prototype.clearCache = function() {
+        this.cache = {};
     };
 
     RestEndpoint.prototype.createEndpoint = function(url) {
@@ -48,6 +61,10 @@ $(function() {
             return this.call(method.toUpperCase(), action, params, callback);
         };
     });
+
+    RestEndpoint.cached = function(url) {
+        return {url: url, cached: true, cache_id: url};
+    };
 
     // ----------------------------------------------------
 
@@ -223,7 +240,7 @@ $(function() {
         render: function() {
             this.$el.html('<span class="loading">Loading...</span>');
             this.body = $('<div class="body" />');
-            Dashboard.api.get(this.options.url, _.bind(function(actions) {
+            Dashboard.api.get(RestEndpoint.cached(this.options.url), _.bind(function(actions) {
                 var tb = new Dashboard.ToolbarView({buttons: actions});
                 this.listenTo(tb, "btn-click", this.runAction);
                 this.$el.empty().append(tb.render().el).append(this.body);
@@ -240,7 +257,7 @@ $(function() {
         },
         runAction: function(url, params) {
             this.body.empty().html('<span class="loading">Loading...</span>');
-            Dashboard.api.get(url, _.bind(function(action) {
+            Dashboard.api.get(RestEndpoint.cached(url), _.bind(function(action) {
                 var view = new Dashboard.ActionView({ model: action });
                 this.listenTo(view, 'done', this.runDefaultAction);
                 this.listenTo(view, 'pipe', this.runAction);
