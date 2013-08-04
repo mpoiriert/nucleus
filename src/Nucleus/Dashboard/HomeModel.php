@@ -25,6 +25,11 @@ class HomeModel
      */
     public $lastname;
 
+    /**
+     * @\Nucleus\IService\Dashboard\ModelField(name="Age", type="int[]")
+     */
+    public $age;
+
     public function __construct($id = null, $firstname = null, $lastname = null, $password = null)
     {
         $this->id = $id;

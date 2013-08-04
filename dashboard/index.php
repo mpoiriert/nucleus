@@ -51,13 +51,14 @@
       <div class="control-group">
         <label class="control-label" for="<%= field.name %>"><%= field.title %></label>
         <div class="controls">
-          <% if (field.type == 'textarea') { %>
-            <textarea name="<%= field.name %>"><%= values[field.name] %></textarea>
-          <% } else if (field.type == 'checkbox' || field.type == 'radio') { %>
-            <input type="<%= field.type %>" name="<%= field.name %>" value="<%= field.value %>"
-              <% if (values[field.name] == field.value) print("checked"); %>>
+          <% if (field.field_type == 'textarea') { %>
+            <textarea name="<%= field.name %>" data-type="<%= field.formated_type %>"><%= values[field.name] %></textarea>
+          <% } else if (field.field_type == 'checkbox' || field.field_type == 'radio') { %>
+            <input type="<%= field.field_type %>" name="<%= field.name %>" value="<%= field.value %>"
+              data-type="<%= field.formated_type %>" <% if (values[field.name] == field.value) print("checked"); %>>
           <% } else { %>
-            <input type="<%= field.type %>" name="<%= field.name %>" value="<%= values[field.name] %>">
+            <input type="<%= field.field_type %>" name="<%= field.name %>" value="<%= values[field.name] %>"
+              data-type="<%= field.formated_type %>">
           <% } %>
         </div>
       </div>

@@ -116,16 +116,31 @@ $(function() {
         },
         serialize: function() {
             var o = {};
-            var a = this.$el.serializeArray();
-            $.each(a, function() {
-                if (o[this.name] !== undefined) {
-                    if (!o[this.name].push) {
-                        o[this.name] = [o[this.name]];
-                    }
-                    o[this.name].push(this.value || '');
-                } else {
-                    o[this.name] = this.value || '';
+            var map = {
+                "int": function(v) { return parseInt(v, 10); },
+                "double": parseFloat,
+                "float": parseFloat
+            };
+            this.$(':input:not(button)').each(function() {
+                var $this = $(this), 
+                    v = this.value || '', 
+                    t = $this.data('type') || 'string', 
+                    is_array = false;
+
+                if (t.indexOf('[]') > -1) {
+                    t = t.substr(0, t.length - 2);
+                    is_array = true;
                 }
+
+                var cast = map[t] !== undefined ? map[t] : function(v) { return v; };
+
+                if (is_array) {
+                    v = _.map(v.split(","), cast);
+                } else {
+                    v = cast(v);
+                }
+
+                o[this.name] = v;
             });
             return o;
         }
@@ -251,10 +266,15 @@ $(function() {
         },
         executeAction: function(data) {
             var method = this.schema.input.type == 'form' ? 'post' : 'get',
-                data = data || {};
+                data = data || {},
+                payload = data;
+
+            if (method === 'post') {
+                payload = { data: JSON.stringify(data) };
+            }
 
             this.$el.html('<span class="loading">Loading...</span>');
-            Dashboard.api.call(method, this.schema.input.url, data, _.bind(function(resp) {
+            Dashboard.api.call(method, this.schema.input.url, payload, _.bind(function(resp) {
                 if (method == 'get') {
                     Dashboard.router.navigate(this.action_url + '?' + $.param(data));
                 }

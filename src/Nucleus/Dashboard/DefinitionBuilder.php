@@ -213,11 +213,14 @@ class DefinitionBuilder
               ->setDescription($annotation->description)
               ->setType($annotation->type)
               ->setIdentifier($annotation->identifier)
-              ->setFormFieldType($annotation->formField)
               ->setListable($annotation->listable)
               ->setEditable($annotation->editable)
               ->setOptional(!$annotation->required)
               ->setLink($annotation->link);
+
+        if ($annotation->formField !== null) {
+            $field->setFormFieldType($annotation->formField);
+        }
 
         if ($annotation->type === null) {
             if (preg_match('/@var ([a-zA-Z]+)/', $property->getDocComment(), $results)) {

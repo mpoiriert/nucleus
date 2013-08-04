@@ -8,6 +8,8 @@ class FieldDefinition
 
     protected $type;
 
+    protected $isArray = false;
+
     protected $model;
 
     protected $name;
@@ -20,13 +22,24 @@ class FieldDefinition
 
     protected $defaultValue;
 
-    protected $formFieldType = 'text';
+    protected $formFieldType;
 
     protected $listable = true;
 
     protected $editable = true;
 
     protected $link;
+
+    protected $defaultFormType = 'text';
+
+    protected $formTypeMapping = array(
+        'string' => 'text',
+        'int' => 'text',
+        'double' => 'text',
+        'float' => 'text',
+        'bool' => 'checkbox',
+        'boolean' => 'checkbox'
+    );
 
     public function setProperty($name)
     {
@@ -47,14 +60,46 @@ class FieldDefinition
         if ($type instanceof ModelDefinition) {
             $this->model = $type;
             $type = $type->getName();
+        } else {
+            $this->model = null;
         }
+
+        if (strpos($type, '[]') !== false) {
+            $this->isArray = true;
+            $type = rtrim($type, '[]');
+        }
+
         $this->type = $type;
+
+        if ($this->model === null && $this->formFieldType === null) {
+            if (isset($this->formTypeMapping[$type])) {
+                $this->formFieldType = $this->formTypeMapping[$type];
+            } else {
+                $this->formFieldType = $this->defaultFormType;
+            }
+        }
+
         return $this;
     }
 
     public function getType()
     {
         return $this->type;
+    }
+
+    public function getFormatedType()
+    {
+        return $this->type . ($this->isArray ? '[]' : '');
+    }
+
+    public function setIsArray($isArray = trye)
+    {
+        $this->isArray = $isArray;
+    }
+
+    public function isArray()
+    {
+        return $this->isArray;
     }
 
     public function isModelType()

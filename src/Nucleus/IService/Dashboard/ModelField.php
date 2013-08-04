@@ -12,7 +12,7 @@ class ModelField
     public $property;
     public $type;
     public $identifier = false;
-    public $formField = 'text';
+    public $formField;
     public $listable = true;
     public $editable = true;
     public $link;

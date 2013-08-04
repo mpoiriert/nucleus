@@ -170,15 +170,15 @@ class Dashboard
         }
 
         $service = $this->serviceContainer->get($controller->getServiceName());
-        $params = array_merge($request->query->all(), $request->request->all());
+        $data = $this->getInputData($request);
 
         if ($action->isModelOnlyArgument()) {
-            $model = $this->instanciateModel($action->getInputModel(), $params);
-            $params = array($action->getModelArgumentName() => $model);
+            $model = $this->instanciateModel($action->getInputModel(), $data);
+            $data = array($action->getModelArgumentName() => $model);
         }
 
         $result = $this->invoker->invoke(
-            array($service, $action->getName()), $params, array($request, $response));
+            array($service, $action->getName()), $data, array($request, $response));
 
         return $this->formatResponse($action, $result);
     }
@@ -200,13 +200,21 @@ class Dashboard
             throw new DashboardException("Action '$modelActionName' from model of action '$actionName' of '$controllerName' not found");
         }
 
-        $params = array_merge($request->query->all(), $request->request->all());
-        $model = $this->instanciateModel($action->getReturnModel(), $params);
+        $data = $this->getInputData($request);
+        $model = $this->instanciateModel($action->getReturnModel(), $data);
 
         $result = $this->invoker->invoke(
-            array($model, $modelAction->getName()), $params, array($request, $response));
+            array($model, $modelAction->getName()), array(), array($request, $response));
 
         return $this->formatResponse($modelAction, $result, $model);
+    }
+
+    protected function getInputData(Request $request)
+    {
+        if ($request->getMethod() === 'POST') {
+            return json_decode($request->request->get('data'), true);
+        }
+        return $request->query->all();
     }
 
     public function formatAction(ActionDefinition $action)
@@ -291,7 +299,10 @@ class Dashboard
             }
 
             return array(
-                'type' => $f->getFormFieldType(),
+                'type' => $f->getType(),
+                'is_array' => $f->isArray(),
+                'field_type' => $f->getFormFieldType(),
+                'formated_type' => $f->getFormatedType(),
                 'name' => $f->getProperty(),
                 'title' => $f->getName(),
                 'description' => $f->getDescription(),
@@ -308,11 +319,15 @@ class Dashboard
         $model = $action->getReturnModel();
         if ($action->getReturnType() === ActionDefinition::RETURN_LIST) {
             $list = array();
-            foreach ($result as $item) {
-                $list[] = $this->convertObjectToJson($item, $model);
+            if ($result !== null) {
+                foreach ($result as $item) {
+                    $list[] = $this->convertObjectToJson($item, $model);
+                }
             }
             return $list;
         } else if ($action->getReturnType() === ActionDefinition::RETURN_NONE) {
+            return null;
+        } else if ($result === null) {
             return null;
         }
         return $this->convertObjectToJson($result, $model);
