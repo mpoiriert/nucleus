@@ -2,6 +2,7 @@
 
 namespace Nucleus\Dashboard;
 
+use Nucleus\IService\DependencyInjection\IServiceContainer;
 use Nucleus\Annotation\ParsingResult as AnnotationParsingResult;
 use Nucleus\Annotation\AnnotationParser;
 use ReflectionClass;
@@ -10,6 +11,16 @@ use ReflectionMethod;
 
 class DefinitionBuilder
 {
+    protected $serviceContainer;
+
+    /**
+     * @Inject
+     */
+    public function initialize(IServiceContainer $serviceContainer)
+    {
+        $this->serviceContainer = $serviceContainer;
+    }
+
     public function buildController($className)
     {
         if (is_object($className)) {
@@ -87,21 +98,24 @@ class DefinitionBuilder
 
     protected function extractActionsFromClass(ReflectionClass $class, AnnotationParsingResult $annotations)
     {
-        $actionMethods = $annotations->getAllMethodAnnotations(array(function($a) {
-            return $a instanceof \Nucleus\IService\Dashboard\Action;
-        }));
-
         $actions = array();
-        foreach ($actionMethods as $methodName => $annos) {
-            if (empty($annos)) {
+        foreach ($annotations->getAllMethodAnnotations() as $methodName => $annos) {
+            $actionAnno = null;
+            foreach ($annos as $anno) {
+                if ($anno instanceof \Nucleus\IService\Dashboard\Action) {
+                    $actionAnno = $anno;
+                    break;
+                }
+            }
+            if (!$actionAnno) {
                 continue;
             }
-            $actions[] = $this->buildAction($class->getMethod($methodName), $annos[0]);
+            $actions[] = $this->buildAction($class->getMethod($methodName), $actionAnno, $annos);
         }
         return $actions;
     }
 
-    protected function buildAction(ReflectionMethod $method, $annotation = null)
+    protected function buildAction(ReflectionMethod $method, $annotation = null, array $additionalAnnotations = array())
     {
         $action = new ActionDefinition();
         $action->setName($method->getName());
@@ -158,6 +172,14 @@ class DefinitionBuilder
                 throw new DefinitionBuilderException("Action '{$action->getName()}' returns something but has no model attached");
             }
             $action->setReturnModel($this->buildModel($annotation && $annotation->model ? $annotation->model : $returnTag[1]));
+        }
+
+        foreach ($additionalAnnotations as $anno) {
+            if ($anno instanceof \Nucleus\IService\Security\Secure) {
+                $yamlParser = $this->serviceContainer->get('yamlParser');
+                $perms = $yamlParser->parse($anno->permissions);
+                $action->setPermissions($perms);
+            }
         }
 
         return $action;

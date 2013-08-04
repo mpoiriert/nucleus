@@ -29,6 +29,7 @@ class HomeController
 
     /**
      * @\Nucleus\IService\Dashboard\Action(title="Add", icon="plus")
+     * 
      * @return Nucleus\Dashboard\HomeModel
      */
     public function add(HomeModel $model)

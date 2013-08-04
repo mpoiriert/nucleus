@@ -5,6 +5,9 @@
         },
         "dashboardHome": {
             "class": "Nucleus\\Dashboard\\HomeController"
+        },
+        "dashboardDefinitionBuilder": {
+            "class": "Nucleus\\Dashboard\\DefinitionBuilder"
         }
     },
     "nucleus": {

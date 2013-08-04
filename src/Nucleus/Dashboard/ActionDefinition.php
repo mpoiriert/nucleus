@@ -37,6 +37,8 @@ class ActionDefinition
 
     protected $appliedToModel;
 
+    protected $permissions = array();
+
     public function setName($name)
     {
         $this->name = $name;
@@ -196,5 +198,15 @@ class ActionDefinition
     public function getAppliedToModel()
     {
         return $this->appliedToModel;
+    }
+
+    public function setPermissions(array $perms)
+    {
+        $this->permissions = $perms;
+    }
+
+    public function getPermissions()
+    {
+        return $this->permissions;
     }
 }

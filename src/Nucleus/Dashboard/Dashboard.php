@@ -8,6 +8,7 @@
 namespace Nucleus\Dashboard;
 
 use Nucleus\IService\Invoker\IInvokerService;
+use Nucleus\IService\Security\IAccessControlService;
 use Nucleus\Routing\Router;
 use Nucleus\IService\DependencyInjection\IServiceContainer;
 use Symfony\Component\HttpFoundation\Request;
@@ -30,6 +31,8 @@ class Dashboard
 
     private $invoker;
 
+    public $accessControl;
+
     private $controllers = array();
 
     private $builder;
@@ -44,7 +47,8 @@ class Dashboard
         $this->serviceContainer = $serviceContainer;
         $this->invoker = $invoker;
         $this->routing = $routing;
-        $this->builder = new DefinitionBuilder();
+        $this->accessControl = $serviceContainer->get('accessControl');
+        $this->builder = $serviceContainer->get('dashboardDefinitionBuilder');
     }
 
     public function addController(ControllerDefinition $controller)
@@ -70,9 +74,9 @@ class Dashboard
     }
 
     /**
-     * @Route(name="dashboard.controllerUrls", path="/nucleus/dashboard/_schema")
+     * @Route(name="dashboard.schema", path="/nucleus/dashboard/_schema")
      */
-    public function getControllerUrls()
+    public function getSchema()
     {
         $controllers = array();
         foreach ($this->controllers as $controller) {
@@ -89,34 +93,31 @@ class Dashboard
     /**
      * @Route(name="dashboard.controllerSchema", path="/nucleus/dashboard/{controllerName}/_schema")
      */
-    public function getControllerActions($controllerName)
+    public function getControllerSchema($controllerName)
     {
         if (($controller = $this->getController($controllerName)) === false) {
             throw new DashboardException("Controller '$controllerName' not found");
         }
 
         $self = $this;
-        return array_map(function($action) use ($controller, $self) {
+        return array_values(array_filter(array_map(function($action) use ($controller, $self) {
+            if (!$self->accessControl->checkPermissions($action->getPermissions())) {
+                return false;
+            }
             return array_merge($self->formatAction($action), array(
                 'default' => $action->isDefault(),
                 'url' => $self->routing->generate('dashboard.actionSchema', 
                     array('controllerName' => $controller->getName(), 'actionName' => $action->getName()))
             ));
-        }, $controller->getVisibleActions());
+        }, $controller->getVisibleActions())));
     }
 
     /**
      * @Route(name="dashboard.actionSchema", path="/nucleus/dashboard/{controllerName}/{actionName}/_schema")
      */
-    public function getAction($controllerName, $actionName)
+    public function getActionSchema($controllerName, $actionName)
     {
-        if (($controller = $this->getController($controllerName)) === false) {
-            throw new DashboardException("Controller '$controllerName' not found");
-        }
-
-        if (($action = $controller->getAction($actionName)) === false) {
-            throw new DashboardException("Action '$actionName' of '$controllerName' not found");
-        }
+        list($controller, $action) = $this->getAction($controllerName, $actionName);
 
         return array_merge(
             $this->formatAction($action),
@@ -128,19 +129,9 @@ class Dashboard
     /**
      * @Route(name="dashboard.modelActionSchema", path="/nucleus/dashboard/{controllerName}/{actionName}/{modelActionName}/_schema")
      */
-    public function getModelAction($controllerName, $actionName, $modelActionName)
+    public function getModelActionSchema($controllerName, $actionName, $modelActionName)
     {
-        if (($controller = $this->getController($controllerName)) === false) {
-            throw new DashboardException("Controller '$controllerName' not found");
-        }
-
-        if (($action = $controller->getAction($actionName)) === false) {
-            throw new DashboardException("Action '$actionName' of '$controllerName' not found");
-        }
-
-        if (($modelAction = $action->getReturnModel()->getAction($modelActionName)) === false) {
-            throw new DashboardException("Action '$modelActionName' from model of action '$actionName' of '$controllerName' not found");
-        }
+        list($controller, $action, $modelAction) = $this->getAction($controllerName, $actionName, $modelActionName);
 
         return array_merge(
             $this->formatAction($modelAction),
@@ -161,13 +152,7 @@ class Dashboard
      */
     public function invokeAction($controllerName, $actionName, Request $request, Response $response)
     {
-        if (($controller = $this->getController($controllerName)) === false) {
-            throw new DashboardException("Controller '$controllerName' not found");
-        }
-
-        if (($action = $controller->getAction($actionName)) === false) {
-            throw new DashboardException("Action '$actionName' of '$controllerName' not found");
-        }
+        list($controller, $action) = $this->getAction($controllerName, $actionName);
 
         $service = $this->serviceContainer->get($controller->getServiceName());
         $data = $this->getInputData($request);
@@ -188,17 +173,7 @@ class Dashboard
      */
     public function invokeModelAction($controllerName, $actionName, $modelActionName, Request $request, Response $response)
     {
-        if (($controller = $this->getController($controllerName)) === false) {
-            throw new DashboardException("Controller '$controllerName' not found");
-        }
-
-        if (($action = $controller->getAction($actionName)) === false) {
-            throw new DashboardException("Action '$actionName' of '$controllerName' not found");
-        }
-
-        if (($modelAction = $action->getReturnModel()->getAction($modelActionName)) === false) {
-            throw new DashboardException("Action '$modelActionName' from model of action '$actionName' of '$controllerName' not found");
-        }
+        list($controller, $action, $modelAction) = $this->getAction($controllerName, $actionName, $modelActionName);
 
         $data = $this->getInputData($request);
         $model = $this->instanciateModel($action->getReturnModel(), $data);
@@ -207,6 +182,35 @@ class Dashboard
             array($model, $modelAction->getName()), array(), array($request, $response));
 
         return $this->formatResponse($modelAction, $result, $model);
+    }
+
+    protected function getAction($controllerName, $actionName, $modelActionName = null)
+    {
+        if (($controller = $this->getController($controllerName)) === false) {
+            throw new DashboardException("Controller '$controllerName' not found");
+        }
+
+        if (($action = $controller->getAction($actionName)) === false) {
+            throw new DashboardException("Action '$actionName' of '$controllerName' not found");
+        }
+
+        if (!$this->accessControl->checkPermissions($action->getPermissions())) {
+            throw new DashboardException("Missing permissions to use action '$actionName' of '$controllerName'");
+        }
+
+        if ($modelActionName === null) {
+            return array($controller, $action);
+        }
+
+        if (($modelAction = $action->getReturnModel()->getAction($modelActionName)) === false) {
+            throw new DashboardException("Action '$modelActionName' from model of action '$actionName' of '$controllerName' not found");
+        }
+
+        if (!$this->accessControl->checkPermissions($modelAction->getPermissions())) {
+            throw new DashboardException("Missing permissions to use action '$actionName/$modelActionName' of '$controllerName'");
+        }
+
+        return array($controller, $action, $modelAction);
     }
 
     protected function getInputData(Request $request)
@@ -252,21 +256,27 @@ class Dashboard
 
         $self = $this;
         $json['actions'] = array_merge(
-            array_map(function($modelAction) use ($controller, $action, $self) {
+            array_values(array_filter(array_map(function($modelAction) use ($controller, $action, $self) {
+                if (!$self->accessControl->checkPermissions($modelAction->getPermissions())) {
+                    return false;
+                }
                 return array_merge($self->formatAction($modelAction), array(
                     'name' => $action->getName() . '/' . $modelAction->getName(),
                     'url' => $self->routing->generate('dashboard.invokeModel', 
                         array('controllerName' => $controller->getName(), 'actionName' => $action->getName(), 
                             'modelActionName' => $modelAction->getName()))
                 ));
-            }, $action->getReturnModel()->getActions()),
+            }, $action->getReturnModel()->getActions()))),
 
-            array_map(function($action) use ($controller, $self) {
+            array_values(array_filter(array_map(function($action) use ($controller, $self) {
+                if (!$self->accessControl->checkPermissions($action->getPermissions())) {
+                    return false;
+                }
                 return array_merge($self->formatAction($action), array(
                     'url' => $self->routing->generate('dashboard.invoke', 
                         array('controllerName' => $controller->getName(), 'actionName' => $action->getName()))
                 ));
-            }, $controller->getActionsForModel($action->getReturnModel()->getClassName()))
+            }, $controller->getActionsForModel($action->getReturnModel()->getClassName()))))
         );
 
         if ($action->getReturnType() === ActionDefinition::RETURN_FORM) {
