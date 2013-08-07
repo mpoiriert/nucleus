@@ -29,27 +29,13 @@ class TestableService
     }
 
     /**
-     * @Listen("Test")
+     * @\Nucleus\IService\EventDispatcher\Listen("Test")
      */
     public function listen(IEvent $event, $namedParameter, NucleusIntegrationTest $typedParameter, $defaultValue = 10)
     {
         foreach (get_defined_vars() as $key => $value) {
             $this->{$key} = $value;
         }
-    }
-
-    /**
-     * @Route(name="test",path="/test",defaults={"test" = 0})
-     * @I18nRoute(
-     *      name="test-i18n",path="/test-i18n",defaults={"test" = 0},
-     *      routes={
-     *          "en-us" = @Route(path="/test-en-us")
-     *      }
-     * )
-     */
-    public function route()
-    {
-        
     }
     
     /**
@@ -65,7 +51,7 @@ class TestableService
      * 
      * @param TestableService $service
      * 
-     * @Listen("Service.servicefortest.postInitialized")
+     * @\Nucleus\IService\EventDispatcher\Listen("Service.servicefortest.postInitialized")
      */
     public function listenLifeCycle(TestableService $service, IEvent $event)
     {

@@ -27,7 +27,7 @@ class AssetManagerExtension extends Twig_Extension
     /**
      * @param \Nucleus\AssetManager $assetManager
      * 
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function setAssetManager(Manager $assetManager)
     {

@@ -32,7 +32,7 @@ class Memcache extends BaseCacheService
      * 
      * @param \Memcache $memcache
      * 
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function setMemcache(\Memcache $memcache = null) 
     {

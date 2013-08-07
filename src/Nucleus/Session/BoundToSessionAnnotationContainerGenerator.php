@@ -7,17 +7,19 @@
 
 namespace Nucleus\Session;
 
-use Nucleus\DependencyInjection\IServiceContainerGeneratorAnnotation;
+use Nucleus\DependencyInjection\IAnnotationContainerGenerator;
 use Nucleus\DependencyInjection\GenerationContext;
 
 /**
- * Description of BoundToSession
+ * Description of BoundToSessionAnnotationContainerGenerator
  *
- * @Annotation
+ * @author Martin
  */
-class BoundToSession implements IServiceContainerGeneratorAnnotation
+class BoundToSessionAnnotationContainerGenerator implements IAnnotationContainerGenerator
 {
-
+    /**
+     * @param GenerationContext $context
+     */
     public function processContainerBuilder(GenerationContext $context)
     {
         $definition = $context->getServiceDefinition();

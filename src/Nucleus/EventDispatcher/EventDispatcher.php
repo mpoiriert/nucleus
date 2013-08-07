@@ -31,7 +31,7 @@ class EventDispatcher implements IEventDispatcherService
     /**
      * @param Nucleus\IService\Invoker\IInvokerService
      * 
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function setInvoker(IInvokerService $invoker)
     {

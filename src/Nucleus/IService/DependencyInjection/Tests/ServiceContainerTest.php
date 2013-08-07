@@ -170,7 +170,7 @@ if (!class_exists('Nucleus\DependencyInjection\Tests\TestService')) {
         private $services;
 
         /**
-         * @Inject(serviceTag="tag")
+         * @\Nucleus\IService\DependencyInjection\Inject(serviceTag="tag")
          */
         public function injectService($serviceTag, $itag)
         {
@@ -179,7 +179,7 @@ if (!class_exists('Nucleus\DependencyInjection\Tests\TestService')) {
         }
 
         /**
-         * @Inject(services="@ITest")
+         * @\Nucleus\IService\DependencyInjection\Inject(services="@ITest")
          */
         public function injectServiceByTag($services)
         {

@@ -34,7 +34,7 @@ class AccessControlManager implements IAccessControlService
     /**
      * @param \Nucleus\BusinessRule\BusinessRuleEngine $businessRuleEngine
      * 
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function initialize(BusinessRuleEngine $businessRuleEngine)
     {
@@ -44,7 +44,7 @@ class AccessControlManager implements IAccessControlService
     /**
      * @param \Nucleus\IService\Security\IAccessControlUser $accessControlUser
      * 
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function setAccessControlUser(IAccessControlUser $accessControlUser)
     {

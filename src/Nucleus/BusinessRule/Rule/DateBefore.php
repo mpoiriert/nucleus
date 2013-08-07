@@ -25,7 +25,7 @@ class DateBefore
     /**
      * @param \Nucleus\IService\Clock\IClock $clock
      * 
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function initialize(IClock $clock)
     {

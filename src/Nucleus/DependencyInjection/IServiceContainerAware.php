@@ -19,7 +19,7 @@ interface IServiceContainerAware
     /**
      * @param IServiceContainer $serviceContainer
      * 
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function setServiceContainer(IServiceContainer $serviceContainer);
 }

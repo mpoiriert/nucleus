@@ -21,7 +21,7 @@ class Logger extends BaseLogger
      * @param array $handlers
      * @param array $processors
      * 
-     * @Inject(name="$[logger][name]",handlers="@logger.handler",processors="@logger.processor")
+     * @\Nucleus\IService\DependencyInjection\Inject(name="$[logger][name]",handlers="@logger.handler",processors="@logger.processor")
      */
     public function __construct($name, array $handlers = array(), array $processors = array())
     {

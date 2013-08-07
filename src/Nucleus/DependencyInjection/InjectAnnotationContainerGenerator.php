@@ -7,22 +7,41 @@
 
 namespace Nucleus\DependencyInjection;
 
-use Nucleus\IService\DependencyInjection\Inject as BaseInject;
+use Nucleus\IService\DependencyInjection\Inject;
 use Symfony\Component\DependencyInjection\Variable;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * @Annotation
+ * Description of InjectAnnotationContainerGenerator
+ *
+ * @author Martin
  */
-class Inject extends BaseInject implements IServiceContainerGeneratorAnnotation
+class InjectAnnotationContainerGenerator implements IAnnotationContainerGenerator
 {
-
-    private function getParameters($class, $method, $serviceCurrentlyGenerated)
+    public function processContainerBuilder(GenerationContext $context)
+    {
+        $method = $context->getParsingContextName();
+        $definition = $context->getServiceDefinition();
+        $parameters = $this->getParameters(
+            $definition->getClass(), 
+            $method, 
+            $context->getServiceName(),
+            $context->getAnnotation()
+        );
+        
+        if ($method == "__construct") {
+            $definition->setArguments($parameters);
+        } else {
+            $definition->addMethodCall($method, $parameters);
+        }
+    }
+    
+    private function getParameters($class, $method, $serviceCurrentlyGenerated, Inject $annotation)
     {
         $reflectionMethod = new \ReflectionMethod($class, $method);
 
-        $mapping = $this->getMapping();
+        $mapping = $annotation->getMapping();
         $parameters = array();
         foreach ($reflectionMethod->getParameters() as $parameter) {
             /* @var  $parameter \ReflectionParameter */
@@ -55,17 +74,5 @@ class Inject extends BaseInject implements IServiceContainerGeneratorAnnotation
         return $parameters;
     }
 
-    public function processContainerBuilder(GenerationContext $context)
-    {
-        $method = $context->getParsingContextName();
-        $definition = $context->getServiceDefinition();
-        $parameters = $this->getParameters(
-            $definition->getClass(), $method, $context->getServiceName()
-        );
-        if ($method == "__construct") {
-            $definition->setArguments($parameters);
-        } else {
-            $definition->addMethodCall($method, $parameters);
-        }
-    }
+    
 }

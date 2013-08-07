@@ -17,7 +17,7 @@ use Nucleus\IService\Security\IAccessControlUser;
 class SessionAccessControlUser implements IAccessControlUser
 {
     /**
-     * @BoundToSession
+     * @\Nucleus\IService\ApplicationContext\BoundToSession
      * 
      * @var string[]
      */

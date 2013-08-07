@@ -26,7 +26,7 @@ abstract class BaseExtensionRenderer implements ITemplateRendererService
     /**
      * @param FileSystemLoader $loader
      * 
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function setFileLoader(FileSystemLoader $templateFileLoader)
     {

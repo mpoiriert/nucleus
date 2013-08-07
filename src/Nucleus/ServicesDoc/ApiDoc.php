@@ -27,7 +27,7 @@ class ApiDoc
     /**
      * @param \Nucleus\Routing\Router $routing
      *
-     * @Inject(params="$", cacheDirectory="$[configuration][generatedDirectory]")
+     * @\Nucleus\IService\DependencyInjection\Inject(params="$", cacheDirectory="$[configuration][generatedDirectory]")
      */
     public function initialize($params, $cacheDirectory)
     {
@@ -67,7 +67,7 @@ class ApiDoc
     }
 
     /**
-     * @\Nucleus\Routing\Route(name="apidoc", path="/nucleus/apidoc")
+     * @\Nucleus\IService\Routing\Route(name="apidoc", path="/nucleus/apidoc")
      */
     public function index()
     {

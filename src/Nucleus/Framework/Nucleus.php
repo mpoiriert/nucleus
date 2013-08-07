@@ -34,8 +34,9 @@ class Nucleus
      */
     protected function loadServiceContainer($dna)
     {
-        $class = 'ServiceContainer';
-        $file = $dna->freezeCachePath()->getCachePath() . '/serviceContainer/' . $class . '.php';
+        $cachePath = $dna->freezeCachePath()->getCachePath();
+        $class = 'ServiceContainer' . md5($cachePath);
+        $file = $cachePath. '/serviceContainer/' . $class . '.php';
         
         $containerConfigCache = new ConfigCache($file, $dna->getDebug());
         $isNew = false;

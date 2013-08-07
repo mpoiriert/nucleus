@@ -27,7 +27,7 @@ class LoggerToMessagesCollectorAdapter extends AbstractProcessingHandler
     /**
      * @param \DebugBar\DebugBar $debugBar
      * 
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function setDebugBar(DebugBar $debugBar)
     {

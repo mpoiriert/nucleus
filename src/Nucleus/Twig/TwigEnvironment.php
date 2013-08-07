@@ -10,7 +10,7 @@ use Nucleus\View\FileSystemLoader;
 class TwigEnvironment extends Twig_Environment
 {
     /**
-     * @Inject(options="$")
+     * @\Nucleus\IService\DependencyInjection\Inject(options="$")
      */
     public function __construct(Twig_LoaderInterface $twigLoader = null, $options = array())
     {
@@ -35,7 +35,7 @@ class TwigEnvironment extends Twig_Environment
      * 
      * @param \Twig_Extension[] $extensions
      * 
-     * @Inject(extensions="@twigRenderer.twigExtension")
+     * @\Nucleus\IService\DependencyInjection\Inject(extensions="@twigRenderer.twigExtension")
      */
     public function setTwigExtensions(array $extensions)
     {
@@ -46,7 +46,7 @@ class TwigEnvironment extends Twig_Environment
 
     /**
      * @param \Nucleus\View\FileSystemLoader $loader
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function importNucleusFileSystemLoader(FileSystemLoader $templateFileLoader)
     {
