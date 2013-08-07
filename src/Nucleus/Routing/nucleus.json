@@ -5,6 +5,13 @@
         }
     },
     "nucleus": {
-        "annotationNamespaces": ["Nucleus\\Routing"]
+        "annotationContainerGenerator": {
+            "Nucleus\\IService\\Routing\\Route": {
+                "class": "Nucleus\\Routing\\RouteAnnotationContainerGenerator"
+            },
+            "Nucleus\\IService\\Routing\\I18nRoute": {
+                "class": "Nucleus\\Routing\\RouteAnnotationContainerGenerator"
+            }
+        }
     }
 }

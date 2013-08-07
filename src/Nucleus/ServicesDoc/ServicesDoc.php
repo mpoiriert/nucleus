@@ -18,7 +18,7 @@ class ServicesDoc
     /**
      * @param \Nucleus\Routing\Router $routing
      * 
-     * @Inject(cacheDirectory="$[configuration][generatedDirectory]")
+     * @\Nucleus\IService\DependencyInjection\Inject(cacheDirectory="$[configuration][generatedDirectory]")
      */
     public function initialize($cacheDirectory, IFileSystemService $fileSystem)
     {
@@ -27,7 +27,7 @@ class ServicesDoc
     }
 
     /**
-     * @\Nucleus\Routing\Route(name="servicesdoc", path="/nucleus/servicesdoc")
+     * @\Nucleus\IService\Routing\Route(name="servicesdoc", path="/nucleus/servicesdoc")
      * @\Nucleus\IService\FrontController\ViewDefinition(template="documentation/services.twig")
      */
     public function index()
@@ -37,7 +37,7 @@ class ServicesDoc
     }
     
     /**
-     * @Listen(eventName="ServiceContainer.postDump")
+     * @\Nucleus\IService\EventDispatcher\Listen(eventName="ServiceContainer.postDump")
      *
      * @param ContainerBuilder $containerBuilder
      */

@@ -37,7 +37,7 @@ class Migrator implements IMigrator
      * @param IServiceContainer $serviceContainer
      * @param IVariableRegistry $applicationVariableRegistry
      * 
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function initialize(IServiceContainer $serviceContainer, IVariableRegistry $applicationVariableRegistry)
     {
@@ -49,7 +49,7 @@ class Migrator implements IMigrator
      * 
      * @param array $configuration
      * 
-     * @Inject(configuration="$")
+     * @\Nucleus\IService\DependencyInjection\Inject(configuration="$")
      */
     public function setConfiguration(array $configuration)
     {

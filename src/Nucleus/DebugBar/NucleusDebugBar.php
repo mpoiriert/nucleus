@@ -20,7 +20,7 @@ class NucleusDebugBar extends StandardDebugBar
     /**
      * @param DataCollectorInterface[] $dataCollectors
      * 
-     * @Inject(dataCollectors="@debugBar.dataCollector")
+     * @\Nucleus\IService\DependencyInjection\Inject(dataCollectors="@debugBar.dataCollector")
      */
     public function setDataCollectors(array $dataCollectors)
     {

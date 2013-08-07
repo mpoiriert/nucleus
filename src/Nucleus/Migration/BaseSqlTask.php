@@ -20,7 +20,7 @@ abstract class BaseSqlTask extends BaseMigrationTask
      * @param array $configuration
      * @throws RuntimeException
      * 
-     * @Inject(configuration="$")
+     * @\Nucleus\IService\DependencyInjection\Inject(configuration="$")
      */
     public function setConfiguration(array $configuration)
     {

@@ -47,38 +47,6 @@ class NucleusIntegrationTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($parameter, $serviceForTest->namedParameter);
     }
 
-    public function testRouteConnection()
-    {
-        $serviceContainer = $this->nucleus->getServiceContainer();
-        $serviceRouter = $serviceContainer->getServiceByName('routing');
-        $result = $serviceRouter->match('/test');
-        $this->assertEquals(
-            array(
-            'test' => 0,
-            '_service' => array('name' => 'serviceForTest', 'method' => 'route'),
-            '_route' => 'test'
-            ), $result
-        );
-
-        $result = $serviceRouter->match('/test-en-us');
-        unset($result['_route']);
-        $this->assertEquals(
-            array(
-            'test' => 0,
-            '_service' => array('name' => 'serviceForTest', 'method' => 'route'),
-            '_culture' => 'en-us'
-            ), $result
-        );
-        
-        
-        $result = $serviceRouter->generate('test-i18n');
-        $this->assertEquals('/test-i18n', $result);
-        
-        $serviceRouter->setDefaultCulture('en-us');
-        $result = $serviceRouter->generate('test-i18n');
-        $this->assertEquals('/test-en-us', $result);
-    }
-    
     public function testCache()
     {
         $serviceContainer = $this->nucleus->getServiceContainer();

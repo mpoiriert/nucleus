@@ -39,7 +39,7 @@ class ServiceBinder
     /**
      * @param \Symfony\Component\HttpFoundation\Session\SessionInterface $session
      * 
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function setSession(SessionInterface $session)
     {
@@ -116,7 +116,7 @@ class ServiceBinder
     }
 
     /**
-     * @Listen("Session.shutdown")
+     * @\Nucleus\IService\EventDispatcher\Listen("Session.shutdown")
      */
     public function setBindServicesToSession()
     {

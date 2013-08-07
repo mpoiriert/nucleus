@@ -8,6 +8,10 @@
         }
     },
     "nucleus": {
-        "annotationNamespaces": ["Nucleus\\EventDispatcher"]
+        "annotationContainerGenerator": {
+            "Nucleus\\IService\\EventDispatcher\\Listen": {
+                "class": "Nucleus\\EventDispatcher\\ListenAnnotationContainerGenerator"
+            }
+        }
     }
 }

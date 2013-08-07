@@ -41,7 +41,7 @@ class TwigDebugBarExtension extends Twig_Extension
      * 
      * @param Manager $assetManager
      * 
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function initialize(JavascriptRenderer $debugBarRenderer, DebugBar $debugBar)
     {

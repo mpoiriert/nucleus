@@ -45,7 +45,7 @@ class BusinessRuleEngine
      * @param \Nucleus\IService\Invoker\IInvokerService $invoker
      * @param \Symfony\Component\Yaml\Yaml $yamlParser
      * 
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function initialize(
     IServiceContainer $serviceContainer, IInvokerService $invoker, Yaml $yamlParser
@@ -60,7 +60,7 @@ class BusinessRuleEngine
      * 
      * @param array $configuration
      * 
-     * @Inject(configuration="$")
+     * @\Nucleus\IService\DependencyInjection\Inject(configuration="$")
      */
     public function setConfiguration(array $configuration)
     {

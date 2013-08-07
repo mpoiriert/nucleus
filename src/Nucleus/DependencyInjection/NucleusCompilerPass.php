@@ -77,9 +77,7 @@ class NucleusCompilerPass implements CompilerPassInterface
             foreach ($annotations as $parsingNode) {
                 $this->addFileResource(get_class($parsingNode['annotation']));
                 $generationContext = new GenerationContext($container, $name, $definition, $parsingNode);
-                if($parsingNode['annotation'] instanceof IServiceContainerGeneratorAnnotation) {
-                    $parsingNode['annotation']->processContainerBuilder($generationContext);
-                } elseif(!is_null($builder = $this->getAnnotationContainerBuilder($parsingNode['annotation']))){
+                if(!is_null($builder = $this->getAnnotationContainerBuilder($parsingNode['annotation']))){
                     $builder->processContainerBuilder($generationContext);
                 }
             }
@@ -99,6 +97,7 @@ class NucleusCompilerPass implements CompilerPassInterface
         $annotationClass = get_class($annotation);
         if(isset($this->configuration['nucleus']['annotationContainerGenerator'][$annotationClass]['class'])) {
             $class = $this->configuration['nucleus']['annotationContainerGenerator'][$annotationClass]['class'];
+            $this->addFileResource($class);
             return new $class();
         }
         
@@ -123,9 +122,6 @@ class NucleusCompilerPass implements CompilerPassInterface
     {
         if (is_null($this->annotationParser)) {
             $this->annotationParser = new AnnotationParser();
-            foreach ($this->configuration['nucleus']['annotationNamespaces'] as $namespace) {
-                $this->annotationParser->addNamespace($namespace);
-            }
         }
 
         return $this->annotationParser;

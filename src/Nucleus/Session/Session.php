@@ -39,7 +39,7 @@ class Session implements ILifeCycleAware, SessionInterface
     /**
      * @param \Nucleus\Session\Session\EventDispatcher $eventDispatcher
      * 
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function initialize(SessionStorageInterface $sessionStorage, IEventDispatcherService $eventDispatcher)
     {
