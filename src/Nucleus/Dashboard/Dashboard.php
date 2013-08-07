@@ -34,7 +34,7 @@ class Dashboard
     /**
      * @\Nucleus\IService\FrontController\ViewDefinition(template="nucleus/dashboard/home.twig")
      * 
-     * @Route(name="dashboard", path="/nucleus/dashboard")
+     * @\Nucleus\IService\Routing\Route(name="dashboard", path="/nucleus/dashboard")
      */
     public function home()
     {
@@ -42,7 +42,7 @@ class Dashboard
     }
 
     /**
-     * @Route(name="dashboardLoad", path="/nucleus/dashboard/load")
+     * @\Nucleus\IService\Routing\Route(name="dashboardLoad", path="/nucleus/dashboard/load")
      */
     public function load()
     {
