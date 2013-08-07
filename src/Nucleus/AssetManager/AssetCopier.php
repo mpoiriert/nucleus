@@ -29,7 +29,7 @@ class AssetCopier
     /**
      * @param array $configuration
      * 
-     * @Inject(configuration="$",rootDirectory="$[assetManager][rootDirectory]")
+     * @\Nucleus\IService\DependencyInjection\Inject(configuration="$",rootDirectory="$[assetManager][rootDirectory]")
      */
     public function setConfiguration(array $configuration, $rootDirectory)
     {
@@ -40,7 +40,7 @@ class AssetCopier
     /**
      * @param \Nucleus\IService\FileSystem\IFileSystemService $fileSystem
      * 
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function intilalize(IFileSystemService $fileSystem)
     {
@@ -48,7 +48,7 @@ class AssetCopier
     }
     
     /**
-     * @Listen(eventName="ServiceContainer.postDump")
+     * @\Nucleus\IService\EventDispatcher\Listen(eventName="ServiceContainer.postDump")
      */
     public function mirror()
     {

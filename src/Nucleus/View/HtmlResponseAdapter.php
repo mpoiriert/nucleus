@@ -41,7 +41,7 @@ class HtmlResponseAdapter implements IResponseAdapter
     /**
      * @param ITemplateRendererService $templateRenderer
      * 
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function initialize(ITemplateRendererService $templateRenderer)
     {
@@ -53,7 +53,7 @@ class HtmlResponseAdapter implements IResponseAdapter
      * @param IViewConciliator $viewConciliator
      * @param ControllerViewConciliator $controllerViewConciliator
      * 
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function setViewConciliator(IViewConciliator $viewConciliator = null, ControllerViewConciliator $controllerViewConciliator = null)
     {

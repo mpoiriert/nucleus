@@ -19,7 +19,7 @@ class FileSystemLoader extends Twig_Loader_Filesystem
     /**
      * @param array $configuration
      * 
-     * @Inject(configuration="$")
+     * @\Nucleus\IService\DependencyInjection\Inject(configuration="$")
      */
     public function initialize(array $configuration)
     {

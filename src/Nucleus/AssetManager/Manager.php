@@ -40,7 +40,7 @@ class Manager implements \Nucleus\IService\AssetManager\IAssetManager
     /**
      * @param array $configuration
      * 
-     * @Inject(configuration="$")
+     * @\Nucleus\IService\DependencyInjection\Inject(configuration="$")
      */
     public function initialize(array $configuration, IFilePersister $assetManagerFilePersister, IUrlBuilder $urlBuilder)
     {

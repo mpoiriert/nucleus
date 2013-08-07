@@ -65,7 +65,7 @@ class CompositeTemplateRenderer implements ITemplateRendererService
     /**
      * @param ITemplateRendererService[] $renderers
      * 
-     * @Inject(renderers="@templateRenderer")
+     * @\Nucleus\IService\DependencyInjection\Inject(renderers="@templateRenderer")
      */
     public function setRenderers($renderers)
     {

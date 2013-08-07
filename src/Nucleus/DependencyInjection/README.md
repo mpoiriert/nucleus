@@ -42,7 +42,7 @@ This is the class that will modify the container to tag services.
 
     namespace Nucleus\DependencyInjection;
 
-    class TagAnnotationContainerGenerator implements IServiceContainerGeneratorAnnotation
+    class TagAnnotationContainerGenerator implements IAnnotationContainerGenerator
     {
         /**
          * @param GenerationContext $context

@@ -29,7 +29,7 @@ class FileCache extends BaseCacheService
     /**
      * @param \Nucleus\IService\FileSystem\IFileSystemService $fileSystem
      * 
-     * @Inject(cachePath="$[configuration][generatedDirectory]")
+     * @\Nucleus\IService\DependencyInjection\Inject(cachePath="$[configuration][generatedDirectory]")
      */
     public function initialize(IFileSystemService $fileSystem, $cachePath)
     {

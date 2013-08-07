@@ -12,7 +12,7 @@ namespace Nucleus\DependencyInjection;
  *
  * @author Martin
  */
-class TagAnnotationContainerGenerator implements IServiceContainerGeneratorAnnotation
+class TagAnnotationContainerGenerator implements IAnnotationContainerGenerator
 {
     /**
      * @param GenerationContext $context

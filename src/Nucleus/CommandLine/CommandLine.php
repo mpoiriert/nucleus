@@ -35,7 +35,7 @@ class CommandLine extends Application implements ICommandLineService  {
      * @param type $version
      * @param \Nucleus\IService\Invoker\IInvokerService $invoker
      * @param \Nucleus\IService\DependencyInjection\IServiceContainer $serviceContainer
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function __construct($name = 'Nucleus', $version = '1.0', IInvokerService $invoker, IServiceContainer $serviceContainer) 
     {

@@ -27,7 +27,7 @@ class FilePersister implements IFilePersister
     /**
      * @param \Nucleus\IService\FileSystem\IFileSystemService $fileSystem
      * 
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function initialize(IFileSystemService $fileSystem)
     {
@@ -37,7 +37,7 @@ class FilePersister implements IFilePersister
     /**
      * @param strin $directory
      * 
-     * @Inject(directory="$[assetManager][rootDirectory]")
+     * @\Nucleus\IService\DependencyInjection\Inject(directory="$[assetManager][rootDirectory]")
      */
     public function setRootDirectory($directory)
     {

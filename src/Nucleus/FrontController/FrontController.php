@@ -54,7 +54,7 @@ class FrontController
      * @param \Nucleus\IService\DependencyInjection\IServiceContainer $serviceContainer
      * @param \Nucleus\Routing\Router $routing
      * 
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function initialize(
     IServiceContainer $serviceContainer, IInvokerService $invoker, Router $routing, IEventDispatcherService $eventDispatcher
@@ -119,7 +119,7 @@ class FrontController
     /**
      * @param \Nucleus\IService\FrontController\IResponseAdapter[] $adapters
      * 
-     * @Inject(adapters="@responseAdapter")
+     * @\Nucleus\IService\DependencyInjection\Inject(adapters="@responseAdapter")
      */
     public function setResponseAdapters(array $adapters = array())
     {

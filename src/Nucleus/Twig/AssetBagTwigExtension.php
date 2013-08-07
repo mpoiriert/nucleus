@@ -41,7 +41,7 @@ class AssetBagTwigExtension extends Twig_Extension
      * 
      * @param Manager $assetManager
      * 
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function initialize(IAssetManager $assetManager)
     {

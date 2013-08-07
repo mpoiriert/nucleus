@@ -21,7 +21,7 @@ class Clock implements IClock
     /**
      * @param array $configuration
      * 
-     * @Inject(configuration="$")
+     * @\Nucleus\IService\DependencyInjection\Inject(configuration="$")
      */
     public function setConfiguration(array $configuration)
     {

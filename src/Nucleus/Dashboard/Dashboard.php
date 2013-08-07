@@ -24,7 +24,7 @@ class Dashboard
     /**
      * @param \Nucleus\Routing\Router $routing
      * 
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function initialize(Router $routing)
     {

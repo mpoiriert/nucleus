@@ -14,13 +14,14 @@ use Symfony\Component\Routing\Route as SymfonyRoute;
 use Nucleus\Framework\Nucleus;
 use Symfony\Component\Routing\Generator\UrlGenerator;
 use InvalidArgumentException;
+use Nucleus\IService\Routing\IRouterService;
 
 /**
  * Description of Router
  *
  * @author Martin
  */
-class Router
+class Router implements IRouterService
 {
     /**
      * @var RouteCollection
@@ -74,9 +75,14 @@ class Router
         $this->routeCollection->remove($name);
     }
 
-    public function match($pathinfo)
+    public function match($path, $host = '', $scheme = '', $method = '')
     {
-        return $this->urlMatcher->match($pathinfo);
+        $context = $this->urlMatcher->getContext();
+        $context->setHost($host);
+        $context->setScheme($scheme);
+        $context->setMethod($method);
+        
+        return $this->urlMatcher->match($path);
     }
 
     public function generate($name, array $parameters = array())

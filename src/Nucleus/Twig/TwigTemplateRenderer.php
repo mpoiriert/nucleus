@@ -29,7 +29,7 @@ class TwigTemplateRenderer extends BaseExtensionRenderer
     }
 
     /**
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function setTwig(Twig_Environment $twigEnvironment)
     {
