@@ -25,8 +25,6 @@ class ApiDoc
 
 
     /**
-     * @param \Nucleus\Routing\Router $routing
-     *
      * @\Nucleus\IService\DependencyInjection\Inject(params="$", cacheDirectory="$[configuration][generatedDirectory]")
      */
     public function initialize($params, $cacheDirectory)
