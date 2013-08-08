@@ -59,7 +59,14 @@ abstract class SingletonApplicationKernel
 
         $application->nucleus = Nucleus::factory($dnaConfiguration);
      
+        $application->postCreationInitiliazation();
+        
         return $application;
+    }
+    
+    protected function postCreationInitiliazation()
+    {
+        
     }
 
     /**

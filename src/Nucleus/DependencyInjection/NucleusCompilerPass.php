@@ -43,6 +43,7 @@ class NucleusCompilerPass implements CompilerPassInterface
         //We set/override the debug value base on the debug in dna configuration
         //So it can be reuse in the service container
         $configuration['services']['configuration']['configuration']['debug'] = $dna->getDebug();
+        $configuration['services']['configuration']['configuration']['cachePath'] = $dna->getCachePath();
         $this->dnaConfiguration->setConfiguration($configuration);
         $this->configuration = $this->dnaConfiguration->getConfiguration();
         $this->loaderFiles = $fileLoader->getLoadedFiles();
