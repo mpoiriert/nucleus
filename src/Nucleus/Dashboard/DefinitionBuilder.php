@@ -17,7 +17,7 @@ class DefinitionBuilder
     protected $validator;
 
     /**
-     * @Inject
+     * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function initialize(IServiceContainer $serviceContainer)
     {

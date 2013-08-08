@@ -74,7 +74,7 @@ class Dashboard
     }
 
     /**
-     * @Route(name="dashboard.schema", path="/nucleus/dashboard/_schema")
+     * @\Nucleus\IService\Routing\Route(name="dashboard.schema", path="/nucleus/dashboard/_schema")
      */
     public function getSchema()
     {
@@ -92,7 +92,7 @@ class Dashboard
     }
 
     /**
-     * @Route(name="dashboard.controllerSchema", path="/nucleus/dashboard/{controllerName}/_schema")
+     * @\Nucleus\IService\Routing\Route(name="dashboard.controllerSchema", path="/nucleus/dashboard/{controllerName}/_schema")
      */
     public function getControllerSchema($controllerName)
     {
@@ -116,7 +116,7 @@ class Dashboard
     }
 
     /**
-     * @Route(name="dashboard.actionSchema", path="/nucleus/dashboard/{controllerName}/{actionName}/_schema")
+     * @\Nucleus\IService\Routing\Route(name="dashboard.actionSchema", path="/nucleus/dashboard/{controllerName}/{actionName}/_schema")
      */
     public function getActionSchema($controllerName, $actionName)
     {
@@ -132,7 +132,7 @@ class Dashboard
     }
 
     /**
-     * @Route(name="dashboard.modelActionSchema", path="/nucleus/dashboard/{controllerName}/{actionName}/{modelActionName}/_schema")
+     * @\Nucleus\IService\Routing\Route(name="dashboard.modelActionSchema", path="/nucleus/dashboard/{controllerName}/{actionName}/{modelActionName}/_schema")
      */
     public function getModelActionSchema($controllerName, $actionName, $modelActionName)
     {
@@ -155,7 +155,7 @@ class Dashboard
     }
 
     /**
-     * @Route(name="dashboard.invoke", path="/nucleus/dashboard/{controllerName}/{actionName}")
+     * @\Nucleus\IService\Routing\Route(name="dashboard.invoke", path="/nucleus/dashboard/{controllerName}/{actionName}")
      */
     public function invokeAction($controllerName, $actionName, Request $request, Response $response)
     {
@@ -184,7 +184,7 @@ class Dashboard
     }
 
     /**
-     * @Route(name="dashboard.invokeModel", path="/nucleus/dashboard/{controllerName}/{actionName}/{modelActionName}")
+     * @\Nucleus\IService\Routing\Route(name="dashboard.invokeModel", path="/nucleus/dashboard/{controllerName}/{actionName}/{modelActionName}")
      */
     public function invokeModelAction($controllerName, $actionName, $modelActionName, Request $request, Response $response)
     {
