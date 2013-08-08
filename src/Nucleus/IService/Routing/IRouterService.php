@@ -14,7 +14,7 @@ namespace Nucleus\IService\Routing;
  */
 interface IRouterService
 {
-    const NUCLEUS_SERVICE_NAME = 'router';
+    const NUCLEUS_SERVICE_NAME = 'routing';
     
     public function addRoute($name, $path, array $defaults = array(), array $requirements = array(), array $options = array(), $host = '', $schemes = array(), $methods = array());
 
