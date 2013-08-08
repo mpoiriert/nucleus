@@ -19,7 +19,7 @@
                 }
             }
         },
-        "securityCheck.aspect": {
+        "aspect.securityCheck": {
             "class": "Nucleus\\Security\\SecurityCheckAspect"
         },
         "businessRuleEngine.rule.securityHasPermission": {

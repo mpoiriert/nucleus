@@ -93,7 +93,7 @@ class CacheDataCollector extends BaseAspect implements Renderable, DataCollector
     {
         return array(
             "cache" => array(
-                "widget" => "PhpDebugBar.Widgets.CacheWidget",
+                "widget" => "Nucleus.DebugBar.CacheWidget",
                 "map" => "cache",
                 "default" => "[]"
             ),
