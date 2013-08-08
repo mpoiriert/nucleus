@@ -20,7 +20,7 @@ $(function() {
         this.cache = {};
     };
 
-    RestEndpoint.prototype.call = function(method, action, params, callback) {
+    RestEndpoint.prototype.call = function(method, action, params, callback, err_callback) {
         if (typeof(action) == 'function') {
             action = action();
         }
@@ -34,7 +34,13 @@ $(function() {
             action = action.url;
         }
         if (options.cached && this.cache[options.cache_id]) {
-            return callback(this.cache[options.cache_id]);
+            var data = this.cache[options.cache_id];
+            if (data.success) {
+                callback(data.data);
+            } else if (err_callback) {
+                err_callback(data.message);
+            }
+            return;
         }
         $.ajax({
             url: this.base_url + action,
@@ -44,7 +50,11 @@ $(function() {
             data: params || {}
         }).done(_.bind(function(data) {
             this.cache[options.cache_id] = data.result;
-            callback(data.result);
+            if (data.result.success) {
+                callback(data.result.data);
+            } else if (err_callback) {
+                err_callback(data.result.message);
+            }
         }, this));
     };
 
@@ -101,9 +111,9 @@ $(function() {
         },
         renderToolbar: function() {
             if (this.options.actions) {
-                var tb = new Dashboard.ToolbarView({ base_url: "#", buttons: this.options.actions });
-                this.listenTo(tb, 'btn-click', this.toolbarClick);
-                this.$el.append(tb.render().el);
+                this.$toolbar = new Dashboard.ToolbarView({ base_url: "#", buttons: this.options.actions });
+                this.listenTo(this.$toolbar, 'btn-click', this.toolbarClick);
+                this.$el.append(this.$toolbar.render().el);
             }
             return this.$el;
         },
@@ -113,6 +123,23 @@ $(function() {
         handleFormSubmited: function(e) {
             this.trigger('submit', this.serialize());
             e.preventDefault();
+        },
+        freeze: function() {
+            this.$(':input').attr('disabled', 'disabled');
+        },
+        unfreeze: function() {
+            this.$(':input').removeAttr('disabled');
+        },
+        showError: function(message) {
+            if (typeof(this.$error) === 'undefined') {
+                this.$error = $('<div class="alert alert-error" />');
+                if (this.$toolbar) {
+                    this.$error.insertAfter(this.$toolbar);
+                } else {
+                    this.$error.prependTo(this.$el);
+                }
+            }
+            this.$error.text(message);
         },
         serialize: function() {
             var o = {};
@@ -235,34 +262,34 @@ $(function() {
             return this;
         },
         renderInput: function() {
-            var view = new Dashboard.FormWidgetView({ fields: this.schema.input.fields });
-            this.listenTo(view, 'submit', this.executeAction);
-            this.$el.empty().append(view.render().el);
+            this.view = new Dashboard.FormWidgetView({ fields: this.schema.input.fields });
+            this.listenTo(this.view, 'submit', this.executeAction);
+            this.$el.empty().append(this.view.render().el);
         },
         renderResponse: function(data) {
             if (this.schema.output.type == 'list') {
-                var view = new Dashboard.ListWidgetView(this.schema.output);
+                this.view = new Dashboard.ListWidgetView(this.schema.output);
             } else if (this.schema.output.type == 'object') {
-                var view = new Dashboard.ObjectWidgetView(this.schema.output);
+                this.view = new Dashboard.ObjectWidgetView(this.schema.output);
             } else if (this.schema.output.type == 'form') {
-                var view = new Dashboard.FormWidgetView(this.schema.output);
+                this.view = new Dashboard.FormWidgetView(this.schema.output);
             } else {
                 this.trigger('done');
                 return;
             }
 
-            view.model = data;
-            this.listenTo(view, 'pipe', function(action, data) {
+            this.view.model = data;
+            this.listenTo(this.view, 'pipe', function(action, data) {
                 this.trigger('pipe', action, data);
             });
 
             if (this.schema.output.pipe) {
-                this.listenTo(view, 'submit', function(data) {
+                this.listenTo(this.view, 'submit', function(data) {
                     this.trigger('pipe', this.schema.output.pipe, data);
                 });
             }
 
-            this.$el.empty().append(view.render().el);
+            this.$el.empty().append(this.view.render().el);
         },
         executeAction: function(data) {
             var method = this.schema.input.type == 'form' ? 'post' : 'get',
@@ -273,13 +300,21 @@ $(function() {
                 payload = { data: JSON.stringify(data) };
             }
 
-            this.$el.html('<span class="loading">Loading...</span>');
-            Dashboard.api.call(method, this.schema.input.url, payload, _.bind(function(resp) {
-                if (method == 'get') {
-                    Dashboard.router.navigate(this.action_url + '?' + $.param(data));
-                }
-                this.renderResponse(resp);
-            }, this));
+            this.view && this.view.freeze();
+            Dashboard.api.call(method, this.schema.input.url, payload, 
+                _.bind(function(resp) {
+                    if (method == 'get') {
+                        Dashboard.router.navigate(this.action_url + '?' + $.param(data));
+                    }
+                    this.renderResponse(resp);
+                }, this),
+                _.bind(function(message) {
+                    if (this.view) {
+                        this.view.showError(message);
+                        this.view.unfreeze();
+                    }
+                }, this)
+            );
         }
     });
 

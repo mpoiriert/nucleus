@@ -40,6 +40,7 @@ class HomeController
 
     /**
      * @\Nucleus\IService\Dashboard\Action(title="Add (args)", icon="plus")
+     * @\Nucleus\IService\Dashboard\Validate(property="firstname", constraint="NotBlank")
      *
      * @param string $firstname Firstname
      * @param string $lastname Lastname

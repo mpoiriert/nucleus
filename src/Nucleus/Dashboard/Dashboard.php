@@ -78,16 +78,17 @@ class Dashboard
      */
     public function getSchema()
     {
-        $controllers = array();
+        $schema = array();
         foreach ($this->controllers as $controller) {
-            $controllers[] = array(
+            $schema[] = array(
                 'name' => $controller->getName(),
                 'title' => $controller->getTitle(),
                 'url' => $this->routing->generate('dashboard.controllerSchema', 
                     array('controllerName' => $controller->getName()))
             );
         }
-        return $controllers;
+
+        return $this->formatResponse($schema);
     }
 
     /**
@@ -100,7 +101,7 @@ class Dashboard
         }
 
         $self = $this;
-        return array_values(array_filter(array_map(function($action) use ($controller, $self) {
+        $schema = array_values(array_filter(array_map(function($action) use ($controller, $self) {
             if (!$self->accessControl->checkPermissions($action->getPermissions())) {
                 return false;
             }
@@ -110,6 +111,8 @@ class Dashboard
                     array('controllerName' => $controller->getName(), 'actionName' => $action->getName()))
             ));
         }, $controller->getVisibleActions())));
+
+        return $this->formatResponse($schema);
     }
 
     /**
@@ -119,11 +122,13 @@ class Dashboard
     {
         list($controller, $action) = $this->getAction($controllerName, $actionName);
 
-        return array_merge(
+        $schema = array_merge(
             $this->formatAction($action),
             array('input' => $this->formatActionInput($controller, $action)),
             array('output' => $this->formatActionOutput($controller, $action))
         );
+
+        return $this->formatResponse($schema);
     }
 
     /**
@@ -133,7 +138,7 @@ class Dashboard
     {
         list($controller, $action, $modelAction) = $this->getAction($controllerName, $actionName, $modelActionName);
 
-        return array_merge(
+        $schema = array_merge(
             $this->formatAction($modelAction),
             array('name' => $action->getName() . '/' . $modelAction->getName()),
             array('input' => array_merge(
@@ -145,6 +150,8 @@ class Dashboard
             )),
             array('output' => $this->formatActionOutput($controller, $modelAction))
         );
+
+        return $this->formatResponse($schema);
     }
 
     /**
@@ -155,17 +162,25 @@ class Dashboard
         list($controller, $action) = $this->getAction($controllerName, $actionName);
 
         $service = $this->serviceContainer->get($controller->getServiceName());
+        $model = $action->getInputModel();
         $data = $this->getInputData($request);
 
-        if ($action->isModelOnlyArgument()) {
-            $model = $this->instanciateModel($action->getInputModel(), $data);
-            $data = array($action->getModelArgumentName() => $model);
+        try {
+            if ($action->isModelOnlyArgument()) {
+                $object = $this->instanciateModel($model, $data);
+                $model->validate($object);
+                $data = array($action->getModelArgumentName() => $object);
+            } else if ($model) {
+                $model->validate($data);
+            }
+        } catch (ValidationException $e) {
+            return $this->formatErrorResponse((string) $e->getVioliations());
         }
 
         $result = $this->invoker->invoke(
             array($service, $action->getName()), $data, array($request, $response));
 
-        return $this->formatResponse($action, $result);
+        return $this->formatInvokedResponse($action, $result);
     }
 
     /**
@@ -176,12 +191,19 @@ class Dashboard
         list($controller, $action, $modelAction) = $this->getAction($controllerName, $actionName, $modelActionName);
 
         $data = $this->getInputData($request);
-        $model = $this->instanciateModel($action->getReturnModel(), $data);
+        $model = $action->getReturnModel();
+        $object = $this->instanciateModel($model, $data);
+
+        try {
+            $model->validate($object);
+        } catch (ValidationException $e) {
+            return $this->formatErrorResponse((string) $e->getVioliations());
+        }
 
         $result = $this->invoker->invoke(
-            array($model, $modelAction->getName()), array(), array($request, $response));
+            array($object, $modelAction->getName()), array(), array($request, $response));
 
-        return $this->formatResponse($modelAction, $result, $model);
+        return $this->formatInvokedResponse($modelAction, $result, $object);
     }
 
     protected function getAction($controllerName, $actionName, $modelActionName = null)
@@ -324,23 +346,34 @@ class Dashboard
         }, $fields));
     }
 
-    protected function formatResponse($action, $result, $obj = null)
+    protected function formatResponse($data)
+    {
+        return array('success' => true, 'data' => $data);
+    }
+
+    protected function formatErrorResponse($message)
+    {
+        return array('success' => false, 'message' => $message);
+    }
+
+    protected function formatInvokedResponse($action, $result, $obj = null)
     {
         $model = $action->getReturnModel();
         if ($action->getReturnType() === ActionDefinition::RETURN_LIST) {
-            $list = array();
+            $data = array();
             if ($result !== null) {
                 foreach ($result as $item) {
-                    $list[] = $this->convertObjectToJson($item, $model);
+                    $data[] = $this->convertObjectToJson($item, $model);
                 }
             }
-            return $list;
         } else if ($action->getReturnType() === ActionDefinition::RETURN_NONE) {
-            return null;
+            $data = null;
         } else if ($result === null) {
-            return null;
+            $data = null;
+        } else {
+            $data = $this->convertObjectToJson($result, $model);
         }
-        return $this->convertObjectToJson($result, $model);
+        return $this->formatResponse($data);
     }
 
     protected function convertObjectToJson($obj, $model)
@@ -364,6 +397,7 @@ class Dashboard
         $className = $model->getClassName();
         $class = new ReflectionClass($className);
         $obj = $class->newInstance();
+
         foreach ($model->getEditableFields() as $f) {
             $p = $f->getProperty();
             $setter = 'set' . ucfirst($p);
@@ -376,6 +410,7 @@ class Dashboard
                 $class->getMethod($setter)->invoke($obj, $data[$p]);
             }
         }
+
         return $obj;
     }
 }

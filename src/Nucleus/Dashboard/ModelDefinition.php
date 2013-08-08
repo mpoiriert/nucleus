@@ -2,6 +2,9 @@
 
 namespace Nucleus\Dashboard;
 
+use Symfony\Component\Validator\Validator;
+use Symfony\Component\Validator\ConstraintViolationList;
+
 class ModelDefinition
 {
     protected $className;
@@ -113,5 +116,36 @@ class ModelDefinition
     public function getActions()
     {
         return $this->actions;
+    }
+
+    public function setValidator(Validator $validator)
+    {
+        $this->validator = $validator;
+    }
+
+    public function getValidator()
+    {
+        return $this->validator;
+    }
+
+    public function validate($data)
+    {
+        if ($this->validator === null) {
+            return true;
+        }
+
+        if ($this->className !== null) {
+            $violiations = $this->validator->validate($data);
+        } else {
+            $violiations = new ConstraintViolationList();
+            foreach ($this->fields as $field) {
+                $value = array_key_exists($field->getProperty(), $data) ? $data[$field->getProperty()] : null;
+                $violiations->addAll($this->validator->validateValue($value, $field->getConstraints()));
+            }
+        }
+
+        if (count($violiations)) {
+            throw new ValidationException($violiations);
+        }
     }
 }

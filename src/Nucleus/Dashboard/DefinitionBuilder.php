@@ -8,10 +8,13 @@ use Nucleus\Annotation\AnnotationParser;
 use ReflectionClass;
 use ReflectionProperty;
 use ReflectionMethod;
+use Symfony\Component\Validator\Validation;
 
 class DefinitionBuilder
 {
     protected $serviceContainer;
+
+    protected $validator;
 
     /**
      * @Inject
@@ -19,6 +22,9 @@ class DefinitionBuilder
     public function initialize(IServiceContainer $serviceContainer)
     {
         $this->serviceContainer = $serviceContainer;
+        $this->validator = Validation::createValidatorBuilder()
+            ->enableAnnotationMapping()
+            ->getValidator();
     }
 
     public function buildController($className)
@@ -91,7 +97,8 @@ class DefinitionBuilder
         }
 
         $model->setFields($fields)
-              ->setActions($this->extractActionsFromClass($class, $annotations));
+              ->setActions($this->extractActionsFromClass($class, $annotations))
+              ->setValidator($this->validator);
 
         return $model;
     }
@@ -144,7 +151,7 @@ class DefinitionBuilder
         }
 
         if ($action->getInputType() !== ActionDefinition::INPUT_CALL) {
-            $inputModel = $this->buildModelFromMethod($method);
+            $inputModel = $this->buildModelFromMethod($method, $additionalAnnotations);
             if ($method->getNumberOfParameters() == 1) {
                 $fields = $inputModel->getFields();
                 if (count($fields) === 1 && $fields[0]->isModelType()) {
@@ -185,9 +192,10 @@ class DefinitionBuilder
         return $action;
     }
 
-    protected function buildModelFromMethod(ReflectionMethod $method)
+    protected function buildModelFromMethod(ReflectionMethod $method, array $additionalAnnotations = array())
     {
         $model = new ModelDefinition();
+        $model->setValidator(Validation::createValidator());
 
         $paramComments = array();
         if (preg_match_all('/@param ([a-zA-Z\\\\]+) (\$[a-zA-Z_0-9]+)( .+)?$/m', $method->getDocComment(), $results)) {
@@ -224,7 +232,26 @@ class DefinitionBuilder
             $model->addField($field);
         }
 
+        $this->applyFieldConstraintsFromAnnotations($model, $additionalAnnotations);
+
         return $model;
+    }
+
+    protected function applyFieldConstraintsFromAnnotations(ModelDefinition $model, array $annotations)
+    {
+        foreach ($annotations as $anno) {
+            if (!($anno instanceof \Nucleus\IService\Dashboard\Validate)) {
+                continue;
+            }
+
+            if (strpos($anno->constraint, '\\') !== false && class_exists($anno->constraint)) {
+                $className = (string) $anno->constraint;
+            } else {
+                $className = 'Symfony\\Component\\Validator\\Constraints\\' . $anno->constraint;
+            }
+
+            $model->getField($anno->property)->addConstraint(new $className(json_decode($anno->options, true)));
+        }
     }
 
     protected function buildField($annotation, ReflectionProperty $property = null)

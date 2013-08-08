@@ -18,6 +18,7 @@
         "symfony/property-access": "2.*",
         "symfony/routing": "2.*",
         "symfony/http-foundation": "2.2.*",
+        "symfony/validator": "2.3.*",
         "twig/twig": "1.*",
         "kriswallsmith/assetic": "1.1.*",
         "leafo/scssphp": "0.0.*",

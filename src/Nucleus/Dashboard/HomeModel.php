@@ -15,6 +15,7 @@ class HomeModel
 
     /**
      * @\Nucleus\IService\Dashboard\ModelField(name="First name")
+     * @\Symfony\Component\Validator\Constraints\NotBlank
      * @var string
      */
     public $firstname;

@@ -2,6 +2,8 @@
 
 namespace Nucleus\Dashboard;
 
+use Symfony\Component\Validator\Constraint;
+
 class FieldDefinition
 {
     protected $property;
@@ -29,6 +31,8 @@ class FieldDefinition
     protected $editable = true;
 
     protected $link;
+
+    protected $constraints = array();
 
     protected $defaultFormType = 'text';
 
@@ -212,5 +216,22 @@ class FieldDefinition
     public function getLink()
     {
         return $this->link;
+    }
+
+    public function setConstraints(array $constraints)
+    {
+        $this->constraints = array();
+        array_map(array($this, 'addConstraint'), $this->constraints);
+        return $this;
+    }
+
+    public function addConstraint(Constraint $constraint)
+    {
+        $this->constraints[] = $constraint;
+    }
+
+    public function getConstraints()
+    {
+        return $this->constraints;
     }
 }
