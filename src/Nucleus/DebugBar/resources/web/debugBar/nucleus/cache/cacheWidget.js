@@ -1,40 +1,30 @@
 
 (function($) {
-    /**
-     * Widget for the displaying sql queries
-     *
-     * @this {CacheWidget}
-     * @constructor
-     * @param {Object} data
-     */
-    var CacheWidget = function(data) {
-        this.element = $('<div class="nucleus-phpdebugbar-widgets" />');
-        this.status = $('<div class="status" />').appendTo(this.element);
+    Nucleus.DebugBar.CacheWidget = PhpDebugBar.Widget.extend({
+        className: 'nucleus-phpdebugbar-widgets',
+        render: function() {
+            this.$status = $('<div class="status" />').appendTo(this.$el);
 
-        this.list = new PhpDebugBar.Widgets.ListWidget(null, function(li, call) {
-            li.addClass('list-item');
-            
-            //Found will not be defined in case of set
-            if(call.found !== undefined && !call.found) {
-                li.addClass('error');
-            }
-            
-            $('<span class="field ' + call.method + '" title="Method" />').text(call.method).appendTo(li);
-            $('<span class="field" title="Namespace" />').text(call.namespace).appendTo(li);
-            $('<span class="field" title="Name" />').text(call.name).appendTo(li);
-        });
-        this.element.append(this.list.element);
+            this.$list = new PhpDebugBar.Widgets.ListWidget(null, function(li, call) {
+                li.addClass('list-item');
+                //Found will not be defined in case of set
+                if (call.found !== undefined && !call.found) {
+                    li.addClass('error');
+                }
 
-        if (data) {
-            this.setData(data);
+                $('<span class="field ' + call.method + '" title="Method" />').text(call.method).appendTo(li);
+                $('<span class="field" title="Namespace" />').text(call.namespace).appendTo(li);
+                $('<span class="field" title="Name" />').text(call.name).appendTo(li);
+            });
+            
+            this.$el.append(this.$list.$el);
+
+            this.bindAttr('data', function(data) {
+                this.$list.set('data',data.calls);
+                this.$status.empty()
+                    .append($('<span />').text(data.calls.length + " calls have been mades"));
+            });
+
         }
-    };
-
-    CacheWidget.prototype.setData = function(data) {
-        this.list.setData(data.calls);
-        this.status.empty()
-            .append($('<span />').text(data.calls.length + " calls have been mades"));
-    };
-
-    PhpDebugBar.Widgets.CacheWidget = CacheWidget;
+    });
 })(jQuery);

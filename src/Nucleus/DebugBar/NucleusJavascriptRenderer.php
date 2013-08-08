@@ -21,6 +21,7 @@ class NucleusJavascriptRenderer extends JavascriptRenderer
         $files = parent::getAssetFiles(null);
         
         $files[0][] = 'nucleus/style.css';
+        $files[1][] = 'nucleus/NucleusDebugBar.js';
         
         foreach($this->debugBar->getCollectors() as $collector) {
             if($collector instanceof IAssetProvider) {

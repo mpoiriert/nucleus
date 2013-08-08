@@ -17,6 +17,10 @@
             "arguments": ["@debugBar","/nucleus/asset/debugBar"]
         },
         
+        "aspect.debugBarNucleusDataCollector": {
+            "class": "Nucleus\\DebugBar\\DataCollector\\NucleusDataCollector"
+        },
+        
         "aspect.debugBarCacheDataCollector": {
             "class": "Nucleus\\DebugBar\\DataCollector\\CacheDataCollector"
         },
