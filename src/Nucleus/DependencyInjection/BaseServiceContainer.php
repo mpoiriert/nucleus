@@ -84,7 +84,7 @@ abstract class BaseServiceContainer extends Container implements IServiceContain
             $name = $this->aliases[$name];
         }
         
-        $service = parent::get($name);
+        $service = $this->loadAspect(parent::get($name),$name);
         
         if (!in_array($service, $this->startedServices)) {
             $this->startedServices[$name] = $service;
@@ -95,8 +95,6 @@ abstract class BaseServiceContainer extends Container implements IServiceContain
             }
         }
 
-        $this->loadAspect($service);
-        
         return $service;
     }
     
@@ -108,21 +106,27 @@ abstract class BaseServiceContainer extends Container implements IServiceContain
         return $this->getServiceByName(IEventDispatcherService::NUCLEUS_SERVICE_NAME);
     }
     
-    private function loadAspect($service)
+    private function loadAspect($service, $id)
     {
-        if ($service instanceof Aspect && !in_array($service, $this->loadedAspects)) {
-            $aspectContainer = $this->getAspectContainer();
-            try {
-                $service = $aspectContainer->getAspect(get_class($service));
-            } catch (\OutOfBoundsException $e) {
-                $this->getAspectContainer()->registerAspect($service);
-            }
-   
-            if($service instanceof IServiceContainerAware) {
-                $service->setServiceContainer($this);
-            }
-            $this->loadedAspects[spl_object_hash($service)] = $service;
+        if (!($service instanceof Aspect) || in_array($service, $this->loadedAspects)) {
+            return $service;
         }
+
+        $aspectContainer = $this->getAspectContainer();
+        try {
+            $newService = $aspectContainer->getAspect(get_class($service));
+            $this->set($id,$newService);
+        } catch (\OutOfBoundsException $e) {
+            $this->getAspectContainer()->registerAspect($service);
+            $newService = $service;
+        }
+
+        if ($newService instanceof IServiceContainerAware) {
+            $newService->setServiceContainer($this);
+        }
+        $this->loadedAspects[] = $newService;
+
+        return $newService;
     }
     
     /**
