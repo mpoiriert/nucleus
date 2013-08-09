@@ -51,6 +51,9 @@ abstract class SingletonApplicationKernel
         }
 
         $application = self::$instance = new static();
+        
+        $application->preCreation();
+        
         $dnaConfiguration = self::$instance->getDnaConfiguration();
 
         if (!($dnaConfiguration instanceof DnaConfiguration)) {
@@ -59,12 +62,17 @@ abstract class SingletonApplicationKernel
 
         $application->nucleus = Nucleus::factory($dnaConfiguration);
      
-        $application->postCreationInitiliazation();
+        $application->postCreation();
         
         return $application;
     }
     
-    protected function postCreationInitiliazation()
+    protected function preCreation()
+    {
+        
+    }
+    
+    protected function postCreation()
     {
         
     }
