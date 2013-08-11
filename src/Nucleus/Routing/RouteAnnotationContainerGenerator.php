@@ -58,8 +58,8 @@ class RouteAnnotationContainerGenerator implements IAnnotationContainerGenerator
      */
     private function addRoute(Route $route, GenerationContext $context)
     {
-        //We don't add route with no name
-        if(!$route->getName()) {
+        //We don't add route with no name or no path
+        if(!$route->getName() || !$route->getPath()) {
             return;
         }
         
