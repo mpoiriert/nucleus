@@ -58,6 +58,11 @@ class RouteAnnotationContainerGenerator implements IAnnotationContainerGenerator
      */
     private function addRoute(Route $route, GenerationContext $context)
     {
+        //We don't add route with no name
+        if(!$route->getName()) {
+            return;
+        }
+        
         $defaults = $route->getDefaults();
         $defaults['_service'] = array(
             'name' => $context->getServiceName(),
