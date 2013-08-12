@@ -56,6 +56,11 @@ class Router implements IRouterService
         $this->urlGenerator = new UrlGenerator($this->routeCollection, $this->context);
     }
     
+    /**
+     * @\Nucleus\IService\EventDispatcher\Listen("Culture.change")
+     * 
+     * @param string $culture
+     */
     public function setDefaultCulture($culture)
     {
         $this->defaultCulture = $culture;
