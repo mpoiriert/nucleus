@@ -61,23 +61,30 @@ class DefinitionBuilder
     {
         $annotations = $this->parseAnnotations($className);
         $class = new ReflectionClass($className);
-
-        $annoFilter = function($a) { return $a instanceof \Nucleus\IService\Dashboard\ModelField; };
-        $fieldAnnotations = $annotations->getClassAnnotations(array($annoFilter));
         $model = new ModelDefinition();
         $model->setClassName($className);
 
+        $loader = null;
         $classProperties = array();
-        foreach ($fieldAnnotations as $anno) {
-            if (!$anno->property) {
-                throw new DefinitionBuilderException("Field '{$anno->name}' of model '$className' is missing the 'property' attribute");
+        foreach ($annotations->getClassAnnotations() as $anno) {
+            if ($anno instanceof \Nucleus\IService\Dashboard\Model) {
+                if ($anno->loader !== null && !is_callable($anno->loader)) {
+                    throw new DefinitionBuilderException("Loader '{$anno->loader}' for model '$className' must be callable");
+                }
+                $loader = $anno->loader;
+            } else if ($anno instanceof \Nucleus\IService\Dashboard\ModelField) {
+                if (!$anno->property) {
+                    throw new DefinitionBuilderException("Field '{$anno->name}' of model '$className' is missing the 'property' attribute");
+                }
+                $classProperties[$anno->property] = $anno;
             }
-            $classProperties[$anno->property] = $anno;
         }
 
         $fields = array();
         foreach ($class->getProperties() as $property) {
-            $annos = $annotations->getPropertyAnnotations($property->getName(), array($annoFilter));
+            $annos = $annotations->getPropertyAnnotations($property->getName(), array(function($a) {
+                return $a instanceof \Nucleus\IService\Dashboard\ModelField;
+            }));
             if (empty($annos)) {
                 if (!isset($classProperties[$property->getName()])) {
                     continue;
@@ -96,8 +103,18 @@ class DefinitionBuilder
             }
         }
 
+        foreach ($annotations->getAllMethodAnnotations() as $methodName => $annos) {
+            foreach ($annos as $anno) {
+                if ($anno instanceof \Nucleus\IService\Dashboard\ModelLoader) {
+                    $loader = array($className, $methodName);
+                    break 2;
+                }
+            }
+        }
+
         $model->setFields($fields)
               ->setActions($this->extractActionsFromClass($class, $annotations))
+              ->setLoader($loader)
               ->setValidator($this->validator);
 
         return $model;
@@ -131,7 +148,8 @@ class DefinitionBuilder
             $action->setTitle($annotation->title ?: $method->getName())
                    ->setIcon($annotation->icon)
                    ->setDefault($annotation->default)
-                   ->setVisible($annotation->visible);
+                   ->setVisible($annotation->visible)
+                   ->setLoadModel($annotation->load_model);
 
             if ($annotation->pipe) {
                 $action->setPipe($annotation->pipe);

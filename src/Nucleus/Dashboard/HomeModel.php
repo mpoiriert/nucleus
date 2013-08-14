@@ -31,6 +31,15 @@ class HomeModel
      */
     public $age;
 
+    /**
+     * @\Nucleus\IService\Dashboard\ModelLoader
+     * @param int $id
+     */
+    public static function find($id)
+    {
+        return new self($id, $id);
+    }
+
     public function __construct($id = null, $firstname = null, $lastname = null, $password = null)
     {
         $this->id = $id;

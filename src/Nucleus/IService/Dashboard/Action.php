@@ -16,4 +16,5 @@ class Action
     public $visible = true;
     public $pipe;
     public $on_model = false;
+    public $load_model = false;
 }

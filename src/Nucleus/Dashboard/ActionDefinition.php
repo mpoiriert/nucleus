@@ -29,6 +29,8 @@ class ActionDefinition
 
     protected $modelOnlyArgument = false;
 
+    protected $loadModel = false;
+
     protected $returnType = 'none';
 
     protected $returnModel;
@@ -100,6 +102,7 @@ class ActionDefinition
     public function setVisible($visible = true)
     {
         $this->visible = $visible;
+        return $this;
     }
 
     public function isVisible()
@@ -143,6 +146,17 @@ class ActionDefinition
     public function getModelArgumentName()
     {
         return $this->modelOnlyArgument;
+    }
+
+    public function setLoadModel($load = true)
+    {
+        $this->loadModel = $load;
+        return $this;
+    }
+
+    public function isModelLoaded()
+    {
+        return $this->loadModel;
     }
 
     public function setReturnType($type)

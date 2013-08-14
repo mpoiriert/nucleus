@@ -167,7 +167,11 @@ class Dashboard
 
         try {
             if ($action->isModelOnlyArgument()) {
-                $object = $this->instanciateModel($model, $data);
+                if ($action->isModelLoaded()) {
+                    $object = $this->loadModel($model, $data);
+                } else {
+                    $object = $this->instanciateModel($model, $data);
+                }
                 $model->validate($object);
                 $data = array($action->getModelArgumentName() => $object);
             } else if ($model) {
@@ -192,7 +196,7 @@ class Dashboard
 
         $data = $this->getInputData($request);
         $model = $action->getReturnModel();
-        $object = $this->instanciateModel($model, $data);
+        $object = $this->loadModel($model, $data);
 
         try {
             $model->validate($object);
@@ -302,7 +306,13 @@ class Dashboard
         );
 
         if ($action->getReturnType() === ActionDefinition::RETURN_FORM) {
-            $json['fields'] = $this->formatFields($action->getReturnModel()->getEditableFields());
+            $fields = $action->getReturnModel()->getEditableFields();
+            if ($idField = $action->getReturnModel()->getIdentifierField()) {
+                if (!in_array($idField, $fields)) {
+                    $fields[] = $idField;
+                }
+            }
+            $json['fields'] = $this->formatFields($fields);
         } else {
             $json['fields'] = $this->formatFields($action->getReturnModel()->getListableFields());
         }
@@ -341,6 +351,7 @@ class Dashboard
                 'optional' => $f->isOptional(),
                 'defaultValue' => $f->getDefaultValue(),
                 'identifier' => $f->isIdentifier(),
+                'editable' => $f->isEditable(),
                 'link' => $link
             );
         }, $fields));
@@ -392,12 +403,33 @@ class Dashboard
         return $json;
     }
 
+    protected function loadModel(ModelDefinition $model, $data)
+    {
+        if (!$model->hasLoader()) {
+            return $this->instanciateModel($model, $data);
+        }
+        $loaderArgs = $data;
+        if ($idField = $model->getIdentifierField()) {
+            $loaderArgs = $data[$idField->getProperty()];
+        }
+        $obj = call_user_func($model->getLoader(), $loaderArgs);
+        $this->populateModel($obj, $model, $data);
+        return $obj;
+    }
+
     protected function instanciateModel(ModelDefinition $model, $data = array())
     {
-        $className = $model->getClassName();
-        $class = new ReflectionClass($className);
+        $class = new ReflectionClass($model->getClassName());
         $obj = $class->newInstance();
+        $this->populateModel($obj, $model, $data, $class);
+        return $obj;
+    }
 
+    protected function populateModel($obj, ModelDefinition $model, $data, ReflectionClass $class = null)
+    {
+        if ($class === null) {
+            $class = new ReflectionClass($obj);
+        }
         foreach ($model->getEditableFields() as $f) {
             $p = $f->getProperty();
             $setter = 'set' . ucfirst($p);
@@ -410,7 +442,6 @@ class Dashboard
                 $class->getMethod($setter)->invoke($obj, $data[$p]);
             }
         }
-
         return $obj;
     }
 }

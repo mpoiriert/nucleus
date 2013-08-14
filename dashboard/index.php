@@ -48,20 +48,24 @@
 
   <script type="text/template" id="form-action-tpl">
     <% _.each(fields, function(field) { %>
-      <div class="control-group">
-        <label class="control-label" for="<%= field.name %>"><%= field.title %></label>
-        <div class="controls">
-          <% if (field.field_type == 'textarea') { %>
-            <textarea name="<%= field.name %>" data-type="<%= field.formated_type %>"><%= values[field.name] %></textarea>
-          <% } else if (field.field_type == 'checkbox' || field.field_type == 'radio') { %>
-            <input type="<%= field.field_type %>" name="<%= field.name %>" value="<%= field.value %>"
-              data-type="<%= field.formated_type %>" <% if (values[field.name] == field.value) print("checked"); %>>
-          <% } else { %>
-            <input type="<%= field.field_type %>" name="<%= field.name %>" value="<%= values[field.name] %>"
-              data-type="<%= field.formated_type %>">
-          <% } %>
+      <% if (field.editable) { %>
+        <div class="control-group">
+          <label class="control-label" for="<%= field.name %>"><%= field.title %></label>
+          <div class="controls">
+            <% if (field.field_type == 'textarea') { %>
+              <textarea name="<%= field.name %>" data-type="<%= field.formated_type %>"><%= values[field.name] %></textarea>
+            <% } else if (field.field_type == 'checkbox' || field.field_type == 'radio') { %>
+              <input type="<%= field.field_type %>" name="<%= field.name %>" value="<%= field.value %>"
+                data-type="<%= field.formated_type %>" <% if (values[field.name] == field.value) print("checked"); %>>
+            <% } else { %>
+              <input type="<%= field.field_type %>" name="<%= field.name %>" value="<%= values[field.name] %>"
+                data-type="<%= field.formated_type %>">
+            <% } %>
+          </div>
         </div>
-      </div>
+      <% } else { %>
+        <input type="hidden" name="<%= field.name %>" value="<%= values[field.name] %>">
+      <% } %>
     <% }) %>
     <div class="form-actions">
       <button type="submit" class="btn btn-primary">Submit</button>

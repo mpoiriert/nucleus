@@ -15,6 +15,8 @@ class ModelDefinition
 
     protected $actions = array();
 
+    protected $loader;
+
     public function setClassName($className)
     {
         $this->className = trim($className, '\\');
@@ -116,6 +118,22 @@ class ModelDefinition
     public function getActions()
     {
         return $this->actions;
+    }
+
+    public function setLoader($callback = null)
+    {
+        $this->loader = $callback;
+        return $this;
+    }
+
+    public function getLoader()
+    {
+        return $this->loader;
+    }
+
+    public function hasLoader()
+    {
+        return $this->loader !== null;
     }
 
     public function setValidator(Validator $validator)

@@ -83,7 +83,7 @@ class HomeController
     }
 
     /**
-     * @\Nucleus\IService\Dashboard\Action(visible=false)
+     * @\Nucleus\IService\Dashboard\Action(visible=false, load_model=true)
      * @return Nucleus\Dashboard\HomeModel
      */
     public function save(HomeModel $model)
