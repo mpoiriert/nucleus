@@ -1,0 +1,38 @@
+body {
+    padding-top: 40px;
+}
+
+.navbar .brand {
+    margin-left: 0px;
+}
+
+#main {
+    padding: 10px;
+}
+
+#submenu {
+    background: #efefef;
+    padding-left: 8px;
+}
+    #submenu ul {
+        list-style: none;
+        margin: 0;
+    }
+        #submenu li {
+            display: inline;
+            margin: 0;
+            padding: 0;
+        }
+            #submenu .btn {
+                border: 0;
+                background: transparent;
+                box-shadow: none;
+                padding: 7px 11px;
+            }
+
+.loading {
+    display: block;
+    font-size: 15px;
+    font-family: monospace;
+    margin: 10px;
+}

@@ -1,18 +1,19 @@
 {
     "services": {
-        "nucleusDashboard": {
+        "dashboard": {
             "class": "Nucleus\\Dashboard\\Dashboard"
         },
-        "templateFileLoader": {
-            "configuration": {
-                "paths": ["<?php echo str_replace('\\','/',__DIR__) . '/resources/views' ?>"]
-            }
+        "dashboardHome": {
+            "class": "Nucleus\\Dashboard\\HomeController"
         },
-        "assetManager": {
-            "configuration": {
-                "copyAssets": {
-                    "<?php echo str_replace('\\','/',__DIR__) . '/resources/views/web' ?>": "/asset/nucleusDashboard"
-                }
+        "dashboardDefinitionBuilder": {
+            "class": "Nucleus\\Dashboard\\DefinitionBuilder"
+        }
+    },
+    "nucleus": {
+        "annotationContainerGenerator": {
+            "Nucleus\\IService\\Dashboard\\Controller": {
+                "class": "Nucleus\\Dashboard\\ControllerAnnotationContainerGenerator"
             }
         }
     }
