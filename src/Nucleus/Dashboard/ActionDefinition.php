@@ -21,7 +21,7 @@ class ActionDefinition
 
     protected $default = false;
 
-    protected $visible = true;
+    protected $menu = true;
 
     protected $inputType = 'call';
 
@@ -99,15 +99,28 @@ class ActionDefinition
         return $this->default;
     }
 
-    public function setVisible($visible = true)
+    public function setMenu($menu = true)
     {
-        $this->visible = $visible;
+        $this->menu = $menu;
         return $this;
+    }
+
+    public function getMenu()
+    {
+        if ($this->menu === true) {
+            return $this->title;
+        }
+        return trim(rtrim($this->menu, '/') . '/' . $this->title, '/');
+    }
+
+    public function providesMenu()
+    {
+        return $this->menu !== null && !is_bool($this->menu);
     }
 
     public function isVisible()
     {
-        return $this->visible;
+        return $this->menu !== false;
     }
 
     public function setInputType($type)

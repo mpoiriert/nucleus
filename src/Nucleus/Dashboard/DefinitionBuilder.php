@@ -52,7 +52,14 @@ class DefinitionBuilder
             }
         }
 
-        $controller->setActions($this->extractActionsFromClass($class, $annotations));
+        $actions = $this->extractActionsFromClass($class, $annotations);
+        foreach ($actions as $action) {
+            if ($action->isVisible() && !$action->providesMenu()) {
+                $action->setMenu($controller->getTitle());
+            }
+        }
+
+        $controller->setActions($actions);
 
         return $controller;
     }
@@ -148,8 +155,11 @@ class DefinitionBuilder
             $action->setTitle($annotation->title ?: $method->getName())
                    ->setIcon($annotation->icon)
                    ->setDefault($annotation->default)
-                   ->setVisible($annotation->visible)
                    ->setLoadModel($annotation->load_model);
+
+            if ($annotation->menu !== null) {
+                $action->setMenu($annotation->menu);
+            }
 
             if ($annotation->pipe) {
                 $action->setPipe($annotation->pipe);

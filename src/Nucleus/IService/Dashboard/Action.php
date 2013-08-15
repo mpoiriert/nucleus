@@ -13,8 +13,8 @@ class Action
     public $out;
     public $model;
     public $default = false;
-    public $visible = true;
     public $pipe;
     public $on_model = false;
     public $load_model = false;
+    public $menu;
 }

@@ -28,7 +28,7 @@ class HomeController
     }
 
     /**
-     * @\Nucleus\IService\Dashboard\Action(title="Add", icon="plus")
+     * @\Nucleus\IService\Dashboard\Action(title="Add", icon="plus", menu="/Home/Add")
      * 
      * @return Nucleus\Dashboard\HomeModel
      */
@@ -39,7 +39,7 @@ class HomeController
     }
 
     /**
-     * @\Nucleus\IService\Dashboard\Action(title="Add (args)", icon="plus")
+     * @\Nucleus\IService\Dashboard\Action(title="Add (args)", icon="plus", menu="/Home/Add")
      * @\Nucleus\IService\Dashboard\Validate(property="firstname", constraint="NotBlank")
      *
      * @param string $firstname Firstname
@@ -52,7 +52,7 @@ class HomeController
     }
 
     /**
-     * @\Nucleus\IService\Dashboard\Action(title="Search", icon="search")
+     * @\Nucleus\IService\Dashboard\Action(title="Search", icon="search", menu="/")
      *
      * @return \Nucleus\Dashboard\HomeModel[]
      */
@@ -64,7 +64,7 @@ class HomeController
     }
 
     /**
-     * @\Nucleus\IService\Dashboard\Action(title="Show", visible=false)
+     * @\Nucleus\IService\Dashboard\Action(title="Show", menu=false)
      * @param int $id
      * @return Nucleus\Dashboard\HomeModel
      */
@@ -83,7 +83,7 @@ class HomeController
     }
 
     /**
-     * @\Nucleus\IService\Dashboard\Action(visible=false, load_model=true)
+     * @\Nucleus\IService\Dashboard\Action(menu=false, load_model=true)
      * @return Nucleus\Dashboard\HomeModel
      */
     public function save(HomeModel $model)

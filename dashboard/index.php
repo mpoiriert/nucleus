@@ -32,16 +32,17 @@
   <div class="navbar navbar-inverse navbar-fixed-top">
     <div class="navbar-inner">
       <a class="brand" href="#">Dashboard</a>
-      <ul class="nav"></ul>
     </div>
   </div>
+
+  <div id="submenu"></div>
 
   <div id="main"></div>
 
   <script type="text/template" id="toolbar-tpl">
     <div class="btn-group">
     <% _.each(buttons, function(btn) { %>
-        <a href="<%= base_url + btn.name %>" data-action="<%= btn.name %>" class="btn"><i class="icon-<%= btn.icon %>"></i> <%= btn.title %></a>
+        <a href="<%= base_url + btn.controller + '/' + btn.name %>" data-controller="<%= btn.controller %>" data-action="<%= btn.name %>" class="btn"><i class="icon-<%= btn.icon %>"></i> <%= btn.title %></a>
     <% }); %>
     </div>
   </script>

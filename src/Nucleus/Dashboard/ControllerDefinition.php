@@ -45,6 +45,9 @@ class ControllerDefinition
     public function setName($name)
     {
         $this->name = $name;
+        if ($this->title === null) {
+            $this->title = ucfirst($name);
+        }
         return $this;
     }
 
@@ -100,6 +103,15 @@ class ControllerDefinition
     public function getActions()
     {
         return $this->actions;
+    }
+
+    public function getActionsAsMenu()
+    {
+        $menu = array();
+        foreach ($this->getVisibleActions() as $action) {
+            $menu[$action->getMenu()] = $action;
+        }
+        return $menu;
     }
 
     public function getVisibleActions()

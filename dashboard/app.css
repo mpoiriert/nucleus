@@ -6,27 +6,29 @@ body {
     margin-left: 0px;
 }
 
-.controller {
-    position: relative;
+#main {
+    padding: 10px;
 }
-    .controller > .btn-toolbar {
-        background: #efefef;
+
+#submenu {
+    background: #efefef;
+    padding-left: 8px;
+}
+    #submenu ul {
+        list-style: none;
         margin: 0;
-        padding-left: 8px;
     }
-        .controller > .btn-toolbar .btn {
-            border: 0;
-            background: transparent;
-            box-shadow: none;
-            padding: 7px 11px;
-        }
-    .controller > .body {
-        padding: 10px;
-    }
-        .controller > .body > .btn-toolbar {
+        #submenu li {
+            display: inline;
             margin: 0;
-            margin-bottom: 7px;
+            padding: 0;
         }
+            #submenu .btn {
+                border: 0;
+                background: transparent;
+                box-shadow: none;
+                padding: 7px 11px;
+            }
 
 .loading {
     display: block;

@@ -80,39 +80,29 @@ class Dashboard
     {
         $schema = array();
         foreach ($this->controllers as $controller) {
-            $schema[] = array(
-                'name' => $controller->getName(),
-                'title' => $controller->getTitle(),
-                'url' => $this->routing->generate('dashboard.controllerSchema', 
-                    array('controllerName' => $controller->getName()))
-            );
+            $schema = array_merge($schema, $this->formatControllerActions($controller));
         }
 
         return $this->formatResponse($schema);
     }
 
-    /**
-     * @\Nucleus\IService\Routing\Route(name="dashboard.controllerSchema", path="/nucleus/dashboard/{controllerName}/_schema")
-     */
-    public function getControllerSchema($controllerName)
+    public function formatControllerActions(ControllerDefinition $controller)
     {
-        if (($controller = $this->getController($controllerName)) === false) {
-            throw new DashboardException("Controller '$controllerName' not found");
-        }
-
         $self = $this;
-        $schema = array_values(array_filter(array_map(function($action) use ($controller, $self) {
+        $actions = array_values(array_filter(array_map(function($action) use ($controller, $self) {
             if (!$self->accessControl->checkPermissions($action->getPermissions())) {
                 return false;
             }
             return array_merge($self->formatAction($action), array(
+                'controller' => $controller->getName(),
+                'menu' => $action->getMenu(),
                 'default' => $action->isDefault(),
                 'url' => $self->routing->generate('dashboard.actionSchema', 
                     array('controllerName' => $controller->getName(), 'actionName' => $action->getName()))
             ));
-        }, $controller->getVisibleActions())));
+        }, $controller->getActionsAsMenu())));
 
-        return $this->formatResponse($schema);
+        return $actions;
     }
 
     /**
@@ -287,6 +277,7 @@ class Dashboard
                     return false;
                 }
                 return array_merge($self->formatAction($modelAction), array(
+                    'controller' => $controller->getName(),
                     'name' => $action->getName() . '/' . $modelAction->getName(),
                     'url' => $self->routing->generate('dashboard.invokeModel', 
                         array('controllerName' => $controller->getName(), 'actionName' => $action->getName(), 
@@ -299,6 +290,7 @@ class Dashboard
                     return false;
                 }
                 return array_merge($self->formatAction($action), array(
+                    'controller' => $controller->getName(),
                     'url' => $self->routing->generate('dashboard.invoke', 
                         array('controllerName' => $controller->getName(), 'actionName' => $action->getName()))
                 ));
