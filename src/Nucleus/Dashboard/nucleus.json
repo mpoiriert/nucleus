@@ -1,13 +1,35 @@
 {
+    "imports": [
+        "../View",
+        "../AssetManager"
+    ],
     "services": {
         "dashboard": {
-            "class": "Nucleus\\Dashboard\\Dashboard"
+            "class": "Nucleus\\Dashboard\\Dashboard",
+            "configuration": {
+                "api_base_url": "/nucleus/dashboard",
+                "schema_base_url": "",
+                "schema_url": "/_schema",
+                "base_url": ""
+            }
         },
         "dashboardHome": {
             "class": "Nucleus\\Dashboard\\HomeController"
         },
         "dashboardDefinitionBuilder": {
             "class": "Nucleus\\Dashboard\\DefinitionBuilder"
+        },
+        "templateFileLoader": {
+            "configuration": {
+                "paths": ["<?php echo str_replace('\\','/',realpath(__DIR__ . '/resources/views')) ?>"]
+            }
+        },
+        "assetCopier": {
+            "configuration": {
+                "toMirror": {
+                    "dashboard": { "source" : "<?php echo str_replace('\\','/',realpath(__DIR__ . '/../../../dashboard')) ?>" }
+                }
+            }
         }
     },
     "nucleus": {

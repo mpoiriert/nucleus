@@ -8,6 +8,9 @@
             "configuration": {
                 "rootDirectory": "<?php echo str_replace('\\','/',__DIR__) . '/web' ?>"
             }
+        },
+        "debugBarTwigExtension": {
+            "disabled": true
         }
      }
 }

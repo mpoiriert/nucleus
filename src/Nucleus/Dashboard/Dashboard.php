@@ -36,6 +36,8 @@ class Dashboard
     private $controllers = array();
 
     private $builder;
+    
+    private $configuration;
 
     /**
      * @param \Nucleus\Routing\Router $routing
@@ -49,6 +51,17 @@ class Dashboard
         $this->routing = $routing;
         $this->accessControl = $serviceContainer->get('accessControl');
         $this->builder = $serviceContainer->get('dashboardDefinitionBuilder');
+    }
+    
+    /**
+     * 
+     * @param array $configuration
+     * 
+     * @\Nucleus\IService\DependencyInjection\Inject(configuration="$")
+     */
+    public function setConfiguration($configuration)
+    {
+        $this->configuration = $configuration;
     }
 
     public function addController(ControllerDefinition $controller)
@@ -435,5 +448,15 @@ class Dashboard
             }
         }
         return $obj;
+    }
+    
+    /**
+     * @\Nucleus\IService\Routing\Route(name="dasboard", path="/nucleus/dashboard")
+     * 
+     * @\Nucleus\IService\FrontController\ViewDefinition(template="nucleus/dashboard/index.twig")
+     */
+    public function home()
+    {
+        return array('configuration'=>$this->configuration);
     }
 }
