@@ -2,9 +2,7 @@
 
 namespace Nucleus\Dashboard;
 
-use Exception;
-
-class DashboardException extends Exception
+class DefinitionDashboardException extends DashboardException
 {
     
 }
