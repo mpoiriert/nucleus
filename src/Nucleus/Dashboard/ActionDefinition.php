@@ -35,6 +35,18 @@ class ActionDefinition
 
     protected $returnModel;
 
+    protected $paginated = false;
+
+    protected $itemsPerPage;
+
+    protected $offsetParam;
+
+    protected $autoPaginate = false;
+
+    protected $sortFieldParam;
+
+    protected $sortOrderParam;
+
     protected $pipe;
 
     protected $appliedToModel;
@@ -192,6 +204,55 @@ class ActionDefinition
     public function getReturnModel()
     {
         return $this->returnModel;
+    }
+
+    public function setPaginated($perPage = 20, $offsetParam = null, $auto = false)
+    {
+        $this->paginated = $perPage !== false;
+        $this->itemsPerPage = $perPage;
+        $this->offsetParam = $offsetParam;
+        $this->autoPaginate = $auto;
+    }
+
+    public function isPaginated()
+    {
+        return $this->paginated;
+    }
+
+    public function getItemsPerPage()
+    {
+        return $this->itemsPerPage;
+    }
+
+    public function getOffsetParam()
+    {
+        return $this->offsetParam;
+    }
+
+    public function isAutoPaginated()
+    {
+        return $this->autoPaginate;
+    }
+
+    public function setSortable($fieldParam, $orderParam = null)
+    {
+        $this->sortFieldParam = $fieldParam;
+        $this->sortOrderParam = $orderParam;
+    }
+
+    public function isSortable()
+    {
+        return $this->sortFieldParam !== null;
+    }
+
+    public function getSortFieldParam()
+    {
+        return $this->sortFieldParam;
+    }
+
+    public function getSortOrderParam()
+    {
+        return $this->sortOrderParam;
     }
 
     public function setPipe($pipe)

@@ -11,7 +11,7 @@ class HomeModel
     /**
      * @var int
      */
-    protected $id;
+    public $id;
 
     /**
      * @\Nucleus\IService\Dashboard\ModelField(name="First name")

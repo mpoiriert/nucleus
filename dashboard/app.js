@@ -208,22 +208,56 @@ $(function() {
     Dashboard.ListWidgetView = Dashboard.BaseWidgetView.extend({
         className: 'list-action-view',
         template: _.template($('#list-action-tpl').html()),
+        initialize: function() {
+            this.nbPages = 1;
+            this.currentPage = 1;
+            this.lastRequest = {};
+            _.each(this.options.fields, _.bind(function(f) {
+                if (f.identifier) {
+                    this.identifier = f;
+                }
+            }, this));
+        },
         render: function() {
             this.$el.empty();
             this.renderToolbar().append(this.template({ fields: this.options.fields }));
-            this.$('table').tablesorter();
-            this.refresh();
+
+            if (this.options.sortable) {
+                this.$('table').addClass('sortable');
+                var self = this;
+                this.$('table th').on('click', function() {
+                    self.$('table th.sorted').removeClass('sorted');
+                    $(this).addClass('sorted').toggleClass('desc');
+                    self.lastRequest.__offset = 0;
+                    self.lastRequest.__sort = $(this).data('field');
+                    self.lastRequest.__sort_order = $(this).hasClass('desc') ? 'desc' : 'asc';
+                    self.reloadData();
+                });
+            }
+
+            if (this.options.paginated) {
+                this.renderTable(this.model.data);
+                this.renderPagination(this.model.count);
+            } else {
+                this.renderTable(this.model);
+            }
+
             return this;
         },
-        refresh: function() {
-            var table = '', id;
-            _.each(this.options.fields, function(f) {
-                if (f.identifier) {
-                    id = f;
-                }
-            });
-            _.each(this.model, _.bind(function(row) {
-                table += '<tr><td><input type="radio" name="' + id.name + '" value="' + row[id.name] + '"></td>';
+        reloadData: function() {
+            this.action.rawExecuteAction(this.lastRequest, _.bind(function(resp) {
+                this.renderTable(resp.data);
+            }, this));
+        },
+        loadPage: function(page) {
+            this.currentPage = page;
+            this.lastRequest.__offset = (page - 1) * this.options.items_per_page;
+            this.reloadData();
+        },
+        renderTable: function(rows) {
+            var table = '';
+            _.each(rows, _.bind(function(row) {
+                table += '<tr><td><input type="radio" name="' + this.identifier.name + '" value="' + row[this.identifier.name] + '"></td>';
                 _.each(this.options.fields, function(f) {
                     table += '<td>';
                     if (f.link) {
@@ -242,7 +276,41 @@ $(function() {
                 Dashboard.app.runAction($(this).data('controller'), $(this).data('action'), $(this).data('params'));
                 e.preventDefault();
             });
-            this.$('table').trigger('update');
+        },
+        renderPagination: function(count) {
+            this.nbPages = Math.ceil(count / this.options.items_per_page);
+            var tpl = _.template($('#pagination-tpl').html());
+            this.$el.append(tpl({ nb_pages: this.nbPages }));
+
+            var self = this;
+            this.$('.pagination a').on('click', function(e) {
+                if (!$(this).parent().hasClass('active') && !$(this).parent().hasClass('disabled')) {
+                    var page = $(this).text();
+                    if (page == 'Prev') {
+                        self.loadPage(self.currentPage - 1);
+                    } else if (page == 'Next') {
+                        self.loadPage(self.currentPage + 1);
+                    } else {
+                        self.loadPage(parseInt(page, 10));
+                    }
+
+                    if (self.currentPage == 1) {
+                        self.$('.pagination li:first-child').addClass('disabled');
+                    } else {
+                        self.$('.pagination li:first-child').removeClass('disabled');
+                    }
+
+                    self.$('.pagination .active').removeClass('active');
+                    self.$('.pagination a[data-page="' + self.currentPage + '"]').parent().addClass('active');
+
+                    if (self.currentPage == self.nbPages) {
+                        self.$('.pagination li:last-child').addClass('disabled');
+                    } else {
+                        self.$('.pagination li:last-child').removeClass('disabled');
+                    }
+                }
+                e.preventDefault();
+            });
         }
     });
 
@@ -287,6 +355,7 @@ $(function() {
                 return;
             }
 
+            this.view.action = this;
             this.view.model = data;
             this.listenTo(this.view, 'pipe', function(controller, action, data) {
                 this.trigger('pipe', controller, action, data);
@@ -301,18 +370,10 @@ $(function() {
             this.$el.empty().append(this.view.render().el);
         },
         executeAction: function(data) {
-            var method = this.schema.input.type == 'form' ? 'post' : 'get',
-                data = data || {},
-                payload = data;
-
-            if (method === 'post') {
-                payload = { data: JSON.stringify(data) };
-            }
-
             this.view && this.view.freeze();
-            Dashboard.api.call(method, this.schema.input.url, payload, 
+            this.rawExecuteAction(data, 
                 _.bind(function(resp) {
-                    if (method == 'get') {
+                    if (this.schema.input.type != 'form') {
                         Dashboard.router.navigate(this.action_url + '?' + $.param(data));
                     }
                     this.renderResponse(resp);
@@ -324,6 +385,18 @@ $(function() {
                     }
                 }, this)
             );
+        },
+        rawExecuteAction: function(data, callback, err_callback) {
+            var method = this.schema.input.type == 'form' ? 'post' : 'get',
+                data = data || {},
+                url = this.schema.input.url,
+                payload = data;
+
+            if (method === 'post') {
+                payload = { data: JSON.stringify(data) };
+            }
+
+            Dashboard.api.call(method, url, payload, callback, err_callback);
         }
     });
 

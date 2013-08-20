@@ -14,6 +14,10 @@ use Nucleus\IService\DependencyInjection\IServiceContainer;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use ReflectionClass;
+use Iterator;
+use LimitIterator;
+use Countable;
+use ArrayIterator;
 
 /**
  * Description of Dashboard
@@ -168,6 +172,26 @@ class Dashboard
         $model = $action->getInputModel();
         $data = $this->getInputData($request);
 
+        if ($action->isPaginated() && !$action->isAutoPaginated() && ($param = $action->getOffsetParam()) !== null) {
+            if (isset($data['__offset'])) {
+                $data[$param] = $data['__offset'];
+                unset($data['__offset']);
+            } else {
+                $data[$param] = 0;
+            }
+        }
+
+        if ($action->isSortable() && isset($data['__sort'])) {
+            $data[$action->getSortFieldParam()] = $data['__sort'];
+            unset($data['__sort']);
+            if (isset($data['__sort_order'])) {
+                if (($orderParam = $action->getSortOrderParam()) !== null) {
+                    $data[$orderParam] = $data['__sort_order'];
+                }
+                unset($data['__sort_order']);
+            }
+        }
+
         try {
             if ($action->isModelOnlyArgument()) {
                 if ($action->isModelLoaded()) {
@@ -187,7 +211,7 @@ class Dashboard
         $result = $this->invoker->invoke(
             array($service, $action->getName()), $data, array($request, $response));
 
-        return $this->formatInvokedResponse($action, $result);
+        return $this->formatInvokedResponse($request, $action, $result);
     }
 
     /**
@@ -210,7 +234,7 @@ class Dashboard
         $result = $this->invoker->invoke(
             array($object, $modelAction->getName()), array(), array($request, $response));
 
-        return $this->formatInvokedResponse($modelAction, $result, $object);
+        return $this->formatInvokedResponse($request, $modelAction, $result, $object);
     }
 
     protected function getAction($controllerName, $actionName, $modelActionName = null)
@@ -281,7 +305,15 @@ class Dashboard
             return array('type' => $action->getReturnType());
         }
 
-        $json = array('type' => $action->getReturnType());
+        $json = array(
+            'type' => $action->getReturnType(),
+            'paginated' => $action->isPaginated(),
+            'sortable' => $action->isSortable()
+        );
+
+        if ($action->isPaginated()) {
+            $json['items_per_page'] = $action->getItemsPerPage();
+        }
 
         $self = $this;
         $json['actions'] = array_merge(
@@ -372,16 +404,32 @@ class Dashboard
         return array('success' => false, 'message' => $message);
     }
 
-    protected function formatInvokedResponse($action, $result, $obj = null)
+    protected function formatInvokedResponse(Request $request, ActionDefinition $action, $result, $obj = null)
     {
         $model = $action->getReturnModel();
         if ($action->getReturnType() === ActionDefinition::RETURN_LIST) {
+            $count = null;
+            if ($action->isAutoPaginated() && $result !== null) {
+                if (!($result instanceof Iterator) && !is_array($result)) {
+                    throw new DashboardException("List results expect an array or an Iterator, '" . get_class($result) . "' given");
+                }
+                list($count, $result) = $this->autoPaginateResults($request, $result);
+            } else if ($action->isPaginated() && $result !== null) {
+                $count = $result[0];
+                $result = $result[1];
+            }
+
             $data = array();
             if ($result !== null) {
                 foreach ($result as $item) {
                     $data[] = $this->convertObjectToJson($item, $model);
                 }
             }
+
+            if ($action->isPaginated()) {
+                $data = array('count' => $count, 'data' => $data, 'per_page' => $action->getItemsPerPage());
+            }
+
         } else if ($action->getReturnType() === ActionDefinition::RETURN_NONE) {
             $data = null;
         } else if ($result === null) {
@@ -392,7 +440,20 @@ class Dashboard
         return $this->formatResponse($data);
     }
 
-    protected function convertObjectToJson($obj, $model)
+    protected function autoPaginateResults(Request $request, $result)
+    {
+        $count = null;
+        if (is_array($result)) {
+            $result = new ArrayIterator($result);
+        }
+        if ($result instanceof Countable) {
+            $count = $result->count();
+        }
+        $result = new LimitIterator($result, $request->query->get('__offset', 0), $request->query->get('__limit', 1));
+        return array($count, $result);
+    }
+
+    protected function convertObjectToJson($obj, ModelDefinition $model)
     {
         $json = array();
         $class = new ReflectionClass($obj);
