@@ -89,6 +89,15 @@ class Dashboard
     {
         return $this->controllers;
     }
+    
+    /**
+     * @\Nucleus\IService\Routing\Route(name="dasboard", path="/nucleus/dashboard")
+     * @\Nucleus\IService\FrontController\ViewDefinition(template="nucleus/dashboard/index.twig")
+     */
+    public function home()
+    {
+        return array('configuration' => $this->configuration);
+    }
 
     /**
      * @\Nucleus\IService\Routing\Route(name="dashboard.schema", path="/nucleus/dashboard/_schema")
@@ -509,15 +518,5 @@ class Dashboard
             }
         }
         return $obj;
-    }
-    
-    /**
-     * @\Nucleus\IService\Routing\Route(name="dasboard", path="/nucleus/dashboard")
-     * 
-     * @\Nucleus\IService\FrontController\ViewDefinition(template="nucleus/dashboard/index.twig")
-     */
-    public function home()
-    {
-        return array('configuration'=>$this->configuration);
     }
 }

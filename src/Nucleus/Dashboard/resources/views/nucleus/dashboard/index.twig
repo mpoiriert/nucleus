@@ -7,14 +7,12 @@
   {{ assetBag }}
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/bootstrap/css/bootstrap.min.css") }}
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/bootstrap/css/bootstrap-responsive.min.css") }}
-  {{ assetBag.add("/nucleus/asset/dashboard/vendor/tablesorter/themes/blue/style.css") }}
   {{ assetBag.add("/nucleus/asset/dashboard/app.css") }}
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/jquery-1.10.1.min.js") }}
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/json2.js") }}
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/underscore-min.js") }}
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/backbone-min.js") }}
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/bootstrap/js/bootstrap.min.js") }}
-  {{ assetBag.add("/nucleus/asset/dashboard/vendor/tablesorter/jquery.tablesorter.min.js") }}
   {{ assetBag.add("/nucleus/asset/dashboard/app.js") }}
   <script type="text/javascript">
     $(function() {
@@ -82,17 +80,29 @@
   </script>
 
   <script type="text/template" id="list-action-tpl">
-    <table class="tablesorter">
+    <table class="table table-bordered table-striped table-condensed">
       <thead>
         <tr>
           <th></th>
         <% _.each(fields, function(f) { %>
-          <th><%= f.title %></th>
+          <th data-field="<%= f.name %>"><%= f.title %></th>
         <% }) %>
         </tr>
       </thead>
       <tbody></tbody>
     </table>
+  </script>
+
+  <script type="text/template" id="pagination-tpl">
+    <div class="pagination">
+      <ul>
+        <li class="disabled"><a href="#" class="prev">Prev</a></li>
+        <% for (var i = 1; i <= nb_pages; i++) { %>
+          <li class="<% if (i == 1) print('active'); %>"><a href="#" data-page="<%= i %>"><%= i %></a></li>
+        <% } %>
+        <li class="<% if (nb_pages == 1) print('disabled'); %>"><a href="#" class="next">Next</a></li>
+      </ul>
+    </div>
   </script>
 
 </body>

@@ -7,10 +7,10 @@
         "dashboard": {
             "class": "Nucleus\\Dashboard\\Dashboard",
             "configuration": {
-                "api_base_url": "/nucleus/dashboard",
-                "schema_base_url": "",
+                "api_base_url": "/../..",
+                "schema_base_url": "/nucleus/dashboard",
                 "schema_url": "/_schema",
-                "base_url": ""
+                "base_url": "/nucleus/dashboard"
             }
         },
         "dashboardHome": {

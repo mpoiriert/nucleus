@@ -11,7 +11,6 @@
 
   <link rel="stylesheet" type="text/css" href="<?php echo $baseurl ?>/vendor/bootstrap/css/bootstrap.min.css" />
   <link rel="stylesheet" type="text/css" href="<?php echo $baseurl ?>/vendor/bootstrap/css/bootstrap-responsive.min.css" />
-  <link rel="stylesheet" type="text/css" href="<?php echo $baseurl ?>/vendor/tablesorter/themes/blue/style.css" />
   <link rel="stylesheet" type="text/css" href="<?php echo $baseurl ?>/app.css" />
 
   <script type="text/javascript" src="<?php echo $baseurl ?>/vendor/jquery-1.10.1.min.js"></script>

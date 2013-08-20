@@ -595,7 +595,7 @@ $(function() {
         Dashboard.api = new RestEndpoint(Dashboard.config.base_url + Dashboard.config.api_base_url);
         Dashboard.app = new Dashboard.App();
         Dashboard.router = new Dashboard.Router();
-        Backbone.history.start({ pushState: true, root: Dashboard.config.base_url });
+        Backbone.history.start({ root: Dashboard.config.base_url });
     };
 
 });
