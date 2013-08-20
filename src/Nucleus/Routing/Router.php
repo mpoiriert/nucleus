@@ -43,10 +43,12 @@ class Router implements IRouterService
      */
     private $urlGenerator;
     
+    private $defaultParameters = array();
+    
     /**
-     * @var string
+     * @\Nucleus\IService\ApplicationContext\BoundToSession
      */
-    private $defaultCulture = '';
+    private $sessionDefaultParameters = array();
 
     public function __construct()
     {
@@ -63,7 +65,7 @@ class Router implements IRouterService
      */
     public function setDefaultCulture($culture)
     {
-        $this->defaultCulture = $culture;
+        $this->setDefaultParameter('_culture', $culture);
     }
 
     public function addRoute($name, $path, array $defaults = array(), array $requirements = array(), array $options = array(), $host = '', $schemes = array(), $methods = array())
@@ -92,6 +94,12 @@ class Router implements IRouterService
 
     public function generate($name, array $parameters = array())
     {
+        $parameters = array_deep_merge(
+            $this->sessionDefaultParameters,
+            $this->defaultParameters, 
+            $parameters
+        );
+        
         $cultures = $this->getCultures($parameters);
 
         foreach($cultures as $culture) {
@@ -107,7 +115,7 @@ class Router implements IRouterService
     private function getCultures(array $parameters)
     {
         if(!isset($parameters['_culture'])) {
-            $culture = $this->defaultCulture;
+            $culture = '';
         } else {
             $culture = $parameters['_culture'];
         }
@@ -143,5 +151,22 @@ class Router implements IRouterService
         }
 
         return Nucleus::serviceFactory($configuration, 'routing');
+    }
+
+    public function setDefaultParameter($name, $value, $boundToSession = true)
+    {
+        if(is_null($value)) {
+            unset($this->defaultParameters[$name]);
+            unset($this->sessionDefaultParameters[$name]);
+            return;
+        }
+        
+        if($boundToSession) {
+            unset($this->defaultParameters[$name]);
+            $this->sessionDefaultParameters[$name] = $value;
+        } else {
+            unset($this->sessionDefaultParameters[$name]);
+            $this->defaultParameters[$name] = $value;
+        }
     }
 }

@@ -51,6 +51,18 @@ abstract class RouterServiceTest extends \PHPUnit_Framework_TestCase
         $routing->removeRoute($name);
     }
     
+    public function testRouteWithRouterDefaultParameter()
+    {
+        $routingService = $this->loadRoutingService();
+        $routingService->addRoute('router_default_parameter', '/routeDefaultParameter/{test}');
+        $routingService->setDefaultParameter('test', 'toto1');
+        $route1 = $routingService->generate('router_default_parameter');
+        $this->assertEquals('/routeDefaultParameter/toto1', $route1);
+        
+        $route2 = $routingService->generate('router_default_parameter',array('test'=>'toto2'));
+        $this->assertEquals('/routeDefaultParameter/toto2', $route2);
+    }
+    
     public function testRouteI18n()
     {
         $routing = $this->loadRoutingService();
