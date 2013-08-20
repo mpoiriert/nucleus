@@ -15,6 +15,7 @@ use Nucleus\Framework\Nucleus;
 use Symfony\Component\Routing\Generator\UrlGenerator;
 use InvalidArgumentException;
 use Nucleus\IService\Routing\IRouterService;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Description of Router
@@ -50,6 +51,11 @@ class Router implements IRouterService
      */
     private $sessionDefaultParameters = array();
 
+    /**
+     * @param RequestContext $routingRequestContext
+     * 
+     * @\Nucleus\IService\DependencyInjection\Inject
+     */
     public function __construct()
     {
         $this->routeCollection = new RouteCollection();
@@ -85,14 +91,22 @@ class Router implements IRouterService
     public function match($path, $host = '', $scheme = '', $method = '')
     {
         $context = $this->urlMatcher->getContext();
-        $context->setHost($host);
-        $context->setScheme($scheme);
-        $context->setMethod($method);
-        
-        return $this->urlMatcher->match($path);
+        $newContext = clone $context;
+        $newContext->setHost($host);
+        $newContext->setScheme($scheme);
+        $newContext->setMethod($method);
+        $this->urlMatcher->setContext($newContext);
+        try {
+            $result = $this->urlMatcher->match($path);
+            $this->urlMatcher->setContext($context);
+            return $result;
+        } catch(\Exception $e) {
+            $this->urlMatcher->setContext($context);
+            throw $e;
+        }
     }
 
-    public function generate($name, array $parameters = array())
+    public function generate($name, array $parameters = array(), $referenceType = self::ABSOLUTE_PATH)
     {
         $parameters = array_deep_merge(
             $this->sessionDefaultParameters,
@@ -105,7 +119,7 @@ class Router implements IRouterService
         foreach($cultures as $culture) {
             $routeName = $this->getI18nRouteName($name,$culture);
             if($this->routeCollection->get($routeName)) {
-                return $this->urlGenerator->generate($routeName,$parameters);
+                return $this->urlGenerator->generate($routeName,$parameters, $referenceType);
             }
         }
         
@@ -168,5 +182,13 @@ class Router implements IRouterService
             unset($this->sessionDefaultParameters[$name]);
             $this->defaultParameters[$name] = $value;
         }
+    }
+
+    /**
+     * @param Request $request
+     */
+    public function setCurrentRequest(Request $request)
+    {
+        $this->context->fromRequest($request);
     }
 }

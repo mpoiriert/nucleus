@@ -2,6 +2,8 @@
 
 namespace Nucleus\IService\Routing\Tests;
 
+use Nucleus\IService\Routing\IRouterService;
+
 abstract class RouterServiceTest extends \PHPUnit_Framework_TestCase
 {
     /**
@@ -49,6 +51,16 @@ abstract class RouterServiceTest extends \PHPUnit_Framework_TestCase
         $result = $routing->match($pathinfo);
         $this->assertEquals($expected, $result);
         $routing->removeRoute($name);
+    }
+    
+    public function testAbsoluteRoute()
+    {
+        $routingService = $this->loadRoutingService();
+        $request = \Symfony\Component\HttpFoundation\Request::create('http://www.test.com');
+        $routingService->setCurrentRequest($request);
+        $routingService->addRoute('absolute', '/absolute');
+        $route = $routingService->generate('absolute',array(), IRouterService::ABSOLUTE_URL);
+        $this->assertEquals('http://www.test.com/absolute', $route);
     }
     
     public function testRouteWithRouterDefaultParameter()

@@ -56,8 +56,11 @@ class FrontController
      * 
      * @\Nucleus\IService\DependencyInjection\Inject
      */
-    public function initialize(
-    IServiceContainer $serviceContainer, IInvokerService $invoker, Router $routing, IEventDispatcherService $eventDispatcher
+    public function __construct(
+        IServiceContainer $serviceContainer, 
+        IInvokerService $invoker, 
+        Router $routing, 
+        IEventDispatcherService $eventDispatcher
     )
     {
         $this->invoker = $invoker;
@@ -71,6 +74,7 @@ class FrontController
      */
     public function handleRequest(Request $request)
     {
+        $this->routing->setCurrentRequest($request);
         $result = $this->routing->match($request->getPathInfo());
         $request->request->add($result);
         $this->execute(

@@ -1,4 +1,7 @@
 {
+    "imports": [
+        "../Routing"
+    ],
     "services": {
         "frontController": {
             "class": "Nucleus\\FrontController\\FrontController"
