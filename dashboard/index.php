@@ -11,7 +11,6 @@
 
   <link rel="stylesheet" type="text/css" href="<?php echo $baseurl ?>/vendor/bootstrap/css/bootstrap.min.css" />
   <link rel="stylesheet" type="text/css" href="<?php echo $baseurl ?>/vendor/bootstrap/css/bootstrap-responsive.min.css" />
-  <link rel="stylesheet" type="text/css" href="<?php echo $baseurl ?>/vendor/tablesorter/themes/blue/style.css" />
   <link rel="stylesheet" type="text/css" href="<?php echo $baseurl ?>/app.css" />
 
   <script type="text/javascript" src="<?php echo $baseurl ?>/vendor/jquery-1.10.1.min.js"></script>
@@ -19,7 +18,6 @@
   <script type="text/javascript" src="<?php echo $baseurl ?>/vendor/underscore-min.js"></script>
   <script type="text/javascript" src="<?php echo $baseurl ?>/vendor/backbone-min.js"></script>
   <script type="text/javascript" src="<?php echo $baseurl ?>/vendor/bootstrap/js/bootstrap.min.js"></script>
-  <script type="text/javascript" src="<?php echo $baseurl ?>/vendor/tablesorter/jquery.tablesorter.min.js"></script>
 
   <script type="text/javascript" src="<?php echo $baseurl ?>/app.js"></script>
   <script type="text/javascript">
@@ -88,17 +86,29 @@
   </script>
 
   <script type="text/template" id="list-action-tpl">
-    <table class="tablesorter">
+    <table class="table table-bordered table-striped table-condensed">
       <thead>
         <tr>
           <th></th>
         <% _.each(fields, function(f) { %>
-          <th><%= f.title %></th>
+          <th data-field="<%= f.name %>"><%= f.title %></th>
         <% }) %>
         </tr>
       </thead>
       <tbody></tbody>
     </table>
+  </script>
+
+  <script type="text/template" id="pagination-tpl">
+    <div class="pagination">
+      <ul>
+        <li class="disabled"><a href="#" class="prev">Prev</a></li>
+        <% for (var i = 1; i <= nb_pages; i++) { %>
+          <li class="<% if (i == 1) print('active'); %>"><a href="#" data-page="<%= i %>"><%= i %></a></li>
+        <% } %>
+        <li class="<% if (nb_pages == 1) print('disabled'); %>"><a href="#" class="next">Next</a></li>
+      </ul>
+    </div>
   </script>
 
 </body>

@@ -19,11 +19,20 @@ class HomeController
 
     /**
      * @\Nucleus\IService\Dashboard\Action(title="List", icon="list", default=true)
-     *
+     * @\Nucleus\IService\Dashboard\Paginate(auto=true, per_page=1)
+     * @\Nucleus\IService\Dashboard\Sortable(order_param="order")
+     * 
      * @return \Nucleus\Dashboard\HomeModel[]
      */
-    public function listAll()
+    public function listAll($sort = 'id', $order = 'asc')
     {
+        usort($this->data, function($a, $b) use ($sort, $order) {
+            if ($a->$sort == $b->$sort) {
+                return 0;
+            }
+            $v = $a->$sort < $b->$sort ? -1 : 1;
+            return $order == 'asc' ? $v : -$v;
+        });
         return $this->data;
     }
 

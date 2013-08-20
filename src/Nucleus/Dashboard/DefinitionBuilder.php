@@ -170,17 +170,42 @@ class DefinitionBuilder
             }
         }
 
+        $minNbOfParams = 0;
+        $excludeParams = array();
+
+        foreach ($additionalAnnotations as $anno) {
+            if ($anno instanceof \Nucleus\IService\Security\Secure) {
+                $yamlParser = $this->serviceContainer->get('yamlParser');
+                $perms = $yamlParser->parse($anno->permissions);
+                $action->setPermissions($perms);
+            } else if ($anno instanceof \Nucleus\IService\Dashboard\Paginate) {
+                $action->setPaginated($anno->per_page, $anno->offset_param, $anno->auto);
+                if ($anno->offset_param !== null) {
+                    $minNbOfParams++;
+                    $excludeParams[] = $anno->offset_param;
+                }
+            } else if ($anno instanceof \Nucleus\IService\Dashboard\Sortable) {
+                $action->setSortable($anno->param, $anno->order_param);
+                $minNbOfParams++;
+                $excludeParams[] = $anno->param;
+                if ($anno->order_param !== null) {
+                    $minNbOfParams++;
+                    $excludeParams[] = $anno->order_param;
+                }
+            }
+        }
+
         if (!$annotation || $annotation->in === null) {
-            if ($method->getNumberOfParameters() > 0) {
+            if ($method->getNumberOfParameters() > $minNbOfParams) {
                 $action->setInputType(ActionDefinition::INPUT_FORM);
             }
         } else {
             $action->setInputType($annotation->in);
         }
 
-        if ($action->getInputType() !== ActionDefinition::INPUT_CALL) {
-            $inputModel = $this->buildModelFromMethod($method, $additionalAnnotations);
-            if ($method->getNumberOfParameters() == 1) {
+        if ($action->getInputType() === ActionDefinition::INPUT_FORM) {
+            $inputModel = $this->buildModelFromMethod($method, $additionalAnnotations, $excludeParams);
+            if ($method->getNumberOfParameters() == $minNbOfParams + 1) {
                 $fields = $inputModel->getFields();
                 if (count($fields) === 1 && $fields[0]->isModelType()) {
                     $action->setModelOnlyArgument($fields[0]->getName());
@@ -209,18 +234,10 @@ class DefinitionBuilder
             $action->setReturnModel($this->buildModel($annotation && $annotation->model ? $annotation->model : $returnTag[1]));
         }
 
-        foreach ($additionalAnnotations as $anno) {
-            if ($anno instanceof \Nucleus\IService\Security\Secure) {
-                $yamlParser = $this->serviceContainer->get('yamlParser');
-                $perms = $yamlParser->parse($anno->permissions);
-                $action->setPermissions($perms);
-            }
-        }
-
         return $action;
     }
 
-    protected function buildModelFromMethod(ReflectionMethod $method, array $additionalAnnotations = array())
+    protected function buildModelFromMethod(ReflectionMethod $method, array $additionalAnnotations = array(), array $excludeParams = array())
     {
         $model = new ModelDefinition();
         $model->setValidator(Validation::createValidator());
@@ -236,6 +253,9 @@ class DefinitionBuilder
         }
 
         foreach ($method->getParameters() as $param) {
+            if (in_array($param->getName(), $excludeParams)) {
+                continue;
+            }
             $com = isset($paramComments[$param->getName()]) ? $paramComments[$param->getName()] : null;
 
             if (!$com) {

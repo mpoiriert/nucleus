@@ -36,3 +36,16 @@ body {
     font-family: monospace;
     margin: 10px;
 }
+
+.list-action-view table td:first-child {
+    text-align: center;
+}
+.list-action-view table.sortable th {
+    cursor: pointer;
+}
+.list-action-view table th.sorted {
+    background: url(asc.gif) center right no-repeat;
+}
+.list-action-view table th.sorted.desc {
+    background-image: url(desc.gif);
+}
