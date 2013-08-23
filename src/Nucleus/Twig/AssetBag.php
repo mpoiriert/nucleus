@@ -16,9 +16,17 @@ class AssetBag
 {
     private $assets = array();
 
+    /**
+     * Add a file to the asset bag. If the asset is already there
+     * it will be ignored.
+     * 
+     * @param string $filePath
+     */
     public function add($filePath)
     {
-        $this->assets[] = $filePath;
+        if(!in_array($filePath,$this->assets)) {
+            $this->assets[] = $filePath;
+        }
     }
 
     public function clear()

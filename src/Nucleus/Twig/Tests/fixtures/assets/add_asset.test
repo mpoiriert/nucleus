@@ -6,6 +6,7 @@ Twig supports for addAsset
 {% include "foo.twig" %}
 --TEMPLATE(foo.twig)--
 {{ assetBag.add('test2.css') }}
+{{ assetBag.add('test2.css') }}
 --DATA--
 return array()
 --CONFIG--
