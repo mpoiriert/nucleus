@@ -92,6 +92,7 @@ class FrontController
      */
     public function execute($serviceName, $methodName, Request $request)
     {
+        $this->routing->setCurrentRequest($request);
         $response = new Response();
         $parameters = array_merge($request->query->all(), $request->request->all());
         $service = $this->serviceContainer->getServiceByName($serviceName);
