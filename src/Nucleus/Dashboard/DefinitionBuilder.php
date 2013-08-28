@@ -10,6 +10,9 @@ use ReflectionProperty;
 use ReflectionMethod;
 use Symfony\Component\Validator\Validation;
 
+/**
+ * Builds Definition objects according to annotations
+ */
 class DefinitionBuilder
 {
     protected $serviceContainer;
@@ -27,6 +30,12 @@ class DefinitionBuilder
             ->getValidator();
     }
 
+    /**
+     * Builds a controller from a class name
+     * 
+     * @param string $className
+     * @return ControllerDefinition
+     */
     public function buildController($className)
     {
         if (is_object($className)) {
@@ -38,6 +47,7 @@ class DefinitionBuilder
         $controller = new ControllerDefinition();
         $controller->setClassName($className);
         
+        // searches for the Controller annotation
         $annos = $annotations->getClassAnnotations(array(function($a) {
             return $a instanceof \Nucleus\IService\Dashboard\Controller;
         }));
@@ -52,7 +62,10 @@ class DefinitionBuilder
             }
         }
 
+        // extract actions
         $actions = $this->extractActionsFromClass($class, $annotations);
+
+        // sets the default menu to be the controller's title
         foreach ($actions as $action) {
             if ($action->isVisible() && !$action->providesMenu()) {
                 $action->setMenu($controller->getTitle());
@@ -64,6 +77,12 @@ class DefinitionBuilder
         return $controller;
     }
 
+    /**
+     * Builds a ModelDefinition from a class name
+     * 
+     * @param string $className
+     * @return ModelDefinition
+     */
     public function buildModel($className)
     {
         $annotations = $this->parseAnnotations($className);
@@ -80,6 +99,7 @@ class DefinitionBuilder
                 }
                 $loader = $anno->loader;
             } else if ($anno instanceof \Nucleus\IService\Dashboard\ModelField) {
+                // class level field definition
                 if (!$anno->property) {
                     throw new DefinitionBuilderException("Field '{$anno->name}' of model '$className' is missing the 'property' attribute");
                 }
@@ -87,6 +107,7 @@ class DefinitionBuilder
             }
         }
 
+        // extract fields from class properties
         $fields = array();
         foreach ($class->getProperties() as $property) {
             $annos = $annotations->getPropertyAnnotations($property->getName(), array(function($a) {
@@ -104,6 +125,7 @@ class DefinitionBuilder
             $fields[$anno->property] = $this->buildField($anno, $property);
         }
 
+        // adds fields from the class level annotations
         foreach ($classProperties as $property => $anno) {
             if (!isset($fields[$property])) {
                 $fields[$property] = $this->buildField($anno);
@@ -127,6 +149,13 @@ class DefinitionBuilder
         return $model;
     }
 
+    /**
+     * Extracts actions from class methods
+     * 
+     * @param ReflectionClass $class
+     * @param AnnotationParsingResult $annotations
+     * @return array
+     */
     protected function extractActionsFromClass(ReflectionClass $class, AnnotationParsingResult $annotations)
     {
         $actions = array();
@@ -134,6 +163,7 @@ class DefinitionBuilder
             $actionAnno = null;
             foreach ($annos as $anno) {
                 if ($anno instanceof \Nucleus\IService\Dashboard\Action) {
+                    // they need to hae the Action annotation
                     $actionAnno = $anno;
                     break;
                 }
@@ -146,12 +176,21 @@ class DefinitionBuilder
         return $actions;
     }
 
+    /**
+     * Creates an ActionDefinition from a class method
+     * 
+     * @param ReflectionMethod $method
+     * @param Annotation $annotation
+     * @param array $additionalAnnotations
+     * @return ActionDefinition
+     */
     protected function buildAction(ReflectionMethod $method, $annotation = null, array $additionalAnnotations = array())
     {
         $action = new ActionDefinition();
         $action->setName($method->getName());
 
         if ($annotation) {
+            // the annotation is not mandatory but is useful to set some action properties
             $action->setTitle($annotation->title ?: $method->getName())
                    ->setIcon($annotation->icon)
                    ->setDefault($annotation->default)
@@ -170,9 +209,12 @@ class DefinitionBuilder
             }
         }
 
+        // some annotations use arguments which could trigger the creation
+        // of an input model if their not ignore
         $minNbOfParams = 0;
         $excludeParams = array();
 
+        // additional information provided by other annotations
         foreach ($additionalAnnotations as $anno) {
             if ($anno instanceof \Nucleus\IService\Security\Secure) {
                 $yamlParser = $this->serviceContainer->get('yamlParser');
@@ -195,6 +237,7 @@ class DefinitionBuilder
             }
         }
 
+        // input
         if (!$annotation || $annotation->in === null) {
             if ($method->getNumberOfParameters() > $minNbOfParams) {
                 $action->setInputType(ActionDefinition::INPUT_FORM);
@@ -204,6 +247,7 @@ class DefinitionBuilder
         }
 
         if ($action->getInputType() === ActionDefinition::INPUT_FORM) {
+            // builds the input model from the method's arguments
             $inputModel = $this->buildModelFromMethod($method, $additionalAnnotations, $excludeParams);
             if ($method->getNumberOfParameters() == $minNbOfParams + 1) {
                 $fields = $inputModel->getFields();
@@ -215,13 +259,15 @@ class DefinitionBuilder
             $action->setInputModel($inputModel);
         }
 
+        // tries to determine the return type
         if (!preg_match('/@return ([a-zA-Z\\\\]+)(\[\])?/', $method->getDocComment(), $returnTag)) {
             $returnTag = false;
         }
 
         if (!$annotation || (!$annotation->pipe && $annotation->out === null)) {
             if ($returnTag) {
-                $action->setReturnType(isset($returnTag[2]) ? ActionDefinition::RETURN_LIST : ActionDefinition::RETURN_OBJECT);
+                $isArray = isset($returnTag[2]) || $returnTag[1] == 'array';
+                $action->setReturnType($isArray ? ActionDefinition::RETURN_LIST : ActionDefinition::RETURN_OBJECT);
             }
         } else if (!$annotation->pipe) {
             $action->setReturnType($annotation->out);
@@ -237,6 +283,14 @@ class DefinitionBuilder
         return $action;
     }
 
+    /**
+     * Builds a ModelDefinition from a method's argument
+     * 
+     * @param ReflectionMethod $method
+     * @param array $additionalAnnotations
+     * @param array $excludeParams
+     * @return ModelDefinition
+     */
     protected function buildModelFromMethod(ReflectionMethod $method, array $additionalAnnotations = array(), array $excludeParams = array())
     {
         $model = new ModelDefinition();
@@ -285,6 +339,13 @@ class DefinitionBuilder
         return $model;
     }
 
+    /**
+     * Adds validation constaints to a field according to annotations
+     * 
+     * @param ModelDefinition $model
+     * @param array $annotations
+     * @return
+     */
     protected function applyFieldConstraintsFromAnnotations(ModelDefinition $model, array $annotations)
     {
         foreach ($annotations as $anno) {
@@ -302,6 +363,13 @@ class DefinitionBuilder
         }
     }
 
+    /**
+     * Builds a FieldDefinition from a property
+     * 
+     * @param Annotation $annotation
+     * @param ReflectionProperty $property
+     * @return FieldDefinition
+     */
     protected function buildField($annotation, ReflectionProperty $property = null)
     {
         $field = new FieldDefinition();
@@ -320,7 +388,7 @@ class DefinitionBuilder
         }
 
         if ($annotation->type === null) {
-            if (preg_match('/@var ([a-zA-Z]+)/', $property->getDocComment(), $results)) {
+            if ($property !== null && preg_match('/@var ([a-zA-Z]+)/', $property->getDocComment(), $results)) {
                 $field->setType($results[1]);
             } else {
                 $field->setType('string');
