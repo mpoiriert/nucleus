@@ -254,7 +254,11 @@ class ModelDefinition
             if (!method_exists($object, 'validate')) {
                 throw new DefinitionBuilderException("Missing validate() method on object");
             }
-            return call_user_func(array($object, 'validate'));
+            if (!call_user_func(array($object, 'validate'))) {
+                $violations = implode("\n", $object->getValidationFailures());
+                throw new ValidationException($violations);
+            }
+            return true;
         }
 
         if ($this->validationMethod === self::VALIDATE_WITH_CALLBACK) {
@@ -281,5 +285,6 @@ class ModelDefinition
         if (count($violiations)) {
             throw new ValidationException($violiations);
         }
+        return true;
     }
 }

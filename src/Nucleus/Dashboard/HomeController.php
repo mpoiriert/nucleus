@@ -37,19 +37,6 @@ class HomeController
     }
 
     /**
-     * @\Nucleus\IService\Dashboard\Action(title="User")
-     * 
-     * @return \User
-     */
-    public function listUser()
-    {
-        $user = new \User();
-        $user->setName('foo');
-        $user->save();
-        return $user;
-    }
-
-    /**
      * @\Nucleus\IService\Dashboard\Action(title="Add", icon="plus", menu="/Home/Add")
      * 
      * @return Nucleus\Dashboard\HomeModel
