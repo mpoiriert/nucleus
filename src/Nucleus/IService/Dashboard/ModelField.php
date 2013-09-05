@@ -34,6 +34,16 @@ class ModelField
     public $identifier = false;
 
     /**
+     * Getter method
+     */
+    public $getter;
+
+    /**
+     * Setter method
+     */
+    public $setter;
+
+    /**
      * The type of HTML input
      */
     public $formField;

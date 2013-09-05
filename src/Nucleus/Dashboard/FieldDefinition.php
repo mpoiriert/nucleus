@@ -6,6 +6,9 @@ use Symfony\Component\Validator\Constraint;
 
 class FieldDefinition
 {
+    const ACCESS_PROPERTY = 0;
+    const ACCESS_GETTER_SETTER = 1;
+
     protected $property;
 
     protected $type;
@@ -23,6 +26,12 @@ class FieldDefinition
     protected $optional = false;
 
     protected $defaultValue;
+
+    protected $accessMethod = 0;
+
+    protected $setterName;
+
+    protected $getterName;
 
     protected $formFieldType;
 
@@ -45,12 +54,14 @@ class FieldDefinition
         'boolean' => 'checkbox'
     );
 
+    public static function create()
+    {
+        return new FieldDefinition();
+    }
+
     public function setProperty($name)
     {
         $this->property = $name;
-        if ($this->name === null) {
-            $this->name = $name;
-        }
         return $this;
     }
 
@@ -124,6 +135,9 @@ class FieldDefinition
 
     public function getName()
     {
+        if ($this->name === null) {
+            return $this->property;
+        }
         return $this->name;
     }
 
@@ -169,6 +183,50 @@ class FieldDefinition
     public function getDefaultValue()
     {
         return $this->defaultValue;
+    }
+
+    public function setAccessMethod($access)
+    {
+        $this->accessMethod = $access;
+        return $this;
+    }
+
+    public function getAccessMethod()
+    {
+        return $this->accessMethod;
+    }
+
+    public function isAccessedUsingProperty()
+    {
+        return $this->accessMethod === self::ACCESS_PROPERTY;
+    }
+
+    public function isAccessUsingMethod()
+    {
+        return $this->accessMethod === self::ACCESS_METHOD;
+    }
+
+    public function setGetterSetterMethodNames($getter, $setter)
+    {
+        $this->getterName = $getter;
+        $this->setterName = $setter;
+        return $this;
+    }
+
+    public function getGetterMethodName()
+    {
+        if ($this->getterName === null) {
+            return 'get' . ucfirst($this->property);
+        }
+        return $this->getterName;
+    }
+
+    public function getSetterMethodName()
+    {
+        if ($this->setterName === null) {
+            return 'set' . ucfirst($this->property);
+        }
+        return $this->setterName;
     }
 
     public function setFormFieldType($type)
@@ -233,5 +291,38 @@ class FieldDefinition
     public function getConstraints()
     {
         return $this->constraints;
+    }
+
+    /**
+     * Returns the field's value from an object
+     * 
+     * @param object $object
+     * @return mixed
+     */
+    public function getValue($object)
+    {
+        if ($this->isAccessedUsingProperty()) {
+            if (!property_exists($object, $this->property)) {
+                return $this->defaultValue;
+            }
+            return $object->{$this->property};
+        }
+        return call_user_func(array($object, $this->getGetterMethodName()));
+    }
+
+    /**
+     * Sets the field's valud on a object
+     * 
+     * @param object $object
+     * @param mixed $value
+     */
+    public function setValue($object, $value)
+    {
+        if ($this->isAccessedUsingProperty()) {
+            $object->{$this->property} = $value;
+            return $this;
+        }
+        call_user_func(array($object, $this->getSetterMethodName()), $value);
+        return $this;
     }
 }

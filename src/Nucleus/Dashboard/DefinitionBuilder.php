@@ -85,8 +85,17 @@ class DefinitionBuilder
      */
     public function buildModel($className)
     {
-        $annotations = $this->parseAnnotations($className);
         $class = new ReflectionClass($className);
+
+        if ($class->hasMethod('getDashboardModelDefinition')) {
+            $model = call_user_func(array($className, 'getDashboardModelDefinition'));
+            if (!($model instanceof ModelDefinition)) {
+                throw new DefinitionBuilderException("'$className::getDashboardModelDefinition()' must return a ModelDefinition object");
+            }
+            return $model;
+        }
+
+        $annotations = $this->parseAnnotations($className);
         $model = new ModelDefinition();
         $model->setClassName($className);
 
@@ -110,19 +119,23 @@ class DefinitionBuilder
         // extract fields from class properties
         $fields = array();
         foreach ($class->getProperties() as $property) {
-            $annos = $annotations->getPropertyAnnotations($property->getName(), array(function($a) {
-                return $a instanceof \Nucleus\IService\Dashboard\ModelField;
-            }));
-            if (empty($annos)) {
+            $annos = $annotations->getPropertyAnnotations($property->getName());
+            $anno = null;
+            foreach ($annos as $a) {
+                if ($a instanceof \Nucleus\IService\Dashboard\ModelField) {
+                    $anno = $a;
+                    break;
+                }
+            }
+            if ($anno === null) {
                 if (!isset($classProperties[$property->getName()])) {
                     continue;
                 }
                 $anno = $classProperties[$property->getName()];
             } else {
-                $anno = $annos[0];
                 $anno->property = $property->getName();
             }
-            $fields[$anno->property] = $this->buildField($anno, $property);
+            $fields[$anno->property] = $this->buildField($anno, $property, $annos);
         }
 
         // adds fields from the class level annotations
@@ -331,22 +344,67 @@ class DefinitionBuilder
                   ->setOptional($param->isOptional())
                   ->setEditable(true);
 
+            $validateAnnotations = array_filter($additionalAnnotations, function($a) use ($param) {
+                return ($a instanceof \Nucleus\IService\Dashboard\Validate) && ($a->property == $param->getName());
+            });
+            $this->applyFieldConstraintsFromAnnotations($field, $validateAnnotations);
+
             $model->addField($field);
         }
-
-        $this->applyFieldConstraintsFromAnnotations($model, $additionalAnnotations);
 
         return $model;
     }
 
     /**
+     * Builds a FieldDefinition from a property
+     * 
+     * @param Annotation $annotation
+     * @param ReflectionProperty $property
+     * @return FieldDefinition
+     */
+    protected function buildField($annotation, ReflectionProperty $property = null, array $additionalAnnotations = array())
+    {
+        $field = new FieldDefinition();
+        $field->setProperty($annotation->property)
+              ->setName($annotation->name ?: $annotation->property)
+              ->setDescription($annotation->description)
+              ->setType($annotation->type)
+              ->setIdentifier($annotation->identifier)
+              ->setListable($annotation->listable)
+              ->setEditable($annotation->editable)
+              ->setOptional(!$annotation->required)
+              ->setLink($annotation->link)
+              ->setGetterSetterMethodNames($annotation->getter, $annotation->setter);
+
+        if ($annotation->formField !== null) {
+            $field->setFormFieldType($annotation->formField);
+        }
+
+        if (($property !== null && !$property->isPublic()) || $annotation->getter !== null || $annotation->setter !== null) {
+            $field->setAccessMethod(FieldDefinition::ACCESS_GETTER_SETTER);
+        }
+
+        $this->applyFieldConstraintsFromAnnotations($field, $additionalAnnotations);
+
+        if ($annotation->type === null) {
+            if ($property !== null && preg_match('/@var ([a-zA-Z]+)/', $property->getDocComment(), $results)) {
+                $field->setType($results[1]);
+            } else {
+                $field->setType('string');
+            }
+        }
+
+        return $field;
+    }
+
+    /**
      * Adds validation constaints to a field according to annotations
      * 
-     * @param ModelDefinition $model
+     * @param FieldDefinition $field
      * @param array $annotations
      * @return
      */
-    protected function applyFieldConstraintsFromAnnotations(ModelDefinition $model, array $annotations)
+    protected function applyFieldConstraintsFromAnnotations(FieldDefinition $field, array $annotations)
     {
         foreach ($annotations as $anno) {
             if (!($anno instanceof \Nucleus\IService\Dashboard\Validate)) {
@@ -359,43 +417,8 @@ class DefinitionBuilder
                 $className = 'Symfony\\Component\\Validator\\Constraints\\' . $anno->constraint;
             }
 
-            $model->getField($anno->property)->addConstraint(new $className(json_decode($anno->options, true)));
+            $field->addConstraint(new $className(json_decode($anno->options, true)));
         }
-    }
-
-    /**
-     * Builds a FieldDefinition from a property
-     * 
-     * @param Annotation $annotation
-     * @param ReflectionProperty $property
-     * @return FieldDefinition
-     */
-    protected function buildField($annotation, ReflectionProperty $property = null)
-    {
-        $field = new FieldDefinition();
-        $field->setProperty($annotation->property)
-              ->setName($annotation->name ?: $annotation->property)
-              ->setDescription($annotation->description)
-              ->setType($annotation->type)
-              ->setIdentifier($annotation->identifier)
-              ->setListable($annotation->listable)
-              ->setEditable($annotation->editable)
-              ->setOptional(!$annotation->required)
-              ->setLink($annotation->link);
-
-        if ($annotation->formField !== null) {
-            $field->setFormFieldType($annotation->formField);
-        }
-
-        if ($annotation->type === null) {
-            if ($property !== null && preg_match('/@var ([a-zA-Z]+)/', $property->getDocComment(), $results)) {
-                $field->setType($results[1]);
-            } else {
-                $field->setType('string');
-            }
-        }
-
-        return $field;
     }
 
     protected function parseAnnotations($className)

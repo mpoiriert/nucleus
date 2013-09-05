@@ -127,7 +127,7 @@ class Dashboard
             if (!$self->accessControl->checkPermissions($action->getPermissions())) {
                 return false;
             }
-            return array_merge($self->formatAction($action), array(
+            return array_merge($self->getLimitedActionSchema($action), array(
                 'controller' => $controller->getName(),
                 'menu' => $action->getMenu(),
                 'default' => $action->isDefault(),
@@ -249,7 +249,7 @@ class Dashboard
                 if (!$self->accessControl->checkPermissions($modelAction->getPermissions())) {
                     return false;
                 }
-                return array_merge($self->formatAction($modelAction), array(
+                return array_merge($self->getLimitedActionSchema($modelAction), array(
                     'controller' => $controller->getName(),
                     'name' => $action->getName() . '/' . $modelAction->getName(),
                     'url' => $self->routing->generate('dashboard.invokeModel', 
@@ -262,7 +262,7 @@ class Dashboard
                 if (!$self->accessControl->checkPermissions($action->getPermissions())) {
                     return false;
                 }
-                return array_merge($self->formatAction($action), array(
+                return array_merge($self->getLimitedActionSchema($action), array(
                     'controller' => $controller->getName(),
                     'url' => $self->routing->generate('dashboard.invoke', 
                         array('controllerName' => $controller->getName(), 'actionName' => $action->getName()))
@@ -338,45 +338,47 @@ class Dashboard
         $service = $this->serviceContainer->get($controller->getServiceName());
         $model = $action->getInputModel();
         $data = $this->getInputData($request);
+        $params = array();
+
+        if ($model !== null) {
+            try {
+                if ($action->isModelLoaded()) {
+                    $object = $model->loadObject($data);
+                } else {
+                    $object = $model->instanciateObject($data);
+                }
+
+                $model->validateObject($object);
+
+                if ($action->isModelOnlyArgument()) {
+                    $params = array($action->getModelArgumentName() => $object);
+                } else {
+                    $params = $model->convertObjectToArray($object);
+                }
+            } catch (ValidationException $e) {
+                return $this->formatErrorResponse((string) $e->getVioliations());
+            }
+        }
 
         if ($action->isPaginated() && !$action->isAutoPaginated() && ($param = $action->getOffsetParam()) !== null) {
             if (isset($data['__offset'])) {
-                $data[$param] = $data['__offset'];
-                unset($data['__offset']);
+                $params[$param] = $data['__offset'];
             } else {
-                $data[$param] = 0;
+                $params[$param] = 0;
             }
         }
 
         if ($action->isSortable() && isset($data['__sort'])) {
-            $data[$action->getSortFieldParam()] = $data['__sort'];
-            unset($data['__sort']);
+            $params[$action->getSortFieldParam()] = $data['__sort'];
             if (isset($data['__sort_order'])) {
                 if (($orderParam = $action->getSortOrderParam()) !== null) {
-                    $data[$orderParam] = $data['__sort_order'];
+                    $params[$orderParam] = $data['__sort_order'];
                 }
-                unset($data['__sort_order']);
             }
-        }
-
-        try {
-            if ($action->isModelOnlyArgument()) {
-                if ($action->isModelLoaded()) {
-                    $object = $this->loadModel($model, $data);
-                } else {
-                    $object = $this->instanciateModel($model, $data);
-                }
-                $model->validate($object);
-                $data = array($action->getModelArgumentName() => $object);
-            } else if ($model) {
-                $model->validate($data);
-            }
-        } catch (ValidationException $e) {
-            return $this->formatErrorResponse((string) $e->getVioliations());
         }
 
         $result = $this->invoker->invoke(
-            array($service, $action->getName()), $data, array($request, $response));
+            array($service, $action->getName()), $params, array($request, $response));
 
         return $this->formatInvokedResponse($request, $action, $result);
     }
@@ -393,7 +395,7 @@ class Dashboard
         $object = $this->loadModel($model, $data);
 
         try {
-            $model->validate($object);
+            $model->validateObject($object);
         } catch (ValidationException $e) {
             return $this->formatErrorResponse((string) $e->getVioliations());
         }
@@ -504,7 +506,7 @@ class Dashboard
             $data = array();
             if ($result !== null) {
                 foreach ($result as $item) {
-                    $data[] = $this->convertObjectToJson($item, $model);
+                    $data[] = $model->convertObjectToArray($item);
                 }
             }
 
@@ -517,7 +519,7 @@ class Dashboard
         } else if ($result === null) {
             $data = null;
         } else {
-            $data = $this->convertObjectToJson($result, $model);
+            $data = $model->convertObjectToArray($result);
         }
         return $this->formatResponse($data);
     }
@@ -540,92 +542,5 @@ class Dashboard
         }
         $result = new LimitIterator($result, $request->query->get('__offset', 0), $request->query->get('__limit', 1));
         return array($count, $result);
-    }
-
-    /**
-     * Converts an object to JSON according to the ModelDefinition
-     * @param object $obj
-     * @param ModelDefinition $model
-     * @return array
-     */
-    protected function convertObjectToJson($obj, ModelDefinition $model)
-    {
-        $json = array();
-        $class = new ReflectionClass($obj);
-        foreach ($model->getListableFields() as $f) {
-            $p = $f->getProperty();
-            $getter = 'get' . ucfirst($p);
-            if ($class->hasProperty($p) && $class->getProperty($p)->isPublic()) {
-                $json[$p] = $class->getProperty($p)->getValue($obj);
-            } else if ($class->hasMethod($getter)) {
-                $json[$p] = $class->getMethod($getter)->invoke($obj);
-            }
-        }
-        return $json;
-    }
-
-    /**
-     * Loads a model using the $data according to the ModelDefinition (eg: using the model loader)
-     * 
-     * @param ModelDefinition $model
-     * @param array $data
-     * @return object
-     */
-    protected function loadModel(ModelDefinition $model, $data)
-    {
-        if (!$model->hasLoader()) {
-            return $this->instanciateModel($model, $data);
-        }
-        $loaderArgs = $data;
-        if ($idField = $model->getIdentifierField()) {
-            $loaderArgs = $data[$idField->getProperty()];
-        }
-        $obj = call_user_func($model->getLoader(), $loaderArgs);
-        $this->populateModel($obj, $model, $data);
-        return $obj;
-    }
-
-    /**
-     * Creates a new object according to the ModelDefinition
-     * 
-     * @param ModelDefinition $model
-     * @param array $data
-     * @return object
-     */
-    protected function instanciateModel(ModelDefinition $model, $data = array())
-    {
-        $class = new ReflectionClass($model->getClassName());
-        $obj = $class->newInstance();
-        $this->populateModel($obj, $model, $data, $class);
-        return $obj;
-    }
-
-    /**
-     * Populates an object with the specified data according to the given ModelDefinition
-     * 
-     * @param object $obj
-     * @param ModelDefinition $model
-     * @param array $data
-     * @param ReflectionClass $class
-     * @return object
-     */
-    protected function populateModel($obj, ModelDefinition $model, $data, ReflectionClass $class = null)
-    {
-        if ($class === null) {
-            $class = new ReflectionClass($obj);
-        }
-        foreach ($model->getEditableFields() as $f) {
-            $p = $f->getProperty();
-            $setter = 'set' . ucfirst($p);
-            if (!isset($data[$p])) {
-                continue;
-            }
-            if ($class->hasProperty($p)) {
-                $class->getProperty($p)->setValue($obj, $data[$p]);
-            } else if ($class->hasMethod($setter)) {
-                $class->getMethod($setter)->invoke($obj, $data[$p]);
-            }
-        }
-        return $obj;
     }
 }

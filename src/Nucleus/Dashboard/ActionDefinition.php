@@ -53,6 +53,11 @@ class ActionDefinition
 
     protected $permissions = array();
 
+    public static function create()
+    {
+        return new ActionDefinition();
+    }
+
     public function setName($name)
     {
         $this->name = $name;
