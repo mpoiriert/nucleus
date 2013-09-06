@@ -46,7 +46,7 @@ interface IRouterService
 
     public function match($path, $host = '', $scheme = '', $method = '');
 
-    public function generate($name, array $parameters = array(), $referenceType = self::ABSOLUTE_PATH);
+    public function generate($name, array $parameters = array(), $referenceType = self::ABSOLUTE_PATH, $scheme=null);
     
     public function setCurrentRequest(Request $request);
     

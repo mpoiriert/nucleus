@@ -106,24 +106,45 @@ class Router implements IRouterService
         }
     }
 
-    public function generate($name, array $parameters = array(), $referenceType = self::ABSOLUTE_PATH)
+    public function generate($name, array $parameters = array(), $referenceType = self::ABSOLUTE_PATH, $scheme = null)
     {
         $parameters = array_deep_merge(
-            $this->sessionDefaultParameters,
-            $this->defaultParameters, 
-            $parameters
+            $this->sessionDefaultParameters, $this->defaultParameters, $parameters
         );
-        
+
+        if ($scheme) {
+            $oldScheme = $this->context->getScheme();
+            $this->context->setScheme($scheme);
+        }
+
         $cultures = $this->getCultures($parameters);
 
-        foreach($cultures as $culture) {
-            $routeName = $this->getI18nRouteName($name,$culture);
-            if($this->routeCollection->get($routeName)) {
-                return $this->urlGenerator->generate($routeName,$parameters, $referenceType);
+        $route = null;
+        try {
+            foreach ($cultures as $culture) {
+                $routeName = $this->getI18nRouteName($name, $culture);
+                if ($this->routeCollection->get($routeName)) {
+                    $route = $this->urlGenerator->generate($routeName, $parameters, $referenceType);
+                    break;
+                }
             }
+
+            if (is_null($route)) {
+                $route = $this->urlGenerator->generate($name, $parameters);
+            }
+        } catch (\Exception $e) {
+            //We want to put the old scheme back on exception
+            if ($scheme) {
+                $this->context->setScheme($oldScheme);
+            }
+            throw $e;
         }
         
-        return $this->urlGenerator->generate($name, $parameters);
+        if ($scheme) {
+            $this->context->setScheme($oldScheme);
+        }
+
+        return $route;
     }
     
     private function getCultures(array $parameters)
