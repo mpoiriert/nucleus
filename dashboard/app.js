@@ -150,6 +150,10 @@ $(function() {
                 "float": parseFloat
             };
             this.$(':input:not(button)').each(function() {
+                if ((this.type == 'radio' || this.type == 'checkbox') && !this.checked) {
+                    return;
+                }
+
                 var $this = $(this), 
                     v = this.value || '', 
                     t = $this.data('type') || 'string', 
@@ -374,7 +378,11 @@ $(function() {
             this.rawExecuteAction(data, 
                 _.bind(function(resp) {
                     if (this.schema.input.type != 'form') {
-                        Dashboard.router.navigate(this.action_url + '?' + $.param(data));
+                        var url = this.action_url, params = $.param(data);
+                        if (params) {
+                            url += '?' + params;
+                        }
+                        Dashboard.router.navigate(url);
                     }
                     this.renderResponse(resp);
                 }, this),
@@ -553,7 +561,15 @@ $(function() {
             action.previous = this.currentAction;
             this.currentAction = action;
             this.$('#main').append(action.render().el);
-            Dashboard.router.navigate(action.controller + "/" + action.name + "?" + $.param(action.options.params));
+
+            var url = action.controller + "/" + action.name,
+                params = $.param(action.options.params);
+
+            if (params) {
+                url += '?' + params;
+            }
+
+            Dashboard.router.navigate(url);
         }
     });
 
@@ -567,10 +583,15 @@ $(function() {
         },
         action: function(controller, action) {
             action = action.replace(/\?*$/, '');
-            Dashboard.app.runAction(controller, action, this._parseQueryString());
+            var qs = '';
+            if (action.indexOf('?') > -1) {
+                qs = action.substr(action.indexOf('?') + 1);
+                action = action.substr(0, action.indexOf('?'));
+            }
+            Dashboard.app.runAction(controller, action, this._parseQueryString(qs));
         },
-        _parseQueryString: function() {
-            var qs = window.location.search.substring(1), result = {};
+        _parseQueryString: function(qs) {
+            var result = {};
             if(!qs){
                 return result;
             }
