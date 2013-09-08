@@ -52,6 +52,7 @@ class DashboardModelBehavior extends Behavior
     public function addFieldDefinition($column)
     {
         $isIdentifier = $column->isPrimaryKey();
+
         $script = "\\Nucleus\\Dashboard\\FieldDefinition::create()\n"
                 . "->setProperty('" . $column->getPhpName() . "')\n"
                 . "->setAccessMethod(\\Nucleus\\Dashboard\\FieldDefinition::ACCESS_GETTER_SETTER)\n"
@@ -63,6 +64,15 @@ class DashboardModelBehavior extends Behavior
 
         if ($isIdentifier) {
             $script .= "\n->setEditable(false)";
+        }
+
+        if (($defaultValue = $column->getPhpDefaultValue()) !== null) {
+            if (is_string($defaultValue)) {
+                $defaultValue = "'" . str_replace("'", "\\'", $defaultValue) . "'";
+            } else if (is_bool($defaultValue)) {
+                $defaultValue = $defaultValue ? 'true' : 'false';
+            }
+            $script .= "\n->setDefaultValue(" . $defaultValue . ")";
         }
 
         return $script;

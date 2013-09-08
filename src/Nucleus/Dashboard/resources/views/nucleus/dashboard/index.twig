@@ -46,18 +46,18 @@
           <label class="control-label" for="<%= field.name %>"><%= field.title %></label>
           <div class="controls">
             <% if (field.field_type == 'textarea') { %>
-              <textarea name="<%= field.name %>" data-type="<%= field.formated_type %>"><%= values[field.name] %></textarea>
+              <textarea name="<%= field.name %>" data-type="<%= field.formated_type %>"><%= values[field.name] || field.defaultValue %></textarea>
             <% } else if (field.field_type == 'checkbox' || field.field_type == 'radio') { %>
               <input type="<%= field.field_type %>" name="<%= field.name %>" value="<%= field.value %>"
-                data-type="<%= field.formated_type %>" <% if (values[field.name] == field.value) print("checked"); %>>
+                data-type="<%= field.formated_type %>" <% if ((typeof(values[field.name]) != 'undefined' && values[field.name] == field.value) || field.defaultValue === true) print("checked"); %>>
             <% } else { %>
-              <input type="<%= field.field_type %>" name="<%= field.name %>" value="<%= values[field.name] %>"
+              <input type="<%= field.field_type %>" name="<%= field.name %>" value="<%= values[field.name] || field.defaultValue %>"
                 data-type="<%= field.formated_type %>">
             <% } %>
           </div>
         </div>
       <% } else { %>
-        <input type="hidden" name="<%= field.name %>" value="<%= values[field.name] %>">
+        <input type="hidden" name="<%= field.name %>" value="<%= values[field.name] || field.defaultValue %>">
       <% } %>
     <% }) %>
     <div class="form-actions">
