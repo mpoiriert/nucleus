@@ -8,8 +8,7 @@ class DashboardModelBehavior extends Behavior
 {
     protected $parameters = array(
         'include' => null,
-        'exclude' => null,
-        'identifier' => null
+        'exclude' => null
     );
 
     public function objectMethods($builder)
@@ -22,6 +21,7 @@ class DashboardModelBehavior extends Behavior
         $script = "public static function getDashboardModelDefinition() {\n"
                 . "\$model = \\Nucleus\\Dashboard\\ModelDefinition::create()\n"
                 . "->setClassName('" . $builder->getObjectClassname() . "')\n"
+                . "->setLoader(function(\$pk) { return " . $builder->getQueryClassname() . "::create()->findPK(\$pk); })\n"
                 . "->setValidationMethod(\\Nucleus\\Dashboard\\ModelDefinition::VALIDATE_WITH_METHOD);\n\n";
 
         if (($includedFields = $this->getParameter('include')) !== null) {
@@ -40,18 +40,18 @@ class DashboardModelBehavior extends Behavior
             $script .= "\$model->addField(" . $this->addFieldDefinition($column) . ");\n\n";
         }
 
+        $script .= "\$model->addAction(\\Nucleus\\Dashboard\\ActionDefinition::create()\n"
+                 . "->setName('delete')\n"
+                 . "->setTitle('Delete')\n"
+                 . "->setIcon('trash'));\n\n";
+
         $script .= "return \$model;\n}";
-        echo $script;
         return $script;
     }
 
     public function addFieldDefinition($column)
     {
         $isIdentifier = $column->isPrimaryKey();
-        if (($identifier = $this->getParameter('identifier')) !== null) {
-            $isIdentifier = $identifier === $column->getName();
-        }
-
         $script = "\\Nucleus\\Dashboard\\FieldDefinition::create()\n"
                 . "->setProperty('" . $column->getPhpName() . "')\n"
                 . "->setAccessMethod(\\Nucleus\\Dashboard\\FieldDefinition::ACCESS_GETTER_SETTER)\n"

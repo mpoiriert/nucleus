@@ -178,7 +178,7 @@ class ModelDefinition
      */
     public function loadObject($data)
     {
-        if ($this->loader !== null) {
+        if ($this->loader === null) {
             return $this->instanciateObject($data);
         }
         $loaderArgs = $data;

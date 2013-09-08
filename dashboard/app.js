@@ -566,7 +566,7 @@ $(function() {
             Dashboard.app.runDefaultAction();
         },
         action: function(controller, action) {
-            action = action.replace(/\?/g, '');
+            action = action.replace(/\?*$/, '');
             Dashboard.app.runAction(controller, action, this._parseQueryString());
         },
         _parseQueryString: function() {

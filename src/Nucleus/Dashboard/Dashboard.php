@@ -392,7 +392,7 @@ class Dashboard
 
         $data = $this->getInputData($request);
         $model = $action->getReturnModel();
-        $object = $this->loadModel($model, $data);
+        $object = $model->loadObject($data);
 
         try {
             $model->validateObject($object);
