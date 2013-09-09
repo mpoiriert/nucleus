@@ -71,7 +71,7 @@ abstract class " . $this->getClassname() . "
         $secureAnnotation = $this->getSecureAnnotation();
         return "
     /**
-     * @\Nucleus\IService\Dashboard\Action(title=\"Add\", icon=\"plus\")
+     * @\Nucleus\IService\Dashboard\Action(title=\"Add\", icon=\"plus\", redirect=\"edit\")
      * {$secureAnnotation}
      * @return {$objectClassname}
      */
