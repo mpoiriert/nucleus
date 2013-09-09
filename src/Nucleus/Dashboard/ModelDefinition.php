@@ -22,7 +22,7 @@ class ModelDefinition
 
     protected $loader;
 
-    protected $validationMethod = 0;
+    protected $validationMethod = ModelDefinition::VALIDATE_WITH_VALIDATOR;
 
     public static function create()
     {

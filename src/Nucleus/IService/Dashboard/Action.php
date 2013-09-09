@@ -44,6 +44,16 @@ class Action
     public $pipe;
 
     /**
+     * An action name to delegate the execution to another action
+     */
+    public $delegate;
+
+    /**
+     * An action name to redirect to after this one has executed
+     */
+    public $redirect;
+
+    /**
      * Whether this action applies to a model only
      */
     public $on_model = false;

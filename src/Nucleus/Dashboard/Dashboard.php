@@ -208,10 +208,16 @@ class Dashboard
     protected function getActionInputSchema(ControllerDefinition $controller, ActionDefinition $action)
     {
         $json = array(
-            'type' => $action->getInputType(),
-            'url' => $this->routing->generate('dashboard.invoke', 
-                array('controllerName' => $controller->getName(), 'actionName' => $action->getName()))
+            'type' => $action->getInputType()
         );
+
+        if ($action->getFlow() === ActionDefinition::FLOW_DELEGATE) {
+            $json['delegate'] = $this->routing->generate('dashboard.invoke', 
+                array('controllerName' => $controller->getName(), 'actionName' => $action->getNextAction()));
+        } else {
+            $json['url'] = $this->routing->generate('dashboard.invoke', 
+                array('controllerName' => $controller->getName(), 'actionName' => $action->getName()));
+        }
 
         if (($model = $action->getInputModel()) !== null) {
             $json['model_name'] = $model->getName();
@@ -230,19 +236,25 @@ class Dashboard
      */
     protected function getActionOutputSchema(ControllerDefinition $controller, ActionDefinition $action)
     {
-        if ($action->getReturnType() === ActionDefinition::RETURN_NONE) {
-            return array('type' => $action->getReturnType());
-        }
-
-        $behaviors = array();
-        foreach ($action->getBehaviors() as $b) {
-            $behaviors[$b->getName()] = $b->getParams();
-        }
-
         $json = array(
             'type' => $action->getReturnType(),
-            'behaviors' => $behaviors
+            'flow' => $action->getFlow()
         );
+
+        if (in_array($action->getFlow(), array(ActionDefinition::FLOW_REDIRECT, ActionDefinition::FLOW_PIPE))) {
+            $json['next_action'] = $action->getNextAction();
+            $json['next_url'] = $this->routing->generate('dashboard.invoke',
+                array('controllerName' => $controller->getName(), 'actionName' => $action->getNextAction()));
+        }
+
+        if ($action->getReturnType() === ActionDefinition::RETURN_NONE) {
+            return $json;
+        }
+
+        $json['behaviors'] = array();
+        foreach ($action->getBehaviors() as $b) {
+            $json['behaviors'][$b->getName()] = $b->getParams();
+        }
 
         $self = $this;
         $json['actions'] = array_merge(
@@ -284,12 +296,6 @@ class Dashboard
             } else {
                 $json['fields'] = $this->getFieldsSchema($model->getListableFields());
             }
-        }
-
-        if ($action->isPiped()) {
-            $json['pipe'] = $action->getPipe();
-            $json['url'] = $this->routing->generate('dashboard.actionSchema',
-                array('controllerName' => $controller->getName(), 'actionName' => $action->getPipe()));
         }
 
         return $json;

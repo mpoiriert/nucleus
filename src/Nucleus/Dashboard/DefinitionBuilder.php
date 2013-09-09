@@ -216,7 +216,15 @@ class DefinitionBuilder
             }
 
             if ($annotation->pipe) {
-                $action->setPipe($annotation->pipe);
+                $action->setFlow(ActionDefinition::FLOW_PIPE, $annotation->pipe);
+            }
+
+            if ($annotation->redirect) {
+                $action->setFlow(ActionDefinition::FLOW_REDIRECT, $annotation->redirect);
+            }
+
+            if ($annotation->delegate) {
+                $action->setFlow(ActionDefinition::FLOW_DELEGATE, $annotation->delegate);
             }
 
             if ($annotation->on_model) {
@@ -283,12 +291,12 @@ class DefinitionBuilder
             $returnTag = false;
         }
 
-        if (!$annotation || (!$annotation->pipe && $annotation->out === null)) {
+        if (!$annotation || (!$action->isFlowing() && $annotation->out === null)) {
             if ($returnTag) {
                 $isArray = isset($returnTag[2]) || $returnTag[1] == 'array';
                 $action->setReturnType($isArray ? ActionDefinition::RETURN_LIST : ActionDefinition::RETURN_OBJECT);
             }
-        } else if (!$annotation->pipe) {
+        } else if (!$action->isFlowing()) {
             $action->setReturnType($annotation->out);
         }
 

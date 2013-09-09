@@ -8,10 +8,16 @@ class ActionDefinition
 {
     const INPUT_CALL = 'call';
     const INPUT_FORM = 'form';
+
     const RETURN_NONE = 'none';
     const RETURN_LIST = 'list';
     const RETURN_OBJECT= 'object';
     const RETURN_FORM = 'form';
+
+    const FLOW_RETURN = 'return';
+    const FLOW_PIPE = 'pipe';
+    const FLOW_DELEGATE = 'delegate';
+    const FLOW_REDIRECT = 'redirect';
 
     protected $name;
 
@@ -25,7 +31,7 @@ class ActionDefinition
 
     protected $menu = true;
 
-    protected $inputType = 'call';
+    protected $inputType = ActionDefinition::INPUT_CALL;
 
     protected $inputModel;
 
@@ -33,11 +39,13 @@ class ActionDefinition
 
     protected $loadModel = false;
 
-    protected $returnType = 'none';
+    protected $returnType = ActionDefinition::RETURN_NONE;
 
     protected $returnModel;
 
-    protected $pipe;
+    protected $flow = ActionDefinition::FLOW_RETURN;
+
+    protected $nextAction;
 
     protected $appliedToModel;
 
@@ -203,21 +211,39 @@ class ActionDefinition
         return $this->returnModel;
     }
 
-    public function setPipe($pipe)
+    public function setFlow($flow, $nextActionName = null)
     {
-        $this->pipe = $pipe;
-        $this->returnType = self::RETURN_FORM;
+        $this->flow = $flow;
+        if ($nextActionName !== null) {
+            $this->setNextAction($nextActionName);
+        }
+        if ($flow !== self::FLOW_RETURN) {
+            $this->returnType = self::RETURN_FORM;
+        }
         return $this;
     }
 
-    public function isPiped()
+    public function getFlow()
     {
-        return $this->pipe !== null;
+        return $this->flow;
     }
 
-    public function getPipe()
+    public function isFlowing()
     {
-        return $this->pipe;
+        return $this->flow !== self::FLOW_RETURN;
+    }
+
+    public function setNextAction($actionName)
+    {
+        if ($this->flow === self::FLOW_RETURN) {
+            throw new DefinitionBuilderException("Flow must be set to something else than return to set a next action");
+        }
+        $this->nextAction = $actionName;
+    }
+
+    public function getNextAction()
+    {
+        return $this->nextAction;
     }
 
     public function applyToModel($className)

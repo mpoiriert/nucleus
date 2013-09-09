@@ -142,7 +142,7 @@ $(function() {
             return this.$el;
         },
         toolbarClick: function(controller, action) {
-            this.trigger('pipe', controller, action, this.serialize());
+            this.trigger('tbclick', controller, action, this.serialize());
         },
         handleFormSubmited: function(e) {
             this.trigger('submit', this.serialize());
@@ -158,7 +158,7 @@ $(function() {
             if (typeof(this.$error) === 'undefined') {
                 this.$error = $('<div class="alert alert-error" />');
                 if (this.$toolbar) {
-                    this.$error.insertAfter(this.$toolbar);
+                    this.$error.insertAfter(this.$toolbar.$el);
                 } else {
                     this.$error.prependTo(this.$el);
                 }
@@ -392,6 +392,11 @@ $(function() {
             this.$el.empty().append(this.view.render().el);
         },
         renderResponse: function(data) {
+            if (this.schema.output.flow == 'redirect') {
+                this.trigger('redirect', this.controller, this.schema.output.next_action, data);
+                return;
+            }
+
             if (this.schema.output.type == 'list') {
                 this.view = new Dashboard.ListWidgetView(this.schema.output);
             } else if (this.schema.output.type == 'object') {
@@ -405,14 +410,12 @@ $(function() {
 
             this.view.action = this;
             this.view.model = data;
-            this.listenTo(this.view, 'pipe', function(controller, action, data) {
-                this.trigger('pipe', controller, action, data);
+            this.listenTo(this.view, 'tbclick', function(controller, action, data) {
+                this.trigger('redirect', controller, action, data);
             });
 
-            if (this.schema.output.pipe) {
-                this.listenTo(this.view, 'submit', function(data) {
-                    this.trigger('pipe', this.controller, this.schema.output.pipe, data);
-                });
+            if (this.schema.output.flow == 'pipe') {
+                this.listenTo(this.view, 'submit', this.pipeAction);
             }
 
             this.$el.empty().append(this.view.render().el);
@@ -431,19 +434,36 @@ $(function() {
                     Dashboard.router.navigate(url);
                     this.renderResponse(resp);
                 }, this),
-                _.bind(function(message) {
-                    if (this.view) {
-                        this.view.showError(message);
-                        this.view.unfreeze();
-                    }
-                }, this)
+                this.handleFailedExecute
             );
         },
-        rawExecuteAction: function(data, callback, err_callback) {
-            var method = this.schema.input.type == 'form' ? 'post' : 'get',
-                data = data || {},
-                url = this.schema.input.url,
-                payload = data;
+        handleFailedExecute: function(message) {
+            if (this.view) {
+                this.view.showError(message);
+                this.view.unfreeze();
+            }
+        },
+        pipeAction: function(data) {
+            this.view && this.view.freeze();
+            this.rawExecuteAction(
+                data, 
+                _.bind(this.renderResponse, this),
+                _.bind(this.handleFailedExecute, this), 
+                this.schema.output.next_url, 
+                'post'
+            );
+        },
+        rawExecuteAction: function(data, callback, err_callback, url, method) {
+            data = data || {};
+            var payload = data;
+
+            if (!method) {
+                method = this.schema.input.type == 'form' ? 'post' : 'get';
+            }
+
+            if (!url) {
+                url = this.schema.input.delegate || this.schema.input.url;
+            }
 
             if (method === 'post') {
                 payload = { data: JSON.stringify(data) };
@@ -589,7 +609,7 @@ $(function() {
         },
         runAction: function(controller, action, params) {
             var view = new Dashboard.ActionView({ controller: controller, name: action, params: params || {} });
-            this.listenTo(view, 'pipe', this.runAction);
+            this.listenTo(view, 'redirect', this.runAction);
             this.listenTo(view, 'done', function() {
                 if (view.previous) {
                     this.switchActionView(view.previous);
