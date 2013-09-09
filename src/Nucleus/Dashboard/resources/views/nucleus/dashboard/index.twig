@@ -34,7 +34,9 @@
   <script type="text/template" id="toolbar-tpl">
     <div class="btn-group">
     <% _.each(buttons, function(btn) { %>
+      <% if (btn.name != current_action) { %>
         <a href="<%= base_url + btn.controller + '/' + btn.name %>" data-controller="<%= btn.controller %>" data-action="<%= btn.name %>" class="btn"><i class="icon-<%= btn.icon %>"></i> <%= btn.title %></a>
+      <% } %>
     <% }); %>
     </div>
   </script>
@@ -46,13 +48,13 @@
           <label class="control-label" for="<%= field.name %>"><%= field.title %></label>
           <div class="controls">
             <% if (field.field_type == 'textarea') { %>
-              <textarea name="<%= field.name %>" data-type="<%= field.formated_type %>"><%= values[field.name] || field.defaultValue %></textarea>
+              <textarea name="<%= field.name %>" data-type="<%= field.formated_type %>" class="input-xlarge"><%= values[field.name] || field.defaultValue %></textarea>
             <% } else if (field.field_type == 'checkbox' || field.field_type == 'radio') { %>
               <input type="<%= field.field_type %>" name="<%= field.name %>" value="<%= field.value %>"
                 data-type="<%= field.formated_type %>" <% if ((typeof(values[field.name]) != 'undefined' && values[field.name] == field.value) || field.defaultValue === true) print("checked"); %>>
             <% } else { %>
               <input type="<%= field.field_type %>" name="<%= field.name %>" value="<%= values[field.name] || field.defaultValue %>"
-                data-type="<%= field.formated_type %>">
+                data-type="<%= field.formated_type %>" class="input-xlarge">
             <% } %>
           </div>
         </div>
@@ -66,7 +68,7 @@
   </script>
 
   <script type="text/template" id="object-action-tpl">
-    <dl>
+    <dl class="dl-horizontal">
     <% _.each(fields, function(field) { %>
       <dt><%= field.title %></dt>
       <dd>

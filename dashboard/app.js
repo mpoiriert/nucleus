@@ -88,11 +88,18 @@ $(function() {
         events: {
             "click a": "btnClick"
         },
+        options: {
+            current_action: null
+        },
         initialize: function() {
             this.base_url = this.options.base_url || '';
         },
         render: function() {
-            this.$el.html(this.template({ base_url: this.base_url, buttons: this.options.buttons }));
+            this.$el.html(this.template({ 
+                base_url: this.base_url, 
+                buttons: this.options.buttons,
+                current_action: this.options.current_action
+            }));
             return this;
         },
         btnClick: function(e) {
@@ -110,9 +117,25 @@ $(function() {
         events: {
             "submit": "handleFormSubmited"
         },
+        renderTitle: function(title) {
+            this.$el.append('<div class="page-header"><h3>' + title + '</h3></div>');
+            return this;
+        },
+        renderTitleWithIdentifier: function(title) {
+            var values = this.model || {};
+            for (var i = 0; i < this.options.fields.length; i++) {
+                if (this.options.fields[i].identifier) {
+                    if (values[this.options.fields[i].name]) {
+                        title += ' #' + values[this.options.fields[i].name];
+                    }
+                }
+            }
+            return this.renderTitle(title);
+        },
         renderToolbar: function() {
             if (this.options.actions) {
-                this.$toolbar = new Dashboard.ToolbarView({ base_url: "#", buttons: this.options.actions });
+                this.$toolbar = new Dashboard.ToolbarView({ base_url: "#", 
+                        buttons: this.options.actions, current_action: this.action.name });
                 this.listenTo(this.$toolbar, 'btn-click', this.toolbarClick);
                 this.$el.append(this.$toolbar.render().el);
             }
@@ -150,7 +173,7 @@ $(function() {
                 "float": parseFloat
             };
             this.$(':input:not(button)').each(function() {
-                if ((this.type == 'radio' || this.type == 'checkbox') && !this.checked) {
+                if (this.type == 'radio' && !this.checked) {
                     return;
                 }
 
@@ -158,6 +181,10 @@ $(function() {
                     v = this.value || '', 
                     t = $this.data('type') || 'string', 
                     is_array = false;
+
+                if (this.type == 'checkbox' && t == 'bool') {
+                    v = this.checked;
+                }
 
                 if (t.indexOf('[]') > -1) {
                     t = t.substr(0, t.length - 2);
@@ -175,6 +202,14 @@ $(function() {
                 o[this.name] = v;
             });
             return o;
+        },
+        formatValue: function(v) {
+            if (v === false) {
+                return 'false';
+            } else if (v === true) {
+                return 'true';
+            }
+            return v || '';
         }
     });
 
@@ -182,12 +217,16 @@ $(function() {
      * Represents an action to show a form
      */
     Dashboard.FormWidgetView = Dashboard.BaseWidgetView.extend({
-        className: 'form-action-view',
+        className: 'form-action-view form-horizontal',
         template: _.template($('#form-action-tpl').html()),
         render: function() {
-            var values = this.model || {};
-            this.$el.attr('method', 'post').html(
-                this.template({ fields: this.options.fields, values: values }));
+            var values = this.model || {}, 
+                title = this.action.schema.title + ' ' + this.options.model_name;
+
+            this.renderTitleWithIdentifier(title)
+                .renderToolbar()
+                .append(this.template({ fields: this.options.fields, values: values }));
+
             return this;
         },
     });
@@ -200,8 +239,12 @@ $(function() {
         template: _.template($('#object-action-tpl').html()),
         render: function() {
             var values = this.model || {};
+
             this.$el.empty();
-            this.renderToolbar().append(this.template({ fields: this.options.fields, model: this.model }));
+            this.renderTitleWithIdentifier(this.options.model_name)
+                .renderToolbar()
+                .append(this.template({ fields: this.options.fields, model: this.model }));
+
             return this;
         },
     });
@@ -226,7 +269,7 @@ $(function() {
             this.$el.empty();
             this.renderToolbar().append(this.template({ fields: this.options.fields }));
 
-            if (this.options.sortable) {
+            if (this.options.behaviors.sortable) {
                 this.$('table').addClass('sortable');
                 var self = this;
                 this.$('table th').on('click', function() {
@@ -239,7 +282,7 @@ $(function() {
                 });
             }
 
-            if (this.options.paginated) {
+            if (this.options.behaviors.paginated) {
                 this.renderTable(this.model.data);
                 this.renderPagination(this.model.count);
             } else {
@@ -255,26 +298,26 @@ $(function() {
         },
         loadPage: function(page) {
             this.currentPage = page;
-            this.lastRequest.__offset = (page - 1) * this.options.items_per_page;
+            this.lastRequest.__offset = (page - 1) * this.options.behaviors.paginated.per_page;
             this.reloadData();
         },
         renderTable: function(rows) {
-            var table = '';
-            _.each(rows, _.bind(function(row) {
-                table += '<tr><td><input type="radio" name="' + this.identifier.name + '" value="' + row[this.identifier.name] + '"></td>';
-                _.each(this.options.fields, function(f) {
+            var table = '', self = this;
+            _.each(rows, function(row) {
+                table += '<tr><td><input type="radio" name="' + self.identifier.name + '" value="' + row[self.identifier.name] + '"></td>';
+                _.each(self.options.fields, function(f) {
                     table += '<td>';
                     if (f.link) {
                         table += '<a href="' + Dashboard.config.base_url + "/" + f.link.controller + "/" + f.link.action + '?' + f.name + '=' + row[f.name] + 
                             '" class="action-link" data-controller="' + f.link.controller + '" data-action="' + f.link.action + 
-                            '" data-params=\'{"' + f.name + '": "' + row[f.name] + '"}\'>' + row[f.name] + '</a>';
+                            '" data-params=\'{"' + f.name + '": "' + row[f.name] + '"}\'>' + self.formatValue(row[f.name]) + '</a>';
                     } else {
-                        table += row[f.name];
+                        table += self.formatValue(row[f.name]);
                     }
                     table += '</td>';
                 });
                 table += '</tr>';
-            }, this));
+            });
             this.$('table tbody').html(table);
             this.$('table .action-link').on('click', function(e) {
                 Dashboard.app.runAction($(this).data('controller'), $(this).data('action'), $(this).data('params'));
@@ -282,7 +325,7 @@ $(function() {
             });
         },
         renderPagination: function(count) {
-            this.nbPages = Math.ceil(count / this.options.items_per_page);
+            this.nbPages = Math.ceil(count / this.options.behaviors.paginated.per_page);
             var tpl = _.template($('#pagination-tpl').html());
             this.$el.append(tpl({ nb_pages: this.nbPages }));
 
@@ -343,7 +386,8 @@ $(function() {
             return this;
         },
         renderInput: function() {
-            this.view = new Dashboard.FormWidgetView({ fields: this.schema.input.fields });
+            this.view = new Dashboard.FormWidgetView(this.schema.input);
+            this.view.action = this;
             this.listenTo(this.view, 'submit', this.executeAction);
             this.$el.empty().append(this.view.render().el);
         },
@@ -377,13 +421,14 @@ $(function() {
             this.view && this.view.freeze();
             this.rawExecuteAction(data, 
                 _.bind(function(resp) {
+                    var url = this.action_url;
                     if (this.schema.input.type != 'form') {
-                        var url = this.action_url, params = $.param(data);
+                        var params = $.param(data);
                         if (params) {
                             url += '?' + params;
                         }
-                        Dashboard.router.navigate(url);
                     }
+                    Dashboard.router.navigate(url);
                     this.renderResponse(resp);
                 }, this),
                 _.bind(function(message) {
@@ -562,13 +607,7 @@ $(function() {
             this.currentAction = action;
             this.$('#main').append(action.render().el);
 
-            var url = action.controller + "/" + action.name,
-                params = $.param(action.options.params);
-
-            if (params) {
-                url += '?' + params;
-            }
-
+            var url = action.controller + "/" + action.name;
             Dashboard.router.navigate(url);
         }
     });

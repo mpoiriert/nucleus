@@ -9,6 +9,8 @@ use ReflectionClass;
 use ReflectionProperty;
 use ReflectionMethod;
 use Symfony\Component\Validator\Validation;
+use Nucleus\Dashboard\ActionBehaviors\PaginatedBehavior;
+use Nucleus\Dashboard\ActionBehaviors\OrderableBehavior;
 
 /**
  * Builds Definition objects according to annotations
@@ -228,25 +230,29 @@ class DefinitionBuilder
         $excludeParams = array();
 
         // additional information provided by other annotations
+        $yamlParser = $this->serviceContainer->get('yamlParser');
         foreach ($additionalAnnotations as $anno) {
             if ($anno instanceof \Nucleus\IService\Security\Secure) {
-                $yamlParser = $this->serviceContainer->get('yamlParser');
                 $perms = $yamlParser->parse($anno->permissions);
                 $action->setPermissions($perms);
             } else if ($anno instanceof \Nucleus\IService\Dashboard\Paginate) {
-                $action->setPaginated($anno->per_page, $anno->offset_param, $anno->auto);
+                $action->addBehavior(new PaginatedBehavior((array) $anno));
                 if ($anno->offset_param !== null) {
                     $minNbOfParams++;
                     $excludeParams[] = $anno->offset_param;
                 }
-            } else if ($anno instanceof \Nucleus\IService\Dashboard\Sortable) {
-                $action->setSortable($anno->param, $anno->order_param);
+            } else if ($anno instanceof \Nucleus\IService\Dashboard\Orderable) {
+                $action->addBehavior(new OrderableBehavior((array) $anno));
                 $minNbOfParams++;
                 $excludeParams[] = $anno->param;
                 if ($anno->order_param !== null) {
                     $minNbOfParams++;
                     $excludeParams[] = $anno->order_param;
                 }
+            } else if ($anno instanceof \Nucleus\IService\Dashboard\ActionBehavior) {
+                $classname = $anno->class;
+                $params = $yamlParser->parse($anno->params);
+                $action->addBehavior(new $classname($params));
             }
         }
 
@@ -259,7 +265,7 @@ class DefinitionBuilder
             $action->setInputType($annotation->in);
         }
 
-        if ($action->getInputType() === ActionDefinition::INPUT_FORM) {
+        if ($action->getInputType() === ActionDefinition::INPUT_FORM || $method->getNumberOfParameters() > $minNbOfParams) {
             // builds the input model from the method's arguments
             $inputModel = $this->buildModelFromMethod($method, $additionalAnnotations, $excludeParams);
             if ($method->getNumberOfParameters() == $minNbOfParams + 1) {

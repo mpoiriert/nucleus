@@ -2,6 +2,8 @@
 
 namespace Nucleus\Dashboard;
 
+use Nucleus\Dashboard\ActionBehaviors\AbstractActionBehavior;
+
 class ActionDefinition
 {
     const INPUT_CALL = 'call';
@@ -35,23 +37,13 @@ class ActionDefinition
 
     protected $returnModel;
 
-    protected $paginated = false;
-
-    protected $itemsPerPage;
-
-    protected $offsetParam;
-
-    protected $autoPaginate = false;
-
-    protected $sortFieldParam;
-
-    protected $sortOrderParam;
-
     protected $pipe;
 
     protected $appliedToModel;
 
     protected $permissions = array();
+
+    protected $behaviors = array();
 
     public static function create()
     {
@@ -211,55 +203,6 @@ class ActionDefinition
         return $this->returnModel;
     }
 
-    public function setPaginated($perPage = 20, $offsetParam = null, $auto = false)
-    {
-        $this->paginated = $perPage !== false;
-        $this->itemsPerPage = $perPage;
-        $this->offsetParam = $offsetParam;
-        $this->autoPaginate = $auto;
-    }
-
-    public function isPaginated()
-    {
-        return $this->paginated;
-    }
-
-    public function getItemsPerPage()
-    {
-        return $this->itemsPerPage;
-    }
-
-    public function getOffsetParam()
-    {
-        return $this->offsetParam;
-    }
-
-    public function isAutoPaginated()
-    {
-        return $this->autoPaginate;
-    }
-
-    public function setSortable($fieldParam, $orderParam = null)
-    {
-        $this->sortFieldParam = $fieldParam;
-        $this->sortOrderParam = $orderParam;
-    }
-
-    public function isSortable()
-    {
-        return $this->sortFieldParam !== null;
-    }
-
-    public function getSortFieldParam()
-    {
-        return $this->sortFieldParam;
-    }
-
-    public function getSortOrderParam()
-    {
-        return $this->sortOrderParam;
-    }
-
     public function setPipe($pipe)
     {
         $this->pipe = $pipe;
@@ -301,5 +244,34 @@ class ActionDefinition
     public function getPermissions()
     {
         return $this->permissions;
+    }
+
+    public function addBehavior(AbstractActionBehavior $behavior)
+    {
+        $this->behaviors[] = $behavior;
+    }
+
+    public function getBehavior($name)
+    {
+        foreach ($this->behaviors as $behavior) {
+            if ($behavior->getName() === $name) {
+                return $behavior;
+            }
+        }
+        return null;
+    }
+
+    public function getBehaviors()
+    {
+        return $this->behaviors;
+    }
+
+    public function applyBehaviors($eventName, $args)
+    {
+        foreach ($this->behaviors as $behavior) {
+            if (method_exists($behavior, $eventName)) {
+                call_user_func_array(array($behavior, $eventName), $args);
+            }
+        }
     }
 }

@@ -32,6 +32,10 @@ class ModelDefinition
     public function setClassName($className)
     {
         $this->className = trim($className, '\\');
+        if ($this->name === null) {
+            $parts = explode('\\', $this->className);
+            $this->name = array_pop($parts);
+        }
         return $this;
     }
 

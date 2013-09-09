@@ -213,8 +213,9 @@ class Dashboard
                 array('controllerName' => $controller->getName(), 'actionName' => $action->getName()))
         );
 
-        if ($action->getInputType() !== ActionDefinition::INPUT_CALL) {
-            $json['fields'] = $this->getFieldsSchema($action->getInputModel()->getEditableFields());
+        if (($model = $action->getInputModel()) !== null) {
+            $json['model_name'] = $model->getName();
+            $json['fields'] = $this->getFieldsSchema($model->getEditableFields());
         }
 
         return $json;
@@ -233,15 +234,15 @@ class Dashboard
             return array('type' => $action->getReturnType());
         }
 
+        $behaviors = array();
+        foreach ($action->getBehaviors() as $b) {
+            $behaviors[$b->getName()] = $b->getParams();
+        }
+
         $json = array(
             'type' => $action->getReturnType(),
-            'paginated' => $action->isPaginated(),
-            'sortable' => $action->isSortable()
+            'behaviors' => $behaviors
         );
-
-        if ($action->isPaginated()) {
-            $json['items_per_page'] = $action->getItemsPerPage();
-        }
 
         $self = $this;
         $json['actions'] = array_merge(
@@ -270,16 +271,19 @@ class Dashboard
             }, $controller->getActionsForModel($action->getReturnModel()->getClassName()))))
         );
 
-        if ($action->getReturnType() === ActionDefinition::RETURN_FORM) {
-            $fields = $action->getReturnModel()->getEditableFields();
-            if ($idField = $action->getReturnModel()->getIdentifierField()) {
-                if (!in_array($idField, $fields)) {
-                    $fields[] = $idField;
+        if (($model = $action->getReturnModel()) !== null) {
+            $json['model_name'] = $model->getName();
+            if ($action->getReturnType() === ActionDefinition::RETURN_FORM) {
+                $fields = $model->getEditableFields();
+                if ($idField = $model->getIdentifierField()) {
+                    if (!in_array($idField, $fields)) {
+                        $fields[] = $idField;
+                    }
                 }
+                $json['fields'] = $this->getFieldsSchema($fields);
+            } else {
+                $json['fields'] = $this->getFieldsSchema($model->getListableFields());
             }
-            $json['fields'] = $this->getFieldsSchema($fields);
-        } else {
-            $json['fields'] = $this->getFieldsSchema($action->getReturnModel()->getListableFields());
         }
 
         if ($action->isPiped()) {
@@ -360,25 +364,12 @@ class Dashboard
             }
         }
 
-        if ($action->isPaginated() && !$action->isAutoPaginated() && ($param = $action->getOffsetParam()) !== null) {
-            if (isset($data['__offset'])) {
-                $params[$param] = $data['__offset'];
-            } else {
-                $params[$param] = 0;
-            }
-        }
-
-        if ($action->isSortable() && isset($data['__sort'])) {
-            $params[$action->getSortFieldParam()] = $data['__sort'];
-            if (isset($data['__sort_order'])) {
-                if (($orderParam = $action->getSortOrderParam()) !== null) {
-                    $params[$orderParam] = $data['__sort_order'];
-                }
-            }
-        }
+        $action->applyBehaviors('beforeInvoke', array($model, $data, &$params, $request, $response));
 
         $result = $this->invoker->invoke(
             array($service, $action->getName()), $params, array($request, $response));
+
+        $action->applyBehaviors('afterInvoke', array($model, &$result, $request, $response));
 
         return $this->formatInvokedResponse($request, $action, $result);
     }
@@ -400,8 +391,12 @@ class Dashboard
             return $this->formatErrorResponse((string) $e->getVioliations());
         }
 
+        $action->applyBehaviors('beforeModelInvoke', array($model, $data, $request, $response, &$cancel));
+
         $result = $this->invoker->invoke(
             array($object, $modelAction->getName()), array(), array($request, $response));
+
+        $action->applyBehaviors('afterModelInvoke', array($model, &$result, $request, $response));
 
         return $this->formatInvokedResponse($request, $modelAction, $result, $object);
     }
@@ -492,28 +487,12 @@ class Dashboard
     {
         $model = $action->getReturnModel();
         if ($action->getReturnType() === ActionDefinition::RETURN_LIST) {
-            $count = null;
-            if ($action->isAutoPaginated() && $result !== null) {
-                if (!($result instanceof Iterator) && !is_array($result)) {
-                    throw new DashboardException("List results expect an array or an Iterator, '" . get_class($result) . "' given");
-                }
-                list($count, $result) = $this->autoPaginateResults($request, $result);
-            } else if ($action->isPaginated() && $result !== null) {
-                $count = $result[0];
-                $result = $result[1];
-            }
-
             $data = array();
             if ($result !== null) {
                 foreach ($result as $item) {
                     $data[] = $model->convertObjectToArray($item);
                 }
             }
-
-            if ($action->isPaginated()) {
-                $data = array('count' => $count, 'data' => $data, 'per_page' => $action->getItemsPerPage());
-            }
-
         } else if ($action->getReturnType() === ActionDefinition::RETURN_NONE) {
             $data = null;
         } else if ($result === null) {
@@ -521,26 +500,9 @@ class Dashboard
         } else {
             $data = $model->convertObjectToArray($result);
         }
-        return $this->formatResponse($data);
-    }
 
-    /**
-     * Paginate results using a LimitIterator
-     * 
-     * @param Request $request
-     * @param $result
-     * @return array
-     */
-    protected function autoPaginateResults(Request $request, $result)
-    {
-        $count = null;
-        if (is_array($result)) {
-            $result = new ArrayIterator($result);
-        }
-        if ($result instanceof Countable) {
-            $count = $result->count();
-        }
-        $result = new LimitIterator($result, $request->query->get('__offset', 0), $request->query->get('__limit', 1));
-        return array($count, $result);
+        $action->applyBehaviors('formatInvokedResponse', array(&$data));
+
+        return $this->formatResponse($data);
     }
 }

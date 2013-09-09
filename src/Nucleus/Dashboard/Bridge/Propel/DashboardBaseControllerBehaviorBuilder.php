@@ -50,14 +50,14 @@ abstract class " . $this->getClassname() . "
     /**
      * @\Nucleus\IService\Dashboard\Action(title=\"List\", icon=\"list\", default=true)
      * @\Nucleus\IService\Dashboard\Paginate(per_page={$perPage}, offset_param=\"offset\")
-     * @\Nucleus\IService\Dashboard\Sortable(param=\"sort\", order_param=\"order\")
+     * @\Nucleus\IService\Dashboard\Orderable(param=\"order_by\", order_param=\"order_by_direction\")
      * {$secureAnnotation}
      * @return {$objectClassname}[]
      */
-    public function listAll(\$offset = 0, \$sort = '{$pkName}', \$order = 'asc')
+    public function listAll(\$offset = 0, \$order_by= '{$pkName}', \$order_by_direction = 'asc')
     {
         \$items = {$queryClassname}::create()
-                ->orderBy(\$sort, strtoupper(\$order))
+                ->orderBy(\$order_by, \$order_by_direction)
                 ->paginate(\$offset * {$perPage}, {$perPage});
         return array(\$items->getNbResults(), \$items->getResults());
     }
@@ -92,7 +92,7 @@ abstract class " . $this->getClassname() . "
         $secureAnnotation = $this->getSecureAnnotation();
         return "
     /**
-     * @\Nucleus\IService\Dashboard\Action(title=\"Edit\", icon=\"edit\", on_model=\"{$objectClassname}\", pipe=\"save\")
+     * @\Nucleus\IService\Dashboard\Action(title=\"Edit\", icon=\"edit\", in=\"call\", on_model=\"{$objectClassname}\", pipe=\"save\")
      * {$secureAnnotation}
      * @return {$objectClassname}
      */
