@@ -150,8 +150,10 @@ class Dashboard
 
         $schema = array_merge(
             $this->getLimitedActionSchema($action),
-            array('input' => $this->getActionInputSchema($controller, $action)),
-            array('output' => $this->getActionOutputSchema($controller, $action))
+            array(
+                'input' => $this->getActionInputSchema($controller, $action),
+                'output' => $this->getActionOutputSchema($controller, $action)
+            )
         );
 
         return $this->formatResponse($schema);
@@ -168,15 +170,17 @@ class Dashboard
 
         $schema = array_merge(
             $this->getLimitedActionSchema($modelAction),
-            array('name' => $action->getName() . '/' . $modelAction->getName()),
-            array('input' => array_merge(
-                $this->getActionInputSchema($controller, $action),
-                array('url' => $this->routing->generate('dashboard.invokeModel', array(
-                    'controllerName' => $controller->getName(), 'actionName' => $action->getName(), 
-                    'modelActionName' => $modelAction->getName()))
-                )
-            )),
-            array('output' => $this->getActionOutputSchema($controller, $modelAction))
+            array(
+                'name' => $action->getName() . '/' . $modelAction->getName(),
+                'input' => array_merge(
+                    $this->getActionInputSchema($controller, $action),
+                    array('url' => $this->routing->generate('dashboard.invokeModel', array(
+                        'controllerName' => $controller->getName(), 'actionName' => $action->getName(), 
+                        'modelActionName' => $modelAction->getName()))
+                    )
+                ),
+                'output' => $this->getActionOutputSchema($controller, $modelAction)
+            )
         );
 
         return $this->formatResponse($schema);
@@ -241,7 +245,7 @@ class Dashboard
             'flow' => $action->getFlow()
         );
 
-        if (in_array($action->getFlow(), array(ActionDefinition::FLOW_REDIRECT, ActionDefinition::FLOW_PIPE))) {
+        if (!in_array($action->getFlow(), array(ActionDefinition::FLOW_NONE, ActionDefinition::FLOW_DELEGATE))) {
             $json['next_action'] = $action->getNextAction();
             $json['next_url'] = $this->routing->generate('dashboard.invoke',
                 array('controllerName' => $controller->getName(), 'actionName' => $action->getNextAction()));
@@ -333,6 +337,7 @@ class Dashboard
                 'defaultValue' => $f->getDefaultValue(),
                 'identifier' => $f->isIdentifier(),
                 'editable' => $f->isEditable(),
+                'queryable' => $f->isQueryable(),
                 'link' => $link
             );
         }, $fields));

@@ -51,6 +51,10 @@ body {
     background-image: url(desc.gif);
 }
 
+.list-action-view .sidebar {
+    padding-top: 20px;
+}
+
 .form-action-view,
 .object-action-view {
     position: relative;
@@ -61,3 +65,10 @@ body {
         right: 10px;
         top: 0px;
     }
+
+#overlay {
+    position: absolute;
+    opacity: .4;
+    background: #fff;
+    z-index: 10000;
+}

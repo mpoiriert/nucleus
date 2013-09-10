@@ -14,10 +14,12 @@ class ActionDefinition
     const RETURN_OBJECT= 'object';
     const RETURN_FORM = 'form';
 
-    const FLOW_RETURN = 'return';
-    const FLOW_PIPE = 'pipe';
+    const FLOW_NONE = 'none';
     const FLOW_DELEGATE = 'delegate';
+    const FLOW_PIPE = 'pipe';
     const FLOW_REDIRECT = 'redirect';
+    const FLOW_REDIRECT_WITH_ID = 'redirect_with_id';
+    const FLOW_REDIRECT_WITH_DATA = 'redirect_with_data';
 
     protected $name;
 
@@ -43,7 +45,7 @@ class ActionDefinition
 
     protected $returnModel;
 
-    protected $flow = ActionDefinition::FLOW_RETURN;
+    protected $flow = ActionDefinition::FLOW_NONE;
 
     protected $nextAction;
 
@@ -217,7 +219,7 @@ class ActionDefinition
         if ($nextActionName !== null) {
             $this->setNextAction($nextActionName);
         }
-        if ($flow !== self::FLOW_RETURN) {
+        if ($flow !== self::FLOW_NONE) {
             $this->returnType = self::RETURN_FORM;
         }
         return $this;
@@ -230,12 +232,12 @@ class ActionDefinition
 
     public function isFlowing()
     {
-        return $this->flow !== self::FLOW_RETURN;
+        return $this->flow !== self::FLOW_NONE;
     }
 
     public function setNextAction($actionName)
     {
-        if ($this->flow === self::FLOW_RETURN) {
+        if ($this->flow === self::FLOW_NONE) {
             throw new DefinitionBuilderException("Flow must be set to something else than return to set a next action");
         }
         $this->nextAction = $actionName;
@@ -275,6 +277,7 @@ class ActionDefinition
     public function addBehavior(AbstractActionBehavior $behavior)
     {
         $this->behaviors[] = $behavior;
+        $behavior->setAction($this);
     }
 
     public function getBehavior($name)

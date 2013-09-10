@@ -6,6 +6,18 @@ abstract class AbstractActionBehavior
 {
     protected $params = array();
 
+    protected $action;
+
+    public function setAction($action)
+    {
+        $this->action = $action;
+    }
+
+    public function getAction()
+    {
+        return $this->action;
+    }
+
     abstract public function getName();
 
     public function __construct(array $params = array())

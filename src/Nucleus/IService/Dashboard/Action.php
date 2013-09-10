@@ -54,6 +54,16 @@ class Action
     public $redirect;
 
     /**
+     * An action name to redirect to after this one has executed (id will be forwarded)
+     */
+    public $redirect_with_id;
+
+    /**
+     * An action name to redirect to after this one has executed (data will be forwarded)
+     */
+    public $redirect_with_data;
+
+    /**
      * Whether this action applies to a model only
      */
     public $on_model = false;

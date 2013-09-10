@@ -80,7 +80,17 @@ class ModelDefinition
                 return $field;
             }
         }
-        return false;
+        return null;
+    }
+
+    public function getFieldByProperty($name)
+    {
+        foreach ($this->fields as $field) {
+            if ($field->getProperty() === $name) {
+                return $field;
+            }
+        }
+        return null;
     }
 
     public function getIdentifierField()
@@ -90,7 +100,7 @@ class ModelDefinition
                 return $field;
             }
         }
-        return false;
+        return null;
     }
 
     public function getFields()
@@ -106,6 +116,11 @@ class ModelDefinition
     public function getEditableFields()
     {
         return array_filter($this->fields, function($f) { return $f->isEditable(); });
+    }
+
+    public function getQueryableFields()
+    {
+        return array_filter($this->fields, function($f) { return $f->isQueryable(); });
     }
 
     public function setActions(array $actions)

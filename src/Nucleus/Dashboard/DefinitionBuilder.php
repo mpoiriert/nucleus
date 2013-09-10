@@ -11,6 +11,7 @@ use ReflectionMethod;
 use Symfony\Component\Validator\Validation;
 use Nucleus\Dashboard\ActionBehaviors\PaginatedBehavior;
 use Nucleus\Dashboard\ActionBehaviors\OrderableBehavior;
+use Nucleus\Dashboard\ActionBehaviors\FilterableBehavior;
 
 /**
  * Builds Definition objects according to annotations
@@ -214,19 +215,21 @@ class DefinitionBuilder
             if ($annotation->menu !== null) {
                 $action->setMenu($annotation->menu);
             }
-
             if ($annotation->pipe) {
                 $action->setFlow(ActionDefinition::FLOW_PIPE, $annotation->pipe);
             }
-
             if ($annotation->redirect) {
                 $action->setFlow(ActionDefinition::FLOW_REDIRECT, $annotation->redirect);
             }
-
+            if ($annotation->redirect_with_id) {
+                $action->setFlow(ActionDefinition::FLOW_REDIRECT_WITH_ID, $annotation->redirect_with_id);
+            }
+            if ($annotation->redirect_with_data) {
+                $action->setFlow(ActionDefinition::FLOW_REDIRECT_WITH_DATA, $annotation->redirect_with_data);
+            }
             if ($annotation->delegate) {
                 $action->setFlow(ActionDefinition::FLOW_DELEGATE, $annotation->delegate);
             }
-
             if ($annotation->on_model) {
                 $action->applyToModel($annotation->on_model);
             }
@@ -257,6 +260,10 @@ class DefinitionBuilder
                     $minNbOfParams++;
                     $excludeParams[] = $anno->order_param;
                 }
+            } else if ($anno instanceof \Nucleus\IService\Dashboard\Filterable) {
+                $action->addBehavior(new FilterableBehavior((array) $anno));
+                $minNbOfParams++;
+                $excludeParams[] = $anno->param;
             } else if ($anno instanceof \Nucleus\IService\Dashboard\ActionBehavior) {
                 $classname = $anno->class;
                 $params = $yamlParser->parse($anno->params);

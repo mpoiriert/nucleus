@@ -30,6 +30,13 @@ class DashboardModelBehavior extends Behavior
             $excludedFields = explode(',', $excludedFields);
         }
 
+        $indexColumns = array();
+        foreach ($this->getTable()->getIndices() as $index) {
+            foreach ($index->getColumns() as $c) {
+                $indexColumns[] = $c;
+            }
+        }
+        $indexColumns = array_unique($indexColumns);
 
         foreach ($this->getTable()->getColumns() as $column) {
             if ($includedFields !== null && !in_array($column->getName(), $includedFields)) {
@@ -37,7 +44,8 @@ class DashboardModelBehavior extends Behavior
             } else if ($excludedFields !== null && in_array($column->getName(), $excludedFields)) {
                 continue;
             }
-            $script .= "\$model->addField(" . $this->addFieldDefinition($column) . ");\n\n";
+            $queryable = $column->isPrimaryKey() || in_array($column->getName(), $indexColumns);
+            $script .= "\$model->addField(" . $this->addFieldDefinition($column, $queryable) . ");\n\n";
         }
 
         $script .= "\$model->addAction(\\Nucleus\\Dashboard\\ActionDefinition::create()\n"
@@ -49,7 +57,7 @@ class DashboardModelBehavior extends Behavior
         return $script;
     }
 
-    public function addFieldDefinition($column)
+    public function addFieldDefinition($column, $queryable = false)
     {
         $isIdentifier = $column->isPrimaryKey();
 
@@ -60,6 +68,7 @@ class DashboardModelBehavior extends Behavior
                 . "->setIdentifier(" . ($isIdentifier ? 'true' : 'false') . ")\n"
                 . "->setType('" . $column->getPhpType() . "')\n"
                 . "->setOptional(" . ($column->isNotNull() ? 'false' : 'true') . ")\n"
+                . "->setQueryable(" . ($queryable ? 'true' : 'false') . ")\n"
                 . "->setDescription('" . str_replace("'", "\\'", $column->getDescription()) . "')";
 
         if ($isIdentifier) {

@@ -95,7 +95,20 @@
     </table>
   </script>
 
-  <script type="text/template" id="pagination-tpl">
+  <script type="text/template" id="list-filters-tpl">
+    <% _.each(fields, function(f) { %>
+      <% if (f.queryable) { %>
+        <p>
+          <label><%= f.title %></label>
+          <input type="<%= f.field_type %>" name="<%= f.name %>" data-type="<%= f.formated_type %>">
+        </p>
+      <% } %>
+    <% }) %>
+    <button class="btn filter">Filter</button>
+    <button class="btn reset">Reset</button>
+  </script>
+
+  <script type="text/template" id="list-pagination-tpl">
     <div class="pagination">
       <ul>
         <li class="disabled"><a href="#" class="prev">Prev</a></li>

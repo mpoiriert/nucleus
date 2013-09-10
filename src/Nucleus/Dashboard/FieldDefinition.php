@@ -39,6 +39,8 @@ class FieldDefinition
 
     protected $editable = true;
 
+    protected $queryable = true;
+
     protected $link;
 
     protected $constraints = array();
@@ -263,6 +265,17 @@ class FieldDefinition
     public function isEditable()
     {
         return $this->editable;
+    }
+
+    public function setQueryable($queryable = true)
+    {
+        $this->queryable = $queryable;
+        return $this;
+    }
+
+    public function isQueryable()
+    {
+        return $this->queryable;
     }
 
     public function setLink($link)
