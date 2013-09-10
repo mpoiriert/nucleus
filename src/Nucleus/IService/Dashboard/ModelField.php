@@ -59,6 +59,11 @@ class ModelField
     public $editable = true;
 
     /**
+     * Whether this property is queryable
+     */
+    public $queryable = true;
+
+    /**
      * The name of an action which will be triggered when
      * this property is clicked
      */

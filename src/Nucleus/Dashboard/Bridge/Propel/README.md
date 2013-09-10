@@ -20,6 +20,7 @@ The following features of Propel's models will be available through the model de
  - primary key as identifier
  - use the model's getters/setters
  - the delete action
+ - default value
 
 You can include/exclude columns from the `ModelDefinition` using either the *exclude*
 or *include* parameters:
@@ -40,6 +41,9 @@ The *dashboard\_controller* behavior creates a basic CRUD controller with the fo
  - listAll: with support for pagination and ordering
  - add: create a new model
  - edit: edit an existing model
+
+The *listAll* action supports pagination, ordering and filtering. If the *sortable* behavior
+is activated on the table, sorting will be activated.
 
 The controller is divided in two parts: a BaseController and a Controller. You can freely
 override the latter.

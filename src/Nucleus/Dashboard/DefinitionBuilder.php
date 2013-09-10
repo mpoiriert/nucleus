@@ -393,6 +393,7 @@ class DefinitionBuilder
               ->setIdentifier($annotation->identifier)
               ->setListable($annotation->listable)
               ->setEditable($annotation->editable)
+              ->setQueryable($annotation->queryable)
               ->setOptional(!$annotation->required)
               ->setLink($annotation->link)
               ->setGetterSetterMethodNames($annotation->getter, $annotation->setter);

@@ -131,6 +131,7 @@ Fields have a few options:
  - *formField*: the HTML input type
  - *listable*: whether the property is listable
  - *editable*: whether the property is editable
+ - *queryable*: whether the property can be queried
  - *link*: an action name which will be triggered when the property is clicked
  - *required*: whether the property is required
 
@@ -267,7 +268,26 @@ The action will receive the model identifier as argument.
 The dashboard actions support the `@Nucleus\IService\Security\Secure` annotation.
 Only actions which the current user is allowed to execute will be displayed.
 
-## Pagination and sorting
+## Behaviors
+
+Actions can have associated behaviors to augment their output. Behaviors can
+be added using the `@ActionBehavior` annotation. It takes as params:
+
+ - *class*: class name of the behavior
+ - *params*: a YAML hash of params
+
+A behavior must extend the `Nucleus\Dashboard\ActionBehaviors\AbstractActionBehavior`.
+Custom parameters can be defined in the `$parameters` property. Some special methods
+can be added which will be called at certain point of the dashboard execution:
+
+    - *beforeInvoke*: called before an action is invoked
+    - *afterInvoke*: called after an action has been invoked but before the results are sent
+    - *beforeInvokeModel*: called before a model action is invoked
+    - *afterInvokeModel*: called after a model action is invoked
+    - *formatInvokedResponse*: called after the response has been formated
+    - *invoke*: special method that will allow the behavior to be called from the client side
+
+## Pagination, sorting and filtering
 
 When results are returned as a "list", the output may be paginated and/or sorted.
 
@@ -289,15 +309,19 @@ annotation. Options:
  - *param*: name of the action parameter used to specify the field to sort (default: sort)
  - *order\_param*: name of the parameter to specify the sorting order: asc or desc
 
+Results may be filtered using the `@\Nucleus\IService\Dashboard\Filterable` action.
+It will provide to the action an array of field names / values to filter the output.
+
 Example:
 
     /**
      * @\Nucleus\IService\Dashboard\Action()
      * @\Nucleus\IService\Dashboard\Paginate(per_page=10, offset_param='offset')
      * @\Nucleus\IService\Dashboard\Sortable(order_param='sortOrder')
+     * @\Nucleus\IService\Dashboard\Filterable(param='filters')
      * @return User[]
      */
-    public function listAll($offset, $sort, $sortOrder)
+    public function listAll($filters, $offset, $sort, $sortOrder)
     {
         // ...
         return array($count, $items);
