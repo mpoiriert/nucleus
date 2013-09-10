@@ -9,6 +9,7 @@
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/bootstrap/css/bootstrap-responsive.min.css") }}
   {{ assetBag.add("/nucleus/asset/dashboard/app.css") }}
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/jquery-1.10.1.min.js") }}
+  {{ assetBag.add("/nucleus/asset/dashboard/vendor/jqueryui/js/jquery-ui-1.10.3.custom.min.js") }}
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/json2.js") }}
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/underscore-min.js") }}
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/backbone-min.js") }}
@@ -34,7 +35,9 @@
   <script type="text/template" id="toolbar-tpl">
     <div class="btn-group">
     <% _.each(buttons, function(btn) { %>
+      <% if (btn.name != current_action) { %>
         <a href="<%= base_url + btn.controller + '/' + btn.name %>" data-controller="<%= btn.controller %>" data-action="<%= btn.name %>" class="btn"><i class="icon-<%= btn.icon %>"></i> <%= btn.title %></a>
+      <% } %>
     <% }); %>
     </div>
   </script>
@@ -46,18 +49,18 @@
           <label class="control-label" for="<%= field.name %>"><%= field.title %></label>
           <div class="controls">
             <% if (field.field_type == 'textarea') { %>
-              <textarea name="<%= field.name %>" data-type="<%= field.formated_type %>"><%= values[field.name] %></textarea>
+              <textarea name="<%= field.name %>" data-type="<%= field.formated_type %>" class="input-xlarge"><%= values[field.name] || field.defaultValue %></textarea>
             <% } else if (field.field_type == 'checkbox' || field.field_type == 'radio') { %>
               <input type="<%= field.field_type %>" name="<%= field.name %>" value="<%= field.value %>"
-                data-type="<%= field.formated_type %>" <% if (values[field.name] == field.value) print("checked"); %>>
+                data-type="<%= field.formated_type %>" <% if ((typeof(values[field.name]) != 'undefined' && values[field.name] == field.value) || field.defaultValue === true) print("checked"); %>>
             <% } else { %>
-              <input type="<%= field.field_type %>" name="<%= field.name %>" value="<%= values[field.name] %>"
-                data-type="<%= field.formated_type %>">
+              <input type="<%= field.field_type %>" name="<%= field.name %>" value="<%= values[field.name] || field.defaultValue %>"
+                data-type="<%= field.formated_type %>" class="input-xlarge">
             <% } %>
           </div>
         </div>
       <% } else { %>
-        <input type="hidden" name="<%= field.name %>" value="<%= values[field.name] %>">
+        <input type="hidden" name="<%= field.name %>" value="<%= values[field.name] || field.defaultValue %>">
       <% } %>
     <% }) %>
     <div class="form-actions">
@@ -66,7 +69,7 @@
   </script>
 
   <script type="text/template" id="object-action-tpl">
-    <dl>
+    <dl class="dl-horizontal">
     <% _.each(fields, function(field) { %>
       <dt><%= field.title %></dt>
       <dd>
@@ -93,7 +96,20 @@
     </table>
   </script>
 
-  <script type="text/template" id="pagination-tpl">
+  <script type="text/template" id="list-filters-tpl">
+    <% _.each(fields, function(f) { %>
+      <% if (f.queryable) { %>
+        <p>
+          <label><%= f.title %></label>
+          <input type="<%= f.field_type %>" name="<%= f.name %>" data-type="<%= f.formated_type %>">
+        </p>
+      <% } %>
+    <% }) %>
+    <button class="btn filter">Filter</button>
+    <button class="btn reset">Reset</button>
+  </script>
+
+  <script type="text/template" id="list-pagination-tpl">
     <div class="pagination">
       <ul>
         <li class="disabled"><a href="#" class="prev">Prev</a></li>

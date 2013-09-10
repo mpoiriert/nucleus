@@ -11,6 +11,9 @@
         },
         "debugBarTwigExtension": {
             "disabled": true
+        },
+        "userDashboard": {
+            "class": "UserDashboardController"
         }
      }
 }

@@ -39,6 +39,7 @@ body {
 
 .list-action-view table td:first-child {
     text-align: center;
+    width: 30px;
 }
 .list-action-view table.sortable th {
     cursor: pointer;
@@ -48,4 +49,26 @@ body {
 }
 .list-action-view table th.sorted.desc {
     background-image: url(desc.gif);
+}
+
+.list-action-view .sidebar {
+    padding-top: 20px;
+}
+
+.form-action-view,
+.object-action-view {
+    position: relative;
+}
+    .form-action-view .btn-toolbar,
+    .object-action-view .btn-toolbar {
+        position: absolute;
+        right: 10px;
+        top: 0px;
+    }
+
+#overlay {
+    position: absolute;
+    opacity: .4;
+    background: #fff;
+    z-index: 10000;
 }
