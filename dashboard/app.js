@@ -33,27 +33,34 @@ $(function() {
             _.extend(options, action);
             action = action.url;
         }
+
         if (options.cached && this.cache[options.cache_id]) {
             var data = this.cache[options.cache_id];
             if (data.success) {
-                callback(data.data);
+                callback && callback(data.data);
             } else if (err_callback) {
-                err_callback(data.message);
+                err_callback && err_callback(data.message);
             }
             return;
         }
+
+        var payload = params;
+        if (method === 'post') {
+            payload = { data: JSON.stringify(params) };
+        }
+
         $.ajax({
             url: this.base_url + action,
             type: method,
             dataType: 'json',
             crossDomain: true,
-            data: params || {}
+            data: payload
         }).done(_.bind(function(data) {
             this.cache[options.cache_id] = data.result;
             if (data.result.success) {
-                callback(data.result.data);
+                callback && callback(data.result.data);
             } else if (err_callback) {
-                err_callback(data.result.message);
+                err_callback && err_callback(data.result.message);
             }
         }, this));
     };
@@ -348,6 +355,10 @@ $(function() {
                 this.renderFilters();
             }
 
+            if (this.options.behaviors.sortable) {
+                this.makeSortable();
+            }
+
             return this;
         },
         refresh: function(reloadPagination) {
@@ -392,6 +403,9 @@ $(function() {
             this.$('table .action-link').on('click', function(e) {
                 Dashboard.app.runAction($(this).data('controller'), $(this).data('action'), $(this).data('params'));
                 e.preventDefault();
+            });
+            this.$('table tbody tr').on('click', function() {
+                $(this).find('input[type="radio"]')[0].checked = true;
             });
         },
         renderPagination: function(count) {
@@ -449,6 +463,24 @@ $(function() {
                 delete self.overrideRequestData.__filters;
                 self.$sidebar.find(':input').val('');
                 self.refresh(true);
+            });
+        },
+        makeSortable: function() {
+            var table = this.$('table tbody'),
+                url = this.options.behaviors.sortable.url,
+                originalIndex;
+
+            table.sortable({
+                axis: "y",
+                start: function(e, ui) {
+                    originalIndex = ui.item.index();
+                    ui.item.find('input[type="radio"]')[0].checked = true;
+                },
+                stop: function(e, ui) {
+                    var delta = ui.item.index() - originalIndex,
+                        data = _.extend({ delta: delta }, serialize(ui.item));
+                    Dashboard.api.call('post', url, data);
+                }
             });
         },
         freeze: function() {
@@ -641,7 +673,6 @@ $(function() {
         },
         _call: function(data, callback, err_callback, url, method) {
             data = data || {};
-            var payload = data;
 
             if (!method) {
                 method = this.schema.input.type == 'form' ? 'post' : 'get';
@@ -651,11 +682,7 @@ $(function() {
                 url = this.schema.input.delegate || this.schema.input.url;
             }
 
-            if (method === 'post') {
-                payload = { data: JSON.stringify(data) };
-            }
-
-            Dashboard.api.call(method, url, payload, callback, err_callback);
+            Dashboard.api.call(method, url, data, callback, err_callback);
         }
     });
 

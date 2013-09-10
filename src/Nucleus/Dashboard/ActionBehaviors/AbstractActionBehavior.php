@@ -49,4 +49,16 @@ abstract class AbstractActionBehavior
     {
         return $this->params;
     }
+
+    public function isInvokable()
+    {
+        return method_exists($this, 'invoke');
+    }
+
+    public function trigger($eventName, $args)
+    {
+        if (method_exists($this, $eventName)) {
+            return call_user_func_array(array($this, $eventName), $args);
+        }
+    }
 }

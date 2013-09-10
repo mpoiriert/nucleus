@@ -204,7 +204,9 @@ class ModelDefinition
         if ($idField = $this->getIdentifierField()) {
             $loaderArgs = $data[$idField->getProperty()];
         }
-        $obj = call_user_func($this->loader, $loaderArgs);
+        if (!($obj = call_user_func($this->loader, $loaderArgs))) {
+            return null;
+        }
         $this->populateObject($obj, $data);
         return $obj;
     }

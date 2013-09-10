@@ -258,6 +258,10 @@ class Dashboard
         $json['behaviors'] = array();
         foreach ($action->getBehaviors() as $b) {
             $json['behaviors'][$b->getName()] = $b->getParams();
+            if ($b->isInvokable()) {
+                $json['behaviors'][$b->getName()]['url'] = $this->routing->generate('dashboard.invokeBehavior',
+                    array('controllerName' => $controller->getName(), 'actionName' => $action->getName(), 'behaviorName' => $b->getName()));
+            }
         }
 
         $self = $this;
@@ -402,7 +406,7 @@ class Dashboard
             return $this->formatErrorResponse((string) $e->getVioliations());
         }
 
-        $action->applyBehaviors('beforeModelInvoke', array($model, $data, $request, $response, &$cancel));
+        $action->applyBehaviors('beforeModelInvoke', array($model, $data, $request, $response));
 
         $result = $this->invoker->invoke(
             array($object, $modelAction->getName()), array(), array($request, $response));
@@ -410,6 +414,26 @@ class Dashboard
         $action->applyBehaviors('afterModelInvoke', array($model, &$result, $request, $response));
 
         return $this->formatInvokedResponse($request, $modelAction, $result, $object);
+    }
+
+    /**
+     * @\Nucleus\IService\Routing\Route(name="dashboard.invokeBehavior", path="/nucleus/dashboard/{controllerName}/{actionName}/_behaviors/{behaviorName}")
+     */
+    public function invokeBehavior($controllerName, $actionName, $behaviorName, Request $request, Response $response)
+    {
+        list($controller, $action) = $this->getAction($controllerName, $actionName);
+
+        $data = $this->getInputData($request);
+        if (($behavior = $action->getBehavior($behaviorName)) === null) {
+            throw new DashboardException("Behavior '$behaviorName' on '$controllerName/$actionName' not found");
+        }
+
+        try {
+            $result = $behavior->trigger('invoke', array($data, $request, $response));
+        } catch (DashboardException $e) {
+            return $this->formatErrorResponse($e->getMessage());
+        }
+        return $this->formatResponse($result);
     }
 
     /**

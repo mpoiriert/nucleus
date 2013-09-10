@@ -18,6 +18,7 @@ class DashboardModelBehavior extends Behavior
 
     public function addGetModelDefinitionMethod($builder)
     {
+        $table = $this->getTable();
         $script = "public static function getDashboardModelDefinition() {\n"
                 . "\$model = \\Nucleus\\Dashboard\\ModelDefinition::create()\n"
                 . "->setClassName('" . $builder->getObjectClassname() . "')\n"
@@ -31,14 +32,18 @@ class DashboardModelBehavior extends Behavior
         }
 
         $indexColumns = array();
-        foreach ($this->getTable()->getIndices() as $index) {
+        foreach ($table->getIndices() as $index) {
             foreach ($index->getColumns() as $c) {
                 $indexColumns[] = $c;
             }
         }
         $indexColumns = array_unique($indexColumns);
 
-        foreach ($this->getTable()->getColumns() as $column) {
+        if ($table->hasBehavior('sortable')) {
+            $excludedFields[] = $table->getBehavior('sortable')->getParameter('rank_column');
+        }
+
+        foreach ($table->getColumns() as $column) {
             if ($includedFields !== null && !in_array($column->getName(), $includedFields)) {
                 continue;
             } else if ($excludedFields !== null && in_array($column->getName(), $excludedFields)) {

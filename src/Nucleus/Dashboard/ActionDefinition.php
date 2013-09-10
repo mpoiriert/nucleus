@@ -298,9 +298,7 @@ class ActionDefinition
     public function applyBehaviors($eventName, $args)
     {
         foreach ($this->behaviors as $behavior) {
-            if (method_exists($behavior, $eventName)) {
-                call_user_func_array(array($behavior, $eventName), $args);
-            }
+            $behavior->trigger($eventName, $args);
         }
     }
 }

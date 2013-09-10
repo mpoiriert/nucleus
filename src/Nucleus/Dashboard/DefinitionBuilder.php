@@ -266,7 +266,7 @@ class DefinitionBuilder
                 $excludeParams[] = $anno->param;
             } else if ($anno instanceof \Nucleus\IService\Dashboard\ActionBehavior) {
                 $classname = $anno->class;
-                $params = $yamlParser->parse($anno->params);
+                $params = $yamlParser->parse($anno->params) ?: array();
                 $action->addBehavior(new $classname($params));
             }
         }
