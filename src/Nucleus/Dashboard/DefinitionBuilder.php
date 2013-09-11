@@ -9,7 +9,13 @@ use ReflectionClass;
 use ReflectionProperty;
 use ReflectionMethod;
 use Symfony\Component\Validator\Validation;
+use Nucleus\Dashboard\ActionBehaviors\PaginatedBehavior;
+use Nucleus\Dashboard\ActionBehaviors\OrderableBehavior;
+use Nucleus\Dashboard\ActionBehaviors\FilterableBehavior;
 
+/**
+ * Builds Definition objects according to annotations
+ */
 class DefinitionBuilder
 {
     protected $serviceContainer;
@@ -27,6 +33,12 @@ class DefinitionBuilder
             ->getValidator();
     }
 
+    /**
+     * Builds a controller from a class name
+     * 
+     * @param string $className
+     * @return ControllerDefinition
+     */
     public function buildController($className)
     {
         if (is_object($className)) {
@@ -38,6 +50,7 @@ class DefinitionBuilder
         $controller = new ControllerDefinition();
         $controller->setClassName($className);
         
+        // searches for the Controller annotation
         $annos = $annotations->getClassAnnotations(array(function($a) {
             return $a instanceof \Nucleus\IService\Dashboard\Controller;
         }));
@@ -52,7 +65,10 @@ class DefinitionBuilder
             }
         }
 
+        // extract actions
         $actions = $this->extractActionsFromClass($class, $annotations);
+
+        // sets the default menu to be the controller's title
         foreach ($actions as $action) {
             if ($action->isVisible() && !$action->providesMenu()) {
                 $action->setMenu($controller->getTitle());
@@ -64,10 +80,25 @@ class DefinitionBuilder
         return $controller;
     }
 
+    /**
+     * Builds a ModelDefinition from a class name
+     * 
+     * @param string $className
+     * @return ModelDefinition
+     */
     public function buildModel($className)
     {
-        $annotations = $this->parseAnnotations($className);
         $class = new ReflectionClass($className);
+
+        if ($class->hasMethod('getDashboardModelDefinition')) {
+            $model = call_user_func(array($className, 'getDashboardModelDefinition'));
+            if (!($model instanceof ModelDefinition)) {
+                throw new DefinitionBuilderException("'$className::getDashboardModelDefinition()' must return a ModelDefinition object");
+            }
+            return $model;
+        }
+
+        $annotations = $this->parseAnnotations($className);
         $model = new ModelDefinition();
         $model->setClassName($className);
 
@@ -80,6 +111,7 @@ class DefinitionBuilder
                 }
                 $loader = $anno->loader;
             } else if ($anno instanceof \Nucleus\IService\Dashboard\ModelField) {
+                // class level field definition
                 if (!$anno->property) {
                     throw new DefinitionBuilderException("Field '{$anno->name}' of model '$className' is missing the 'property' attribute");
                 }
@@ -87,23 +119,29 @@ class DefinitionBuilder
             }
         }
 
+        // extract fields from class properties
         $fields = array();
         foreach ($class->getProperties() as $property) {
-            $annos = $annotations->getPropertyAnnotations($property->getName(), array(function($a) {
-                return $a instanceof \Nucleus\IService\Dashboard\ModelField;
-            }));
-            if (empty($annos)) {
+            $annos = $annotations->getPropertyAnnotations($property->getName());
+            $anno = null;
+            foreach ($annos as $a) {
+                if ($a instanceof \Nucleus\IService\Dashboard\ModelField) {
+                    $anno = $a;
+                    break;
+                }
+            }
+            if ($anno === null) {
                 if (!isset($classProperties[$property->getName()])) {
                     continue;
                 }
                 $anno = $classProperties[$property->getName()];
             } else {
-                $anno = $annos[0];
                 $anno->property = $property->getName();
             }
-            $fields[$anno->property] = $this->buildField($anno, $property);
+            $fields[$anno->property] = $this->buildField($anno, $property, $annos);
         }
 
+        // adds fields from the class level annotations
         foreach ($classProperties as $property => $anno) {
             if (!isset($fields[$property])) {
                 $fields[$property] = $this->buildField($anno);
@@ -127,6 +165,13 @@ class DefinitionBuilder
         return $model;
     }
 
+    /**
+     * Extracts actions from class methods
+     * 
+     * @param ReflectionClass $class
+     * @param AnnotationParsingResult $annotations
+     * @return array
+     */
     protected function extractActionsFromClass(ReflectionClass $class, AnnotationParsingResult $annotations)
     {
         $actions = array();
@@ -134,6 +179,7 @@ class DefinitionBuilder
             $actionAnno = null;
             foreach ($annos as $anno) {
                 if ($anno instanceof \Nucleus\IService\Dashboard\Action) {
+                    // they need to hae the Action annotation
                     $actionAnno = $anno;
                     break;
                 }
@@ -146,12 +192,21 @@ class DefinitionBuilder
         return $actions;
     }
 
+    /**
+     * Creates an ActionDefinition from a class method
+     * 
+     * @param ReflectionMethod $method
+     * @param Annotation $annotation
+     * @param array $additionalAnnotations
+     * @return ActionDefinition
+     */
     protected function buildAction(ReflectionMethod $method, $annotation = null, array $additionalAnnotations = array())
     {
         $action = new ActionDefinition();
         $action->setName($method->getName());
 
         if ($annotation) {
+            // the annotation is not mandatory but is useful to set some action properties
             $action->setTitle($annotation->title ?: $method->getName())
                    ->setIcon($annotation->icon)
                    ->setDefault($annotation->default)
@@ -160,41 +215,63 @@ class DefinitionBuilder
             if ($annotation->menu !== null) {
                 $action->setMenu($annotation->menu);
             }
-
             if ($annotation->pipe) {
-                $action->setPipe($annotation->pipe);
+                $action->setFlow(ActionDefinition::FLOW_PIPE, $annotation->pipe);
             }
-
+            if ($annotation->redirect) {
+                $action->setFlow(ActionDefinition::FLOW_REDIRECT, $annotation->redirect);
+            }
+            if ($annotation->redirect_with_id) {
+                $action->setFlow(ActionDefinition::FLOW_REDIRECT_WITH_ID, $annotation->redirect_with_id);
+            }
+            if ($annotation->redirect_with_data) {
+                $action->setFlow(ActionDefinition::FLOW_REDIRECT_WITH_DATA, $annotation->redirect_with_data);
+            }
+            if ($annotation->delegate) {
+                $action->setFlow(ActionDefinition::FLOW_DELEGATE, $annotation->delegate);
+            }
             if ($annotation->on_model) {
                 $action->applyToModel($annotation->on_model);
             }
         }
 
+        // some annotations use arguments which could trigger the creation
+        // of an input model if their not ignore
         $minNbOfParams = 0;
         $excludeParams = array();
 
+        // additional information provided by other annotations
+        $yamlParser = $this->serviceContainer->get('yamlParser');
         foreach ($additionalAnnotations as $anno) {
             if ($anno instanceof \Nucleus\IService\Security\Secure) {
-                $yamlParser = $this->serviceContainer->get('yamlParser');
                 $perms = $yamlParser->parse($anno->permissions);
                 $action->setPermissions($perms);
             } else if ($anno instanceof \Nucleus\IService\Dashboard\Paginate) {
-                $action->setPaginated($anno->per_page, $anno->offset_param, $anno->auto);
+                $action->addBehavior(new PaginatedBehavior((array) $anno));
                 if ($anno->offset_param !== null) {
                     $minNbOfParams++;
                     $excludeParams[] = $anno->offset_param;
                 }
-            } else if ($anno instanceof \Nucleus\IService\Dashboard\Sortable) {
-                $action->setSortable($anno->param, $anno->order_param);
+            } else if ($anno instanceof \Nucleus\IService\Dashboard\Orderable) {
+                $action->addBehavior(new OrderableBehavior((array) $anno));
                 $minNbOfParams++;
                 $excludeParams[] = $anno->param;
                 if ($anno->order_param !== null) {
                     $minNbOfParams++;
                     $excludeParams[] = $anno->order_param;
                 }
+            } else if ($anno instanceof \Nucleus\IService\Dashboard\Filterable) {
+                $action->addBehavior(new FilterableBehavior((array) $anno));
+                $minNbOfParams++;
+                $excludeParams[] = $anno->param;
+            } else if ($anno instanceof \Nucleus\IService\Dashboard\ActionBehavior) {
+                $classname = $anno->class;
+                $params = $yamlParser->parse($anno->params) ?: array();
+                $action->addBehavior(new $classname($params));
             }
         }
 
+        // input
         if (!$annotation || $annotation->in === null) {
             if ($method->getNumberOfParameters() > $minNbOfParams) {
                 $action->setInputType(ActionDefinition::INPUT_FORM);
@@ -203,7 +280,8 @@ class DefinitionBuilder
             $action->setInputType($annotation->in);
         }
 
-        if ($action->getInputType() === ActionDefinition::INPUT_FORM) {
+        if ($action->getInputType() === ActionDefinition::INPUT_FORM || $method->getNumberOfParameters() > $minNbOfParams) {
+            // builds the input model from the method's arguments
             $inputModel = $this->buildModelFromMethod($method, $additionalAnnotations, $excludeParams);
             if ($method->getNumberOfParameters() == $minNbOfParams + 1) {
                 $fields = $inputModel->getFields();
@@ -215,15 +293,17 @@ class DefinitionBuilder
             $action->setInputModel($inputModel);
         }
 
+        // tries to determine the return type
         if (!preg_match('/@return ([a-zA-Z\\\\]+)(\[\])?/', $method->getDocComment(), $returnTag)) {
             $returnTag = false;
         }
 
-        if (!$annotation || (!$annotation->pipe && $annotation->out === null)) {
+        if (!$annotation || (!$action->isFlowing() && $annotation->out === null)) {
             if ($returnTag) {
-                $action->setReturnType(isset($returnTag[2]) ? ActionDefinition::RETURN_LIST : ActionDefinition::RETURN_OBJECT);
+                $isArray = isset($returnTag[2]) || $returnTag[1] == 'array';
+                $action->setReturnType($isArray ? ActionDefinition::RETURN_LIST : ActionDefinition::RETURN_OBJECT);
             }
-        } else if (!$annotation->pipe) {
+        } else if (!$action->isFlowing()) {
             $action->setReturnType($annotation->out);
         }
 
@@ -237,6 +317,14 @@ class DefinitionBuilder
         return $action;
     }
 
+    /**
+     * Builds a ModelDefinition from a method's argument
+     * 
+     * @param ReflectionMethod $method
+     * @param array $additionalAnnotations
+     * @param array $excludeParams
+     * @return ModelDefinition
+     */
     protected function buildModelFromMethod(ReflectionMethod $method, array $additionalAnnotations = array(), array $excludeParams = array())
     {
         $model = new ModelDefinition();
@@ -277,15 +365,68 @@ class DefinitionBuilder
                   ->setOptional($param->isOptional())
                   ->setEditable(true);
 
+            $validateAnnotations = array_filter($additionalAnnotations, function($a) use ($param) {
+                return ($a instanceof \Nucleus\IService\Dashboard\Validate) && ($a->property == $param->getName());
+            });
+            $this->applyFieldConstraintsFromAnnotations($field, $validateAnnotations);
+
             $model->addField($field);
         }
-
-        $this->applyFieldConstraintsFromAnnotations($model, $additionalAnnotations);
 
         return $model;
     }
 
-    protected function applyFieldConstraintsFromAnnotations(ModelDefinition $model, array $annotations)
+    /**
+     * Builds a FieldDefinition from a property
+     * 
+     * @param Annotation $annotation
+     * @param ReflectionProperty $property
+     * @return FieldDefinition
+     */
+    protected function buildField($annotation, ReflectionProperty $property = null, array $additionalAnnotations = array())
+    {
+        $field = new FieldDefinition();
+        $field->setProperty($annotation->property)
+              ->setName($annotation->name ?: $annotation->property)
+              ->setDescription($annotation->description)
+              ->setType($annotation->type)
+              ->setIdentifier($annotation->identifier)
+              ->setListable($annotation->listable)
+              ->setEditable($annotation->editable)
+              ->setQueryable($annotation->queryable)
+              ->setOptional(!$annotation->required)
+              ->setLink($annotation->link)
+              ->setGetterSetterMethodNames($annotation->getter, $annotation->setter);
+
+        if ($annotation->formField !== null) {
+            $field->setFormFieldType($annotation->formField);
+        }
+
+        if (($property !== null && !$property->isPublic()) || $annotation->getter !== null || $annotation->setter !== null) {
+            $field->setAccessMethod(FieldDefinition::ACCESS_GETTER_SETTER);
+        }
+
+        $this->applyFieldConstraintsFromAnnotations($field, $additionalAnnotations);
+
+        if ($annotation->type === null) {
+            if ($property !== null && preg_match('/@var ([a-zA-Z]+)/', $property->getDocComment(), $results)) {
+                $field->setType($results[1]);
+            } else {
+                $field->setType('string');
+            }
+        }
+
+        return $field;
+    }
+
+    /**
+     * Adds validation constaints to a field according to annotations
+     * 
+     * @param FieldDefinition $field
+     * @param array $annotations
+     * @return
+     */
+    protected function applyFieldConstraintsFromAnnotations(FieldDefinition $field, array $annotations)
     {
         foreach ($annotations as $anno) {
             if (!($anno instanceof \Nucleus\IService\Dashboard\Validate)) {
@@ -298,36 +439,8 @@ class DefinitionBuilder
                 $className = 'Symfony\\Component\\Validator\\Constraints\\' . $anno->constraint;
             }
 
-            $model->getField($anno->property)->addConstraint(new $className(json_decode($anno->options, true)));
+            $field->addConstraint(new $className(json_decode($anno->options, true)));
         }
-    }
-
-    protected function buildField($annotation, ReflectionProperty $property = null)
-    {
-        $field = new FieldDefinition();
-        $field->setProperty($annotation->property)
-              ->setName($annotation->name ?: $annotation->property)
-              ->setDescription($annotation->description)
-              ->setType($annotation->type)
-              ->setIdentifier($annotation->identifier)
-              ->setListable($annotation->listable)
-              ->setEditable($annotation->editable)
-              ->setOptional(!$annotation->required)
-              ->setLink($annotation->link);
-
-        if ($annotation->formField !== null) {
-            $field->setFormFieldType($annotation->formField);
-        }
-
-        if ($annotation->type === null) {
-            if (preg_match('/@var ([a-zA-Z]+)/', $property->getDocComment(), $results)) {
-                $field->setType($results[1]);
-            } else {
-                $field->setType('string');
-            }
-        }
-
-        return $field;
     }
 
     protected function parseAnnotations($className)

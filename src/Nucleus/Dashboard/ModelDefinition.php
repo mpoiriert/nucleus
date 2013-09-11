@@ -4,9 +4,14 @@ namespace Nucleus\Dashboard;
 
 use Symfony\Component\Validator\Validator;
 use Symfony\Component\Validator\ConstraintViolationList;
+use ReflectionClass;
 
 class ModelDefinition
 {
+    const VALIDATE_WITH_VALIDATOR = 0;
+    const VALIDATE_WITH_CALLBACK = 1;
+    const VALIDATE_WITH_METHOD = 2;
+
     protected $className;
 
     protected $name;
@@ -17,9 +22,20 @@ class ModelDefinition
 
     protected $loader;
 
+    protected $validationMethod = ModelDefinition::VALIDATE_WITH_VALIDATOR;
+
+    public static function create()
+    {
+        return new ModelDefinition();
+    }
+
     public function setClassName($className)
     {
         $this->className = trim($className, '\\');
+        if ($this->name === null) {
+            $parts = explode('\\', $this->className);
+            $this->name = array_pop($parts);
+        }
         return $this;
     }
 
@@ -64,7 +80,17 @@ class ModelDefinition
                 return $field;
             }
         }
-        return false;
+        return null;
+    }
+
+    public function getFieldByProperty($name)
+    {
+        foreach ($this->fields as $field) {
+            if ($field->getProperty() === $name) {
+                return $field;
+            }
+        }
+        return null;
     }
 
     public function getIdentifierField()
@@ -74,7 +100,7 @@ class ModelDefinition
                 return $field;
             }
         }
-        return false;
+        return null;
     }
 
     public function getFields()
@@ -90,6 +116,11 @@ class ModelDefinition
     public function getEditableFields()
     {
         return array_filter($this->fields, function($f) { return $f->isEditable(); });
+    }
+
+    public function getQueryableFields()
+    {
+        return array_filter($this->fields, function($f) { return $f->isQueryable(); });
     }
 
     public function setActions(array $actions)
@@ -136,9 +167,21 @@ class ModelDefinition
         return $this->loader !== null;
     }
 
-    public function setValidator(Validator $validator)
+    public function setValidationMethod($method)
+    {
+        $this->validationMethod = $method;
+        return $this;
+    }
+
+    public function getValidationMethod()
+    {
+        return $this->validationMethod;
+    }
+
+    public function setValidator($validator)
     {
         $this->validator = $validator;
+        return $this;
     }
 
     public function getValidator()
@@ -146,18 +189,116 @@ class ModelDefinition
         return $this->validator;
     }
 
-    public function validate($data)
+    /**
+     * Loads a model using the $data according to the ModelDefinition (eg: using the model loader)
+     * 
+     * @param array $data
+     * @return object
+     */
+    public function loadObject($data)
     {
+        if ($this->loader === null) {
+            return $this->instanciateObject($data);
+        }
+        $loaderArgs = $data;
+        if ($idField = $this->getIdentifierField()) {
+            $loaderArgs = $data[$idField->getProperty()];
+        }
+        if (!($obj = call_user_func($this->loader, $loaderArgs))) {
+            return null;
+        }
+        $this->populateObject($obj, $data);
+        return $obj;
+    }
+
+    /**
+     * Creates a new object according to the ModelDefinition
+     * 
+     * @param array $data
+     * @return object
+     */
+    public function instanciateObject($data = array())
+    {
+        if ($this->className !== null) {
+            $class = new ReflectionClass($this->className);
+            $obj = $class->newInstance();
+        } else {
+            $obj = new \stdClass();
+        }
+        $this->populateObject($obj, $data);
+        return $obj;
+    }
+
+    /**
+     * Populates an object with the specified data according to the given ModelDefinition
+     * 
+     * @param object $obj
+     * @param array $data
+     * @return object
+     */
+    public function populateObject($obj, $data)
+    {
+        foreach ($this->getEditableFields() as $f) {
+            $p = $f->getProperty();
+            if (!isset($data[$p])) {
+                continue;
+            }
+            $f->setValue($obj, $data[$p]);
+        }
+        return $obj;
+    }
+
+    /**
+     * Converts an object to an array representation according to the ModelDefinition
+     * 
+     * @param object $obj
+     * @return array
+     */
+    public function convertObjectToArray($obj)
+    {
+        $array = array();
+        $class = new ReflectionClass($obj);
+        foreach ($this->getListableFields() as $f) {
+            $array[$f->getProperty()] = $f->getValue($obj);
+        }
+        return $array;
+    }
+
+    /**
+     * Validates an object using fields validators
+     * 
+     * @param object $object
+     */
+    public function validateObject($object)
+    {
+        if ($this->validationMethod === self::VALIDATE_WITH_METHOD) {
+            if (!method_exists($object, 'validate')) {
+                throw new DefinitionBuilderException("Missing validate() method on object");
+            }
+            if (!call_user_func(array($object, 'validate'))) {
+                $violations = implode("\n", $object->getValidationFailures());
+                throw new ValidationException($violations);
+            }
+            return true;
+        }
+
+        if ($this->validationMethod === self::VALIDATE_WITH_CALLBACK) {
+            if ($this->validator === null) {
+                throw new DefinitionBuilderException("Missing validation callback");
+            }
+            return call_user_func($this->validator, array($object, $this));
+        }
+
         if ($this->validator === null) {
             return true;
         }
 
         if ($this->className !== null) {
-            $violiations = $this->validator->validate($data);
+            $violiations = $this->validator->validate($object);
         } else {
             $violiations = new ConstraintViolationList();
             foreach ($this->fields as $field) {
-                $value = array_key_exists($field->getProperty(), $data) ? $data[$field->getProperty()] : null;
+                $value = $field->getValue($object);
                 $violiations->addAll($this->validator->validateValue($value, $field->getConstraints()));
             }
         }
@@ -165,5 +306,6 @@ class ModelDefinition
         if (count($violiations)) {
             throw new ValidationException($violiations);
         }
+        return true;
     }
 }

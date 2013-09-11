@@ -13,9 +13,6 @@
                 "base_url": "/nucleus/dashboard"
             }
         },
-        "dashboardHome": {
-            "class": "Nucleus\\Dashboard\\HomeController"
-        },
         "dashboardDefinitionBuilder": {
             "class": "Nucleus\\Dashboard\\DefinitionBuilder"
         },
