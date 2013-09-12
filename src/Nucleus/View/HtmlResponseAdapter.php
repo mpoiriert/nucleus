@@ -22,6 +22,12 @@ use Nucleus\IService\View\IViewConciliator;
 class HtmlResponseAdapter implements IResponseAdapter
 {
     /**
+     *
+     * @var array 
+     */
+    private static $contentTypes = array('application/xhtml+xml','text/html');
+    
+    /**
      * @var IViewRendererService
      */
     private $templateRenderer;
@@ -63,7 +69,7 @@ class HtmlResponseAdapter implements IResponseAdapter
 
     public function adaptResponse($contentType, Request $request, Response $response, array $result)
     {
-        if ($contentType != "text/html") {
+        if (!in_array($contentType,self::$contentTypes)) {
             return false;
         }
         $service = $request->request->get('_service');
