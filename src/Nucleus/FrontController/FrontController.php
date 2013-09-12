@@ -131,18 +131,7 @@ class FrontController
     private function completeResponse(Request $request, Response $response, $result)
     {
         $contentTypes = $request->getAcceptableContentTypes();
-        
-        if($this->processContentTypes($contentTypes, $request, $response, $result)) {
-            return;
-        }
-
-        $exceptionContentTypes = array_unique(
-            array_merge($request->getAcceptableContentTypes(),$this->defaultAcceptableContentTypes)
-        );
-        
-        throw new UnableToAdaptResponseToContentTypeException(
-            UnableToAdaptResponseToContentTypeException::formatText($exceptionContentTypes)
-        );
+        $this->processContentTypes($contentTypes, $request, $response, $result);
     }
     
     private function processContentTypes($contentTypes, Request $request, Response $response, $result) 
