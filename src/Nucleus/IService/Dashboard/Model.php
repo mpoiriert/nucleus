@@ -7,5 +7,8 @@ namespace Nucleus\IService\Dashboard;
  */
 class Model
 {
+    /**
+     * A callback used to load models
+     */
     public $loader;
 }

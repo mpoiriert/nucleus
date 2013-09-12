@@ -2,14 +2,24 @@
 
 namespace Nucleus\Dashboard;
 
+use Nucleus\Dashboard\ActionBehaviors\AbstractActionBehavior;
+
 class ActionDefinition
 {
     const INPUT_CALL = 'call';
     const INPUT_FORM = 'form';
+
     const RETURN_NONE = 'none';
     const RETURN_LIST = 'list';
     const RETURN_OBJECT= 'object';
     const RETURN_FORM = 'form';
+
+    const FLOW_NONE = 'none';
+    const FLOW_DELEGATE = 'delegate';
+    const FLOW_PIPE = 'pipe';
+    const FLOW_REDIRECT = 'redirect';
+    const FLOW_REDIRECT_WITH_ID = 'redirect_with_id';
+    const FLOW_REDIRECT_WITH_DATA = 'redirect_with_data';
 
     protected $name;
 
@@ -23,7 +33,7 @@ class ActionDefinition
 
     protected $menu = true;
 
-    protected $inputType = 'call';
+    protected $inputType = ActionDefinition::INPUT_CALL;
 
     protected $inputModel;
 
@@ -31,27 +41,24 @@ class ActionDefinition
 
     protected $loadModel = false;
 
-    protected $returnType = 'none';
+    protected $returnType = ActionDefinition::RETURN_NONE;
 
     protected $returnModel;
 
-    protected $paginated = false;
+    protected $flow = ActionDefinition::FLOW_NONE;
 
-    protected $itemsPerPage;
-
-    protected $offsetParam;
-
-    protected $autoPaginate = false;
-
-    protected $sortFieldParam;
-
-    protected $sortOrderParam;
-
-    protected $pipe;
+    protected $nextAction;
 
     protected $appliedToModel;
 
     protected $permissions = array();
+
+    protected $behaviors = array();
+
+    public static function create()
+    {
+        return new ActionDefinition();
+    }
 
     public function setName($name)
     {
@@ -206,70 +213,39 @@ class ActionDefinition
         return $this->returnModel;
     }
 
-    public function setPaginated($perPage = 20, $offsetParam = null, $auto = false)
+    public function setFlow($flow, $nextActionName = null)
     {
-        $this->paginated = $perPage !== false;
-        $this->itemsPerPage = $perPage;
-        $this->offsetParam = $offsetParam;
-        $this->autoPaginate = $auto;
-    }
-
-    public function isPaginated()
-    {
-        return $this->paginated;
-    }
-
-    public function getItemsPerPage()
-    {
-        return $this->itemsPerPage;
-    }
-
-    public function getOffsetParam()
-    {
-        return $this->offsetParam;
-    }
-
-    public function isAutoPaginated()
-    {
-        return $this->autoPaginate;
-    }
-
-    public function setSortable($fieldParam, $orderParam = null)
-    {
-        $this->sortFieldParam = $fieldParam;
-        $this->sortOrderParam = $orderParam;
-    }
-
-    public function isSortable()
-    {
-        return $this->sortFieldParam !== null;
-    }
-
-    public function getSortFieldParam()
-    {
-        return $this->sortFieldParam;
-    }
-
-    public function getSortOrderParam()
-    {
-        return $this->sortOrderParam;
-    }
-
-    public function setPipe($pipe)
-    {
-        $this->pipe = $pipe;
-        $this->returnType = self::RETURN_FORM;
+        $this->flow = $flow;
+        if ($nextActionName !== null) {
+            $this->setNextAction($nextActionName);
+        }
+        if ($flow !== self::FLOW_NONE) {
+            $this->returnType = self::RETURN_FORM;
+        }
         return $this;
     }
 
-    public function isPiped()
+    public function getFlow()
     {
-        return $this->pipe !== null;
+        return $this->flow;
     }
 
-    public function getPipe()
+    public function isFlowing()
     {
-        return $this->pipe;
+        return $this->flow !== self::FLOW_NONE;
+    }
+
+    public function setNextAction($actionName)
+    {
+        if ($this->flow === self::FLOW_NONE) {
+            throw new DefinitionBuilderException("Flow must be set to something else than return to set a next action");
+        }
+        $this->nextAction = $actionName;
+    }
+
+    public function getNextAction()
+    {
+        return $this->nextAction;
     }
 
     public function applyToModel($className)
@@ -296,5 +272,33 @@ class ActionDefinition
     public function getPermissions()
     {
         return $this->permissions;
+    }
+
+    public function addBehavior(AbstractActionBehavior $behavior)
+    {
+        $this->behaviors[] = $behavior;
+        $behavior->setAction($this);
+    }
+
+    public function getBehavior($name)
+    {
+        foreach ($this->behaviors as $behavior) {
+            if ($behavior->getName() === $name) {
+                return $behavior;
+            }
+        }
+        return null;
+    }
+
+    public function getBehaviors()
+    {
+        return $this->behaviors;
+    }
+
+    public function applyBehaviors($eventName, $args)
+    {
+        foreach ($this->behaviors as $behavior) {
+            $behavior->trigger($eventName, $args);
+        }
     }
 }
