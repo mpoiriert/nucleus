@@ -9,19 +9,27 @@ class FieldDefinition
     const ACCESS_PROPERTY = 0;
     const ACCESS_GETTER_SETTER = 1;
 
+    const VISIBILITY_NONE = 'none';
+    const VISIBILITY_LIST = 'list';
+    const VISIBILITY_VIEW = 'view';
+    const VISIBILITY_EDIT = 'edit';
+    const VISIBILITY_QUERY = 'query';
+
     protected $property;
 
     protected $type;
 
     protected $isArray = false;
 
-    protected $model;
+    protected $relatedModel;
 
     protected $name;
 
     protected $description;
 
-    protected $identifier = false;
+    protected $isIdentifier = false;
+
+    protected $isStringRepr = false;
 
     protected $optional = false;
 
@@ -35,13 +43,12 @@ class FieldDefinition
 
     protected $formFieldType;
 
-    protected $listable = true;
-
-    protected $editable = true;
-
-    protected $queryable = true;
-
-    protected $link;
+    protected $visibility = array(
+        FieldDefinition::VISIBILITY_LIST,
+        FieldDefinition::VISIBILITY_VIEW,
+        FieldDefinition::VISIBILITY_EDIT,
+        FieldDefinition::VISIBILITY_QUERY
+    );
 
     protected $constraints = array();
 
@@ -55,6 +62,10 @@ class FieldDefinition
         'bool' => 'checkbox',
         'boolean' => 'checkbox'
     );
+
+    protected $valueController;
+
+    protected $valueControllerRemoteId;
 
     public static function create()
     {
@@ -74,13 +85,6 @@ class FieldDefinition
 
     public function setType($type)
     {
-        if ($type instanceof ModelDefinition) {
-            $this->model = $type;
-            $type = $type->getName();
-        } else {
-            $this->model = null;
-        }
-
         if (strpos($type, '[]') !== false) {
             $this->isArray = true;
             $type = rtrim($type, '[]');
@@ -88,7 +92,7 @@ class FieldDefinition
 
         $this->type = $type;
 
-        if ($this->model === null && $this->formFieldType === null) {
+        if ($this->formFieldType === null) {
             if (isset($this->formTypeMapping[$type])) {
                 $this->formFieldType = $this->formTypeMapping[$type];
             } else {
@@ -109,24 +113,31 @@ class FieldDefinition
         return $this->type . ($this->isArray ? '[]' : '');
     }
 
+    public function setRelatedModel(ModelDefinition $model)
+    {
+        $this->relatedModel = $model;
+        return $this;
+    }
+
+    public function hasRelatedModel()
+    {
+        return $this->relatedModel !== null;
+    }
+
+    public function getRelatedModel()
+    {
+        return $this->relatedModel;
+    }
+
     public function setIsArray($isArray = trye)
     {
         $this->isArray = $isArray;
+        return $this;
     }
 
     public function isArray()
     {
         return $this->isArray;
-    }
-
-    public function isModelType()
-    {
-        return $this->model !== null;
-    }
-
-    public function getModel()
-    {
-        return $this->model;
     }
 
     public function setName($name)
@@ -154,15 +165,26 @@ class FieldDefinition
         return $this->description;
     }
 
-    public function setIdentifier($identifier = true)
+    public function setIdentifier($isIdentifier = true)
     {
-        $this->identifier = $identifier;
+        $this->isIdentifier = $isIdentifier;
         return $this;
     }
 
     public function isIdentifier()
     {
-        return $this->identifier;
+        return $this->isIdentifier;
+    }
+
+    public function setStringRepr($isStringRepr = true)
+    {
+        $this->isStringRepr = $isStringRepr;
+        return $this;
+    }
+
+    public function isStringRepr()
+    {
+        return $this->isStringRepr;
     }
 
     public function setOptional($optional = true)
@@ -239,54 +261,23 @@ class FieldDefinition
 
     public function getFormFieldType()
     {
-        if ($this->model !== null) {
-            return $this->model->getIdentifierField()->getFormFieldType();
-        }
         return $this->formFieldType;
     }
 
-    public function setListable($listable = true)
+    public function setVisibility($visibility)
     {
-        $this->listable = $listable;
+        $this->visibility = (array) $visibility;
         return $this;
     }
 
-    public function isListable()
+    public function getVisibility()
     {
-        return $this->listable;
+        return $this->visibility;
     }
 
-    public function setEditable($editable = true)
+    public function isVisible($visibility)
     {
-        $this->editable = $editable;
-        return $this;
-    }
-
-    public function isEditable()
-    {
-        return $this->editable;
-    }
-
-    public function setQueryable($queryable = true)
-    {
-        $this->queryable = $queryable;
-        return $this;
-    }
-
-    public function isQueryable()
-    {
-        return $this->queryable;
-    }
-
-    public function setLink($link)
-    {
-        $this->link = $link;
-        return $this;
-    }
-
-    public function getLink()
-    {
-        return $this->link;
+        return in_array($visibility, $this->visibility);
     }
 
     public function setConstraints(array $constraints)
@@ -304,6 +295,28 @@ class FieldDefinition
     public function getConstraints()
     {
         return $this->constraints;
+    }
+
+    public function setValueController($controllerName, $remoteId = 'id')
+    {
+        $this->valueController = $controllerName;
+        $this->valueControllerRemoteId = $remoteId;
+        return $this;
+    }
+
+    public function hasValueController()
+    {
+        return $this->valueController !== null;
+    }
+
+    public function getValueController()
+    {
+        return $this->valueController;
+    }
+
+    public function getValueControllerRemoteId()
+    {
+        return $this->valueControllerRemoteId;
     }
 
     /**

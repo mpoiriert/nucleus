@@ -2,8 +2,22 @@ body {
     padding-top: 40px;
 }
 
-.navbar .brand {
+.navbar-inverse .navbar-inner {
     margin-left: 0px;
+    color: #e78f88;
+    background-image: linear-gradient(to bottom,#c32519,#a5170b);
+    background-repeat: repeat-x;
+    border-color: #a5170b;
+}
+
+.navbar-inverse .brand, .navbar-inverse .nav>li>a {
+    color: #f3d8d6;
+    text-shadow: none;
+}
+
+.navbar-inverse .brand {
+    color: #e78f88;
+    margin-left: 0;
 }
 
 #main {

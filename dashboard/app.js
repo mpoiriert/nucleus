@@ -107,7 +107,10 @@ $(function() {
                 return;
             }
 
-            if (this.type == 'checkbox' && t == 'bool') {
+            if (this.type == 'checkbox' && (t == 'bool' || t == 'boolean')) {
+                if (!this.checked && ignoreEmptyValues) {
+                    return;
+                }
                 v = this.checked;
             }
 
@@ -129,6 +132,39 @@ $(function() {
         return o;
     };
 
+    var get_identifiers = function(fields) {
+        var idfields = [];
+        for (var i = 0; i < fields.length; i++) {
+            if (fields[i].identifier) {
+                idfields.push(fields[i])
+            }
+        }
+        return idfields;
+    };
+
+    var build_pk = function(fields, data) {
+        var pk = {};
+        for (var i = 0; i < fields.length; i++) {
+            if (fields[i].identifier && data[fields[i].name]) {
+                pk[fields[i].name] = data[fields[i].name];
+            }
+        }
+        return pk;
+    };
+
+    var filter_visible_fields = function(fields, visibility) {
+        if (!_.isArray(visibility)) {
+            visibility = [visibility];
+        }
+        var vfields = [];
+        for (var i = 0; i < fields.length; i++) {
+            if (_.intersection(fields[i].visibility, visibility).length == visibility.length) {
+                vfields.push(fields[i])
+            }
+        }
+        return vfields;
+    };
+
     // ----------------------------------------------------
 
     /*
@@ -139,7 +175,7 @@ $(function() {
         className: 'btn-toolbar',
         template: _.template($('#toolbar-tpl').html()),
         events: {
-            "click a": "btnClick"
+            "click a.btn": "btnClick"
         },
         options: {
             current_action: null
@@ -156,9 +192,18 @@ $(function() {
             return this;
         },
         btnClick: function(e) {
-            var a = $(e.currentTarget);
-            this.trigger("btn-click", a.data('controller'), a.data('action'));
             e.preventDefault();
+            var a = $(e.currentTarget);
+            if (a.hasClass('disabled')) {
+                return;
+            }
+            this.trigger("btn-click", a.data('controller'), a.data('action'));
+        },
+        disable: function() {
+            this.$('.btn').addClass('disabled');
+        },
+        enable: function() {
+            this.$('.btn').removeClass('disabled');
         }
     });
 
@@ -287,7 +332,17 @@ $(function() {
             this.$el.empty();
             this.renderTitleWithIdentifier(title)
                 .renderToolbar()
-                .append(this.template({ fields: this.options.fields, values: values }));
+                .append(this.template({ fields: filter_visible_fields(this.options.fields, ['edit', 'view']), values: values }));
+
+            this.$('select.related').each(function() {
+                var $this = $(this), m = $this.data('related'), v = $this.data('value');
+                Dashboard.api.call('get', Dashboard.config.base_url + $this.data('url'), function(resp) {
+                    for (var i = 0; i < resp.data.length; i++) {
+                        var s = v == resp.data[i][m.identifier[0]] ? 'selected="selected"' : '';
+                        $this.append('<option value="' + resp.data[i][m.identifier[0]] + '" ' + s + '>' + resp.data[i][m.repr] + '</option>');
+                    }
+                });
+            });
 
             return this;
         }
@@ -305,7 +360,7 @@ $(function() {
             this.$el.empty();
             this.renderTitleWithIdentifier(this.options.model_name)
                 .renderToolbar()
-                .append(this.template({ fields: this.options.fields, model: this.model }));
+                .append(this.template({ fields: filter_visible_fields(this.options.fields, 'view'), model: this.model }));
 
             return this;
         }
@@ -321,15 +376,11 @@ $(function() {
             Dashboard.ListWidgetView.__super__.initialize.apply(this);
             this.nbPages = 1;
             this.currentPage = 1;
-            _.each(this.options.fields, _.bind(function(f) {
-                if (f.identifier) {
-                    this.identifier = f;
-                }
-            }, this));
         },
         render: function() {
             this.$body.empty();
             this.renderToolbar().append(this.template({ fields: this.options.fields }));
+            this.$toolbar.disable();
 
             if (this.options.behaviors.sortable) {
                 this.$('table').addClass('sortable');
@@ -366,7 +417,11 @@ $(function() {
             this.parent.action._call(_.extend({}, this.parent.action.data, this.overrideRequestData), 
                 _.bind(function(resp) {
                     this.unfreeze();
-                    this.renderTable(resp.data);
+                    if (this.options.behaviors.paginated) {
+                        this.renderTable(resp.data);
+                    } else {
+                        this.renderTable(resp);
+                    }
                     if (reloadPagination) {
                         this.renderPagination(resp.count);
                     }
@@ -384,36 +439,71 @@ $(function() {
         },
         renderTable: function(rows) {
             var table = '', self = this;
-            _.each(rows, function(row) {
-                table += '<tr><td><input type="radio" name="' + self.identifier.name + '" value="' + row[self.identifier.name] + '"></td>';
-                _.each(self.options.fields, function(f) {
+            _.each(rows, function(row, index) {
+                var id = build_pk(self.options.fields, row);
+                table += '<tr><td><input type="radio" name="id" value=\'' + JSON.stringify(id) + '\'></td>';
+
+                _.each(filter_visible_fields(self.options.fields, 'list'), function(f) {
                     table += '<td>';
-                    if (f.link) {
-                        table += '<a href="' + Dashboard.config.base_url + "/" + f.link.controller + "/" + f.link.action + '?' + f.name + '=' + row[f.name] + 
-                            '" class="action-link" data-controller="' + f.link.controller + '" data-action="' + f.link.action + 
-                            '" data-params=\'{"' + f.name + '": "' + row[f.name] + '"}\'>' + self.formatValue(row[f.name]) + '</a>';
+                    if (f.value_controller) {
+                        var url = Dashboard.config.base_url + "/" + f.value_controller.controller + "/edit?" + f.value_controller.remote_id + '=' + row[f.name];
+                        table += '<a href="' + url + '" class="related" data-model="' + f.related_model.name + '" data-controller="' + f.value_controller.controller + '" ' +
+                                 'data-action="edit" data-params=\'{"' + f.value_controller.remote_id + '": "' + row[f.name] + '"}\'>' + 
+                                 self.formatValue(row[f.name]) + '</a>';
                     } else {
                         table += self.formatValue(row[f.name]);
                     }
                     table += '</td>';
                 });
+
                 table += '</tr>';
             });
             this.$('table tbody').html(table);
-            this.$('table .action-link').on('click', function(e) {
-                Dashboard.app.runAction($(this).data('controller'), $(this).data('action'), $(this).data('params'));
-                e.preventDefault();
-            });
+
+            var popoverTimeout;
+            this.$('table a.related')
+                .on('click', function(e) {
+                    Dashboard.app.runAction($(this).data('controller'), $(this).data('action'), $(this).data('params'));
+                    e.preventDefault();
+                })
+                .on('mouseenter', function() {
+                    var a = $(this);
+                    popoverTimeout = setTimeout(function() {
+                        Dashboard.api.call('get', Dashboard.config.base_url + '/' + a.data('controller') + '/view', a.data('params'), function(resp) {
+                            var p = a.data('popover');
+                            p.options.content = _.template($('#related-popover-tpl').html())({ data: resp });
+                            p.setContent();
+                        });
+                        a.popover({
+                            trigger: 'manual',
+                            html: true,
+                            content: '<em>loading...</em>',
+                            title: a.data('model'),
+                            placement: 'bottom'
+                        }).popover('show');
+                    }, 500);
+                })
+                .on('mouseleave', function() {
+                    clearTimeout(popoverTimeout);
+                    $(this).popover('hide');
+                });
+
             this.$('table tbody tr').on('click', function() {
                 $(this).find('input[type="radio"]')[0].checked = true;
+                self.$toolbar.enable();
             });
         },
         renderPagination: function(count) {
             if (this.$pagination) {
                 this.$pagination.remove();
+                this.$pagination = null;
             }
 
             this.nbPages = Math.ceil(count / this.options.behaviors.paginated.per_page);
+            if (this.nbPages < 2) {
+                return;
+            }
+
             var tpl = _.template($('#list-pagination-tpl').html()),
                 pagination = $(tpl({ nb_pages: this.nbPages }));
 
@@ -453,15 +543,23 @@ $(function() {
         renderFilters: function() {
             this.addSidebar();
             var tpl = _.template($('#list-filters-tpl').html()), self = this;
-            this.$sidebar.html(tpl({ fields: this.options.fields }));
-            this.$sidebar.find('button.filter').on('click', function() {
+            this.$sidebar.html(tpl({ fields: filter_visible_fields(this.options.fields, 'query') }));
+            this.$sidebar.find('button.filter').on('click', function(e) {
+                e.preventDefault();
                 var filters = serialize(self.$sidebar, true);
                 self.overrideRequestData.__filters = JSON.stringify(filters);
                 self.refresh(true);
             });
-            this.$sidebar.find('button.reset').on('click', function() {
+            this.$sidebar.find('button.reset').on('click', function(e) {
+                e.preventDefault();
                 delete self.overrideRequestData.__filters;
-                self.$sidebar.find(':input').val('');
+                self.$sidebar.find(':input').each(function() {
+                    if (this.type == 'checkbox') {
+                        this.checked = false;
+                    } else {
+                        this.value = '';
+                    }
+                });
                 self.refresh(true);
             });
         },
@@ -482,6 +580,10 @@ $(function() {
                     Dashboard.api.call('post', url, data);
                 }
             });
+        },
+        serialize: function() {
+            var data = JSON.parse(this.$('tbody input:checked').val());
+            return data;
         },
         freeze: function() {
             Dashboard.app.showOverlay(this.$el);
@@ -645,13 +747,7 @@ $(function() {
                 if (this.schema.output.flow == 'redirect') {
                     data = null;
                 } else if (this.schema.output.flow == 'redirect_with_id') {
-                    for (var i = 0; i < this.schema.output.fields.length; i++) {
-                        if (this.schema.output.fields[i].identifier) {
-                            var n = this.schema.output.fields[i].name, v = data[n];
-                            data = {};
-                            data[n] = v;
-                        }
-                    }
+                    data = build_pk(this.schema.output.fields, data);
                 }
                 this.trigger('redirect', this.controller, this.schema.output.next_action, data);
                 return;

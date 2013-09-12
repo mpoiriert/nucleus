@@ -24,7 +24,7 @@
 <body>
   <div class="navbar navbar-inverse navbar-fixed-top">
     <div class="navbar-inner">
-      <a class="brand" href="#">Dashboard</a>
+      <a class="brand" href="#">{{ result.configuration.title }}</a>
     </div>
   </div>
 
@@ -44,18 +44,26 @@
 
   <script type="text/template" id="form-action-tpl">
     <% _.each(fields, function(field) { %>
-      <% if (field.editable) { %>
+      <% if (_.contains(field.visibility, 'edit') || _.contains(field.visibility, 'view')) { %>
         <div class="control-group">
           <label class="control-label" for="<%= field.name %>"><%= field.title %></label>
           <div class="controls">
-            <% if (field.field_type == 'textarea') { %>
-              <textarea name="<%= field.name %>" data-type="<%= field.formated_type %>" class="input-xlarge"><%= values[field.name] || field.defaultValue %></textarea>
-            <% } else if (field.field_type == 'checkbox' || field.field_type == 'radio') { %>
-              <input type="<%= field.field_type %>" name="<%= field.name %>" value="<%= field.value %>"
-                data-type="<%= field.formated_type %>" <% if ((typeof(values[field.name]) != 'undefined' && values[field.name] == field.value) || field.defaultValue === true) print("checked"); %>>
+            <% if (_.contains(field.visibility, 'edit')) { %>
+              <% if (field.value_controller && !field.is_array) { %>
+                <select name="<%= field.name %>" data-type="<%= field.formated_type %>" data-value="<%= values[field.name] || field.defaultValue %>"
+                  data-url="/<%= field.value_controller.controller %>/listAll?__offset=-1" data-related='<%= JSON.stringify(field.related_model) %>' class="related">
+                </select>
+              <% } else if (field.field_type == 'textarea') { %>
+                <textarea name="<%= field.name %>" data-type="<%= field.formated_type %>" class="input-xlarge"><%= values[field.name] || field.defaultValue %></textarea>
+              <% } else if (field.field_type == 'checkbox' || field.field_type == 'radio') { %>
+                <input type="<%= field.field_type %>" name="<%= field.name %>" value="<%= field.value %>"
+                  data-type="<%= field.formated_type %>" <% if ((typeof(values[field.name]) != 'undefined' && values[field.name] == field.value) || field.defaultValue === true) print("checked"); %>>
+              <% } else { %>
+                <input type="<%= field.field_type %>" name="<%= field.name %>" value="<%= values[field.name] || field.defaultValue %>"
+                  data-type="<%= field.formated_type %>" class="input-xlarge">
+              <% } %>
             <% } else { %>
-              <input type="<%= field.field_type %>" name="<%= field.name %>" value="<%= values[field.name] || field.defaultValue %>"
-                data-type="<%= field.formated_type %>" class="input-xlarge">
+              <%= values[field.name] %>
             <% } %>
           </div>
         </div>
@@ -98,12 +106,11 @@
 
   <script type="text/template" id="list-filters-tpl">
     <% _.each(fields, function(f) { %>
-      <% if (f.queryable) { %>
-        <p>
-          <label><%= f.title %></label>
-          <input type="<%= f.field_type %>" name="<%= f.name %>" data-type="<%= f.formated_type %>">
-        </p>
-      <% } %>
+      <p>
+        <label><%= f.title %></label>
+        <input type="<%= f.field_type %>" name="<%= f.name %>" data-type="<%= f.formated_type %>"
+          value="<% if (f.field_type == 'checkbox') print('1'); %>">
+      </p>
     <% }) %>
     <button class="btn filter">Filter</button>
     <button class="btn reset">Reset</button>
@@ -119,6 +126,17 @@
         <li class="<% if (nb_pages == 1) print('disabled'); %>"><a href="#" class="next">Next</a></li>
       </ul>
     </div>
+  </script>
+
+  <script type="text/template" id="related-popover-tpl">
+    <table class="table">
+    <% _.each(data, function(v, k) { %>
+      <tr>
+        <td><strong><%= k %></strong></td>
+        <td><%= v %></td>
+      </tr>
+    <% }) %>
+    </table>
   </script>
 
 </body>

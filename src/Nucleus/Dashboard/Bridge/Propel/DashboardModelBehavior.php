@@ -6,10 +6,20 @@ use Behavior;
 
 class DashboardModelBehavior extends Behavior
 {
+    protected $name = 'dashboard_model';
+    
     protected $parameters = array(
         'include' => null,
-        'exclude' => null
+        'exclude' => null,
+        'delete_action' => 'true',
+        'aliases' => '',
+        'repr' => 'id'
     );
+
+    public function objectAttributes()
+    {
+        return "private static \$dashboardModelDefinition;\n";
+    }
 
     public function objectMethods($builder)
     {
@@ -20,10 +30,12 @@ class DashboardModelBehavior extends Behavior
     {
         $table = $this->getTable();
         $script = "public static function getDashboardModelDefinition() {\n"
+                . "if (self::\$dashboardModelDefinition !== null) {\nreturn self::\$dashboardModelDefinition;\n}\n"
                 . "\$model = \\Nucleus\\Dashboard\\ModelDefinition::create()\n"
-                . "->setClassName('" . $builder->getObjectClassname() . "')\n"
-                . "->setLoader(function(\$pk) { return " . $builder->getQueryClassname() . "::create()->findPK(\$pk); })\n"
-                . "->setValidationMethod(\\Nucleus\\Dashboard\\ModelDefinition::VALIDATE_WITH_METHOD);\n\n";
+                . "->setClassName('" . $builder->getStubObjectBuilder()->getFullyQualifiedClassname() . "')\n"
+                . "->setLoader(function(\$pk) { return \\" . $builder->getStubQueryBuilder()->getFullyQualifiedClassname() . "::create()->findPK(\$pk); })\n"
+                . "->setValidationMethod(\\Nucleus\\Dashboard\\ModelDefinition::VALIDATE_WITH_METHOD);\n"
+                . "self::\$dashboardModelDefinition = \$model;\n\n";
 
         if (($includedFields = $this->getParameter('include')) !== null) {
             $includedFields = explode(',', $includedFields);
@@ -53,10 +65,12 @@ class DashboardModelBehavior extends Behavior
             $script .= "\$model->addField(" . $this->addFieldDefinition($column, $queryable) . ");\n\n";
         }
 
-        $script .= "\$model->addAction(\\Nucleus\\Dashboard\\ActionDefinition::create()\n"
-                 . "->setName('delete')\n"
-                 . "->setTitle('Delete')\n"
-                 . "->setIcon('trash'));\n\n";
+        if ($this->getParameter('delete_action') == 'true') {
+            $script .= "\$model->addAction(\\Nucleus\\Dashboard\\ActionDefinition::create()\n"
+                     . "->setName('delete')\n"
+                     . "->setTitle('Delete')\n"
+                     . "->setIcon('trash'));\n\n";
+        }
 
         $script .= "return \$model;\n}";
         return $script;
@@ -65,20 +79,26 @@ class DashboardModelBehavior extends Behavior
     public function addFieldDefinition($column, $queryable = false)
     {
         $isIdentifier = $column->isPrimaryKey();
+        $visibility = array('list', 'view');
+
+        $name = ucfirst(str_replace('_', ' ', $this->getAlias($column->getName())));
 
         $script = "\\Nucleus\\Dashboard\\FieldDefinition::create()\n"
                 . "->setProperty('" . $column->getPhpName() . "')\n"
                 . "->setAccessMethod(\\Nucleus\\Dashboard\\FieldDefinition::ACCESS_GETTER_SETTER)\n"
-                . "->setName('" . $column->getName() . "')\n"
-                . "->setIdentifier(" . ($isIdentifier ? 'true' : 'false') . ")\n"
+                . "->setName('" . $name . "')\n"
                 . "->setType('" . $column->getPhpType() . "')\n"
+                . "->setIdentifier(" . ($isIdentifier ? 'true' : 'false') . ")\n"
                 . "->setOptional(" . ($column->isNotNull() ? 'false' : 'true') . ")\n"
-                . "->setQueryable(" . ($queryable ? 'true' : 'false') . ")\n"
                 . "->setDescription('" . str_replace("'", "\\'", $column->getDescription()) . "')";
 
-        if ($isIdentifier) {
-            $script .= "\n->setEditable(false)";
+        if (!$isIdentifier || !$column->isAutoIncrement()) {
+            $visibility[] = 'edit';
         }
+        if (!$queryable) {
+            $visibility[] = 'query';
+        }
+        $script .= "\n->setVisibility(array('" . implode("', '", $visibility) . "'))";
 
         if (($defaultValue = $column->getPhpDefaultValue()) !== null) {
             if (is_string($defaultValue)) {
@@ -89,6 +109,35 @@ class DashboardModelBehavior extends Behavior
             $script .= "\n->setDefaultValue(" . $defaultValue . ")";
         }
 
+        if ($column->isForeignKey() && !$column->hasMultipleFK()) {
+            $fks = $column->getForeignKeys();
+            $fk = $fks[0];
+            $table = $fk->getForeignTable();
+            if (!$table->hasCompositePrimaryKey() && $table->hasBehavior('dashboard_controller')) {
+                $pks = $table->getPrimaryKey();
+                $pk = $pks[0];
+                $fqdn = $table->getNamespace() . '\\' . $table->getPhpName();
+                $script .= "\n->setRelatedModel(\\$fqdn::getDashboardModelDefinition())"
+                         . "\n->setValueController('" . $table->getPhpName() . "DashboardController', '" . $pk->getPhpName() . "')";
+            }
+        }
+
+        if ($this->getParameter('repr') == $column->getName()) {
+            $script .= "\n->setStringRepr(true)";
+        }
+
         return $script;
+    }
+
+    protected function getAlias($name)
+    {
+        $aliases = array_filter(explode(',', $this->getParameter('aliases')));
+        foreach ($aliases as $alias) {
+            list($c, $a) = explode(':', $alias, 2);
+            if ($c == $name) {
+                return $a;
+            }
+        }
+        return $name;
     }
 }

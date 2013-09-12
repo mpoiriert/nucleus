@@ -2,6 +2,8 @@
 
 namespace Nucleus\Dashboard\ActionBehaviors;
 
+use Nucleus\Dashboard\FieldDefinition;
+
 class FilterableBehavior extends AbstractActionBehavior
 {
     protected $params = array(
@@ -25,7 +27,7 @@ class FilterableBehavior extends AbstractActionBehavior
         $rawFilters = json_decode($data['__filters'], true);
         foreach ($rawFilters as $k => $v) {
             if (($field = $model->getFieldByProperty($k)) !== null) {
-                if ($field->isQueryable()) {
+                if ($field->isVisible(FieldDefinition::VISIBILITY_QUERY)) {
                     $filters[$field->getProperty()] = $v;
                 }
             }

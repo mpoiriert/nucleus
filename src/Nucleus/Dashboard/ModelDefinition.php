@@ -93,14 +93,24 @@ class ModelDefinition
         return null;
     }
 
-    public function getIdentifierField()
+    public function getIdentifierFields()
     {
+        $idfields = array();
         foreach ($this->fields as $field) {
             if ($field->isIdentifier()) {
+                $idfields[] = $field;
+            }
+        }
+        return $idfields;
+    }
+
+    public function getStringReprField()
+    {
+        foreach ($this->fields as $field) {
+            if ($field->isStringRepr()) {
                 return $field;
             }
         }
-        return null;
     }
 
     public function getFields()
@@ -108,19 +118,10 @@ class ModelDefinition
         return $this->fields;
     }
 
-    public function getListableFields()
+    public function getVisibleFields($visibility)
     {
-        return array_filter($this->fields, function($f) { return $f->isListable(); });
-    }
-
-    public function getEditableFields()
-    {
-        return array_filter($this->fields, function($f) { return $f->isEditable(); });
-    }
-
-    public function getQueryableFields()
-    {
-        return array_filter($this->fields, function($f) { return $f->isQueryable(); });
+        return array_filter($this->fields, function($f) use ($visibility) { 
+            return $f->isVisible($visibility); });
     }
 
     public function setActions(array $actions)
@@ -200,13 +201,22 @@ class ModelDefinition
         if ($this->loader === null) {
             return $this->instanciateObject($data);
         }
-        $loaderArgs = $data;
-        if ($idField = $this->getIdentifierField()) {
-            $loaderArgs = $data[$idField->getProperty()];
+
+        $id = array();
+        foreach ($this->getIdentifierFields() as $idf) {
+            $id[] = $data[$idf->getProperty()];
         }
-        if (!($obj = call_user_func($this->loader, $loaderArgs))) {
+
+        if (count($id) === 1) {
+            $args = array($id[0]);
+        } else {
+            $args = empty($id) ? $data : $id;
+        }
+
+        if (!($obj = call_user_func_array($this->loader, $args))) {
             return null;
         }
+
         $this->populateObject($obj, $data);
         return $obj;
     }
@@ -238,7 +248,7 @@ class ModelDefinition
      */
     public function populateObject($obj, $data)
     {
-        foreach ($this->getEditableFields() as $f) {
+        foreach ($this->getVisibleFields(FieldDefinition::VISIBILITY_EDIT) as $f) {
             $p = $f->getProperty();
             if (!isset($data[$p])) {
                 continue;
@@ -258,7 +268,7 @@ class ModelDefinition
     {
         $array = array();
         $class = new ReflectionClass($obj);
-        foreach ($this->getListableFields() as $f) {
+        foreach ($this->getFields() as $f) {
             $array[$f->getProperty()] = $f->getValue($obj);
         }
         return $array;

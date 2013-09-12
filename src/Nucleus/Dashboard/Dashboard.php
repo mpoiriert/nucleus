@@ -33,6 +33,8 @@ class Dashboard
 
     private $serviceContainer;
 
+    private $initializeServices = array();
+
     private $invoker;
 
     public $accessControl;
@@ -55,6 +57,10 @@ class Dashboard
         $this->routing = $routing;
         $this->accessControl = $serviceContainer->get('accessControl');
         $this->builder = $serviceContainer->get('dashboardDefinitionBuilder');
+
+        foreach ($this->initializeServices as $serviceName) {
+            $this->addServiceAsController($serviceName);
+        }
     }
     
     /**
@@ -73,6 +79,10 @@ class Dashboard
 
     public function addServiceAsController($serviceName)
     {
+        if ($this->serviceContainer === null) {
+            $this->initializeServices[] = $serviceName;
+            return;
+        }
         $service = $this->serviceContainer->get($serviceName);
         $controller = $this->builder->buildController($service)->setServiceName($serviceName);
         $this->addController($controller);
@@ -225,7 +235,7 @@ class Dashboard
 
         if (($model = $action->getInputModel()) !== null) {
             $json['model_name'] = $model->getName();
-            $json['fields'] = $this->getFieldsSchema($model->getEditableFields());
+            $json['fields'] = $this->getFieldsSchema($model->getFields());
         }
 
         return $json;
@@ -293,17 +303,7 @@ class Dashboard
 
         if (($model = $action->getReturnModel()) !== null) {
             $json['model_name'] = $model->getName();
-            if ($action->getReturnType() === ActionDefinition::RETURN_FORM) {
-                $fields = $model->getEditableFields();
-                if ($idField = $model->getIdentifierField()) {
-                    if (!in_array($idField, $fields)) {
-                        $fields[] = $idField;
-                    }
-                }
-                $json['fields'] = $this->getFieldsSchema($fields);
-            } else {
-                $json['fields'] = $this->getFieldsSchema($model->getListableFields());
-            }
+            $json['fields'] = $this->getFieldsSchema($model->getFields());
         }
 
         return $json;
@@ -319,16 +319,21 @@ class Dashboard
     {
         $self = $this;
         return array_values(array_map(function($f) use ($self) {
-            if ($link = $f->getLink()) {
-                list($controller, $action) = explode('::', $link, 2);
-                $link = array(
-                    'controller' => $controller,
-                    'action' => $action,
-                    'url' => $self->routing->generate('dashboard.actionSchema',
-                        array('controllerName' => $controller, 'actionName' => $action))
+            $valueController = null;
+            if ($f->hasValueController()) {
+                $valueController = array(
+                    'controller' => $f->getValueController(),
+                    'remote_id' => $f->getValueControllerRemoteId()
                 );
             }
-
+            $related = null;
+            if ($m = $f->getRelatedModel()) {
+                $related = array(
+                    'name' => $m->getName(),
+                    'identifier' => array_map(function($f) { return $f->getProperty(); }, $m->getIdentifierFields()),
+                    'repr' => $m->getStringReprField()->getProperty()
+                );
+            }
             return array(
                 'type' => $f->getType(),
                 'is_array' => $f->isArray(),
@@ -340,9 +345,9 @@ class Dashboard
                 'optional' => $f->isOptional(),
                 'defaultValue' => $f->getDefaultValue(),
                 'identifier' => $f->isIdentifier(),
-                'editable' => $f->isEditable(),
-                'queryable' => $f->isQueryable(),
-                'link' => $link
+                'visibility' => $f->getVisibility(),
+                'related_model' => $related,
+                'value_controller' => $valueController
             );
         }, $fields));
     }
