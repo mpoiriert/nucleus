@@ -14,6 +14,7 @@ use Nucleus\Routing\Router;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Nucleus\IService\EventDispatcher\IEventDispatcherService;
+use Nucleus\IService\FrontController\UnableToAdaptResponseToContentTypeException;
 
 /**
  * Description of FrontController
@@ -48,6 +49,13 @@ class FrontController
      * @var \Nucleus\IService\EventDispatcher\IEventDispatcherService 
      */
     private $eventDispatcher;
+    
+    /**
+     * The list of default content types to use when client accept all type
+     * 
+     * @var array
+     */
+    private $defaultAcceptableContentTypes = array('text/html');
 
     /**
      * @param \Nucleus\IService\Invoker\IInvokerService $invoker
@@ -67,6 +75,17 @@ class FrontController
         $this->serviceContainer = $serviceContainer;
         $this->routing = $routing;
         $this->eventDispatcher = $eventDispatcher;
+    }
+    
+    /**
+     * This is to set the order when the accepted content type is define by
+     * the all content type string 
+     * 
+     * @param string[] $contentTypes
+     */
+    public function setDefaultAcceptableContentTypes(array $contentTypes)
+    {
+        $this->defaultAcceptableContentTypes = $contentTypes;
     }
 
     /**
@@ -111,14 +130,40 @@ class FrontController
 
     private function completeResponse(Request $request, Response $response, $result)
     {
-        foreach ($request->getAcceptableContentTypes() as $contentType) {
+        $contentTypes = $request->getAcceptableContentTypes();
+        
+        if($this->processContentTypes($contentTypes, $request, $response, $result)) {
+            return;
+        }
+
+        $exceptionContentTypes = array_unique(
+            array_merge($request->getAcceptableContentTypes(),$this->defaultAcceptableContentTypes)
+        );
+        
+        throw new UnableToAdaptResponseToContentTypeException(
+            UnableToAdaptResponseToContentTypeException::formatText($exceptionContentTypes)
+        );
+    }
+    
+    private function processContentTypes($contentTypes, Request $request, Response $response, $result) 
+    {
+        foreach($contentTypes as $contentType) {
             foreach ($this->responseAdapters as $adapter) {
+                if($contentType == '*/*') {
+                    //We remove the */* content type so we don't have a infinite loop
+                    $defaultContentTypes = array_diff($this->defaultAcceptableContentTypes,array('*/*'));
+                    if($this->processContentTypes($defaultContentTypes, $request, $response, $result)) {
+                        return true;
+                    }
+                }
                 if ($adapter->adaptResponse($contentType, $request, $response, $result)) {
                     $response->headers->set('Content-Type', $contentType);
-                    return;
+                    return true;
                 }
             }
         }
+        
+        return false;
     }
 
     /**
