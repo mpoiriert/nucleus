@@ -96,7 +96,9 @@
         <tr>
           <th></th>
         <% _.each(fields, function(f) { %>
-          <th data-field="<%= f.name %>"><%= f.title %></th>
+          <% if (_.contains(f.visibility, 'list')) { %>
+            <th data-field="<%= f.name %>"><%= f.title %></th>
+          <% } %>
         <% }) %>
         </tr>
       </thead>

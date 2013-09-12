@@ -13,7 +13,12 @@ class DashboardModelBehavior extends Behavior
         'exclude' => null,
         'delete_action' => 'true',
         'aliases' => '',
-        'repr' => 'id'
+        'htmlfields' => '',
+        'repr' => 'id',
+        'nolist' => '',
+        'noedit' => '',
+        'noview' => '',
+        'noquery' => ''
     );
 
     public function objectAttributes()
@@ -65,6 +70,18 @@ class DashboardModelBehavior extends Behavior
             $script .= "\$model->addField(" . $this->addFieldDefinition($column, $queryable) . ");\n\n";
         }
 
+        if ($table->hasBehavior('i18n_dictionary')) {
+            $entries = explode(',', $table->getBehavior('i18n_dictionary')->getParameter('entries'));
+            foreach ($entries as $name) {
+                if ($includedFields !== null && !in_array($name, $includedFields)) {
+                    continue;
+                } else if ($excludedFields !== null && in_array($name, $excludedFields)) {
+                    continue;
+                }
+                $script .= "\$model->addField(" . $this->addI18nFieldDefinition(trim($name)) . ");\n\n";
+            }
+        }
+
         if ($this->getParameter('delete_action') == 'true') {
             $script .= "\$model->addAction(\\Nucleus\\Dashboard\\ActionDefinition::create()\n"
                      . "->setName('delete')\n"
@@ -98,7 +115,7 @@ class DashboardModelBehavior extends Behavior
         if (!$queryable) {
             $visibility[] = 'query';
         }
-        $script .= "\n->setVisibility(array('" . implode("', '", $visibility) . "'))";
+        $script .= "\n->setVisibility(array('" . implode("', '", $this->getVisibility($column->getName(), $visibility)) . "'))";
 
         if (($defaultValue = $column->getPhpDefaultValue()) !== null) {
             if (is_string($defaultValue)) {
@@ -126,6 +143,27 @@ class DashboardModelBehavior extends Behavior
             $script .= "\n->setStringRepr(true)";
         }
 
+        if ($t = $this->getFormFieldType($column->getName())) {
+            $script .= "\n->setFormFieldType('$t')";
+        }
+
+        return $script;
+    }
+
+    protected function addI18nFieldDefinition($name)
+    {
+        $script = "\\Nucleus\\Dashboard\\FieldDefinition::create()\n"
+                . "->setProperty('" . ucfirst($name) . "')\n"
+                . "->setAccessMethod(\\Nucleus\\Dashboard\\FieldDefinition::ACCESS_GETTER_SETTER)\n"
+                . "->setName('" . $name . "')\n"
+                . "->setType('string')\n"
+                . "->setOptional(true)\n"
+                . "->setVisibility(array('" . implode("', '", $this->getVisibility($name, array('list', 'view', 'edit'))) . "'))";
+
+        if ($t = $this->getFormFieldType($name)) {
+            $script .= "\n->setFormFieldType('$t')";
+        }
+
         return $script;
     }
 
@@ -139,5 +177,27 @@ class DashboardModelBehavior extends Behavior
             }
         }
         return $name;
+    }
+
+    protected function getFormFieldType($name)
+    {
+        $types = array_filter(explode(',', $this->getParameter('htmlfields')));
+        foreach ($types as $type) {
+            list($c, $a) = explode(':', $type, 2);
+            if ($c == $name) {
+                return $a;
+            }
+        }
+    }
+
+    protected function getVisibility($name, $default)
+    {
+        $visibility = array();
+        foreach (array('list', 'edit', 'view', 'query') as $v) {
+            if (in_array($v, $default) && !in_array($name, explode(',', $this->getParameter("no$v")))) {
+                $visibility[] = $v;
+            }
+        }
+        return $visibility;
     }
 }
