@@ -14,8 +14,7 @@ class Controller
     public $name;
 
     /**
-     * The public title of the controller
-     * Used in the menu bar.
+     * The menu which will contain the actions of this controller
      */
-    public $title;
+    public $menu;
 }
