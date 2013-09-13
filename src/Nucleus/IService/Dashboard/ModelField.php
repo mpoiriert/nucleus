@@ -49,25 +49,9 @@ class ModelField
     public $formField;
 
     /**
-     * Whether this property is listable
+     * Visibility
      */
-    public $listable = true;
-
-    /**
-     * Whether this property is editable
-     */
-    public $editable = true;
-
-    /**
-     * Whether this property is queryable
-     */
-    public $queryable = true;
-
-    /**
-     * The name of an action which will be triggered when
-     * this property is clicked
-     */
-    public $link;
+    public $visibility;
 
     /**
      * Whether this property is required

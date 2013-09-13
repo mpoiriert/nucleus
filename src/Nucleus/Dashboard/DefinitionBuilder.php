@@ -60,8 +60,8 @@ class DefinitionBuilder
             if ($anno->name) {
                 $controller->setName($anno->name);
             }
-            if ($anno->title) {
-                $controller->setTitle($anno->title);
+            if ($anno->menu !== null) {
+                $controller->setMenu($anno->menu);
             }
         }
 
@@ -69,9 +69,10 @@ class DefinitionBuilder
         $actions = $this->extractActionsFromClass($class, $annotations);
 
         // sets the default menu to be the controller's title
+        $menu = $controller->getMenu();
         foreach ($actions as $action) {
-            if ($action->isVisible() && !$action->providesMenu()) {
-                $action->setMenu($controller->getTitle());
+            if (($action->isVisible() || $menu === false) && !$action->providesMenu()) {
+                $action->setMenu($menu);
             }
         }
 
@@ -285,9 +286,9 @@ class DefinitionBuilder
             $inputModel = $this->buildModelFromMethod($method, $additionalAnnotations, $excludeParams);
             if ($method->getNumberOfParameters() == $minNbOfParams + 1) {
                 $fields = $inputModel->getFields();
-                if (count($fields) === 1 && $fields[0]->isModelType()) {
+                if (count($fields) === 1 && $fields[0]->hasRelatedModel()) {
                     $action->setModelOnlyArgument($fields[0]->getName());
-                    $inputModel = $fields[0]->getModel();
+                    $inputModel = $fields[0]->getRelatedModel();
                 }
             }
             $action->setInputModel($inputModel);
@@ -354,16 +355,15 @@ class DefinitionBuilder
                 $type = $com['type'];
             }
 
-            if (class_exists($type)) {
-                $type = $this->buildModel($type);
-            }
-
             $field = new FieldDefinition();
             $field->setProperty($param->getName())
-                  ->setType($type)
+                  ->setType($type ?: 'string')
                   ->setDescription($com ? $com['description'] : null)
-                  ->setOptional($param->isOptional())
-                  ->setEditable(true);
+                  ->setOptional($param->isOptional());
+
+            if (class_exists($type)) {
+                $field->setRelatedModel($this->buildModel($type));
+            }
 
             $validateAnnotations = array_filter($additionalAnnotations, function($a) use ($param) {
                 return ($a instanceof \Nucleus\IService\Dashboard\Validate) && ($a->property == $param->getName());
@@ -391,15 +391,15 @@ class DefinitionBuilder
               ->setDescription($annotation->description)
               ->setType($annotation->type)
               ->setIdentifier($annotation->identifier)
-              ->setListable($annotation->listable)
-              ->setEditable($annotation->editable)
-              ->setQueryable($annotation->queryable)
               ->setOptional(!$annotation->required)
-              ->setLink($annotation->link)
               ->setGetterSetterMethodNames($annotation->getter, $annotation->setter);
 
         if ($annotation->formField !== null) {
             $field->setFormFieldType($annotation->formField);
+        }
+
+        if ($annotation->visibility !== null) {
+            $field->setVisibility($annotation->visibility);
         }
 
         if (($property !== null && !$property->isPublic()) || $annotation->getter !== null || $annotation->setter !== null) {
