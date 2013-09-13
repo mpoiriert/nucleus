@@ -49,6 +49,12 @@ abstract class " . $this->getClassname() . "
                 $script .= $this->addAddAction() . $this->addEditAction();
             }
         }
+
+        if ($b = $this->getTable()->getBehavior('dashboard_model')) {
+            foreach ($b->getChildrenFKs() as $fk) {
+                $script .= $this->addChildActions($fk);
+            }
+        }
     }
 
     protected function addListAction()
@@ -182,6 +188,61 @@ abstract class " . $this->getClassname() . "
     {
         \$obj->save();
         return \$obj;
+    }
+";
+    }
+
+    protected function addChildActions($fk)
+    {
+        $table = $fk->getTable();
+        $name = $table->getPhpName();
+        $pname = $name . "s";
+
+        $lcols = $fk->getLocalColumnObjects();
+        $localId = $lcols[0]->getPhpName();
+        $fcols = $fk->getForeignColumnObjects();
+        $remoteId = $fcols[0]->getPhpName();
+
+        $queryClassname = $this->getStubQueryBuilder()->getFullyQualifiedClassname();
+        $childObjectClassname = $this->getNewStubObjectBuilder($table)->getFullyQualifiedClassname();
+        $childQueryClassname = $this->getNewStubQueryBuilder($table)->getFullyQualifiedClassname();
+
+        $secureAnnotation = $this->getSecureAnnotation();
+
+        return "
+    /**
+     * @\Nucleus\IService\Dashboard\Action(menu=false)
+     * {$secureAnnotation}
+     * @return \\{$childObjectClassname}[]
+     */
+    public function list{$pname}(\${$localId})
+    {
+        \$obj = \\{$queryClassname}::create()->findPK(\${$localId});
+        return \$obj->get{$pname}();
+    }
+
+    /**
+     * @\Nucleus\IService\Dashboard\Action(menu=false)
+     * {$secureAnnotation}
+     */
+    public function add{$pname}(\${$localId}, \${$remoteId})
+    {
+        \$obj = \\{$queryClassname}::create()->findPK(\${$localId});
+        \$child = \\{$childQueryClassname}::create()->findPK(\${$remoteId});
+        \$obj->add{$name}(\$child);
+        \$obj->save();
+    }
+
+    /**
+     * @\Nucleus\IService\Dashboard\Action(menu=false)
+     * {$secureAnnotation}
+     */
+    public function remove{$pname}(\${$localId}, \${$remoteId})
+    {
+        \$obj = \\{$queryClassname}::create()->findPK(\${$localId});
+        \$child = \\{$childQueryClassname}::create()->findPK(\${$remoteId});
+        \$obj->remove{$name}(\$child);
+        \$obj->save();
     }
 ";
     }

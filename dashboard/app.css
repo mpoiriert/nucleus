@@ -73,8 +73,8 @@ body {
 .object-action-view {
     position: relative;
 }
-    .form-action-view .btn-toolbar,
-    .object-action-view .btn-toolbar {
+    .form-action-view > .btn-toolbar,
+    .object-action-view > .btn-toolbar {
         position: absolute;
         right: 10px;
         top: 0px;

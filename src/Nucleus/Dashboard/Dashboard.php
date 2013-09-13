@@ -315,15 +315,16 @@ class Dashboard
      * @param array $fields
      * @return array
      */
-    protected function getFieldsSchema($fields)
+    public function getFieldsSchema($fields, $recurse = true)
     {
         $self = $this;
-        return array_values(array_map(function($f) use ($self) {
+        return array_values(array_map(function($f) use ($self, $recurse) {
             $valueController = null;
             if ($f->hasValueController()) {
                 $valueController = array(
                     'controller' => $f->getValueController(),
-                    'remote_id' => $f->getValueControllerRemoteId()
+                    'remote_id' => $f->getValueControllerRemoteId(),
+                    'local_id' => $f->getValueControllerLocalId()
                 );
             }
             $related = null;
@@ -331,8 +332,13 @@ class Dashboard
                 $related = array(
                     'name' => $m->getName(),
                     'identifier' => array_map(function($f) { return $f->getProperty(); }, $m->getIdentifierFields()),
-                    'repr' => $m->getStringReprField()->getProperty()
+                    'repr' => $m->getStringReprField()->getProperty(),
+                    'controller' => $f->getRelatedModelController()
                 );
+
+                if ($recurse) {
+                    $related['fields'] = $self->getFieldsSchema($m->getFields(), false);
+                }
             }
             return array(
                 'type' => $f->getType(),

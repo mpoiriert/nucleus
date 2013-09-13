@@ -42,13 +42,28 @@
     </div>
   </script>
 
+  <script type="text/template" id="tabs-tpl">
+    <div class="tabbable tabs-right">
+      <ul class="nav nav-tabs">
+        <% _.each(tabs, function(title, id) { %>
+          <li><a href="#tab-<%= id %>" <% if (id > 0) print('data-related="' + title + '"'); %> data-toggle="tab"><%= title %></a></li>
+        <% }) %>
+      </ul>
+      <div class="tab-content">
+        <% _.each(tabs, function(title, id) { %>
+          <div class="tab-pane active" id="tab-<%= id %>"></div>
+        <% }) %>
+      </div>
+    </div>
+  </script>
+
   <script type="text/template" id="form-action-tpl">
     <% _.each(fields, function(field) { %>
-      <% if (_.contains(field.visibility, 'edit') || _.contains(field.visibility, 'view')) { %>
+      <% if (!_.contains(hidden_fields, field.name)) { %>
         <div class="control-group">
           <label class="control-label" for="<%= field.name %>"><%= field.title %></label>
           <div class="controls">
-            <% if (_.contains(field.visibility, 'edit')) { %>
+            <% if (force_edit || _.contains(field.visibility, 'edit')) { %>
               <% if (field.value_controller && !field.is_array) { %>
                 <select name="<%= field.name %>" data-type="<%= field.formated_type %>" data-value="<%= values[field.name] || field.defaultValue %>"
                   data-url="/<%= field.value_controller.controller %>/listAll?__offset=-1" data-related='<%= JSON.stringify(field.related_model) %>' class="related">
@@ -56,19 +71,22 @@
               <% } else if (field.field_type == 'textarea') { %>
                 <textarea name="<%= field.name %>" data-type="<%= field.formated_type %>" class="input-xlarge"><%= values[field.name] || field.defaultValue %></textarea>
               <% } else if (field.field_type == 'checkbox' || field.field_type == 'radio') { %>
-                <input type="<%= field.field_type %>" name="<%= field.name %>" value="<%= field.value %>"
-                  data-type="<%= field.formated_type %>" <% if ((typeof(values[field.name]) != 'undefined' && values[field.name] == field.value) || field.defaultValue === true) print("checked"); %>>
+                <input type="<%= field.field_type %>" name="<%= field.name %>" value="1"
+                  data-type="<%= field.formated_type %>" <% if ((typeof(values[field.name]) != 'undefined' && values[field.name]) || field.defaultValue === true) print("checked"); %>>
               <% } else { %>
                 <input type="<%= field.field_type %>" name="<%= field.name %>" value="<%= values[field.name] || field.defaultValue %>"
                   data-type="<%= field.formated_type %>" class="input-xlarge">
               <% } %>
             <% } else { %>
+              <% if (field.identifier && typeof(values[field.name]) != 'undefined') { %>
+                <input type="hidden" name="<%= field.name %>" value="<%= values[field.name] %>">
+              <% } %>
               <%= values[field.name] %>
             <% } %>
           </div>
         </div>
       <% } else { %>
-        <input type="hidden" name="<%= field.name %>" value="<%= values[field.name] || field.defaultValue %>">
+        <input type="hidden" name="<%= field.name %>" value="<%= values[field.name] %>">
       <% } %>
     <% }) %>
     <div class="form-actions">
@@ -94,12 +112,10 @@
     <table class="table table-bordered table-striped table-condensed">
       <thead>
         <tr>
-          <th></th>
-        <% _.each(fields, function(f) { %>
-          <% if (_.contains(f.visibility, 'list')) { %>
+          <th width="30"></th>
+          <% _.each(fields, function(f) { %>
             <th data-field="<%= f.name %>"><%= f.title %></th>
-          <% } %>
-        <% }) %>
+          <% }) %>
         </tr>
       </thead>
       <tbody></tbody>
@@ -139,6 +155,16 @@
       </tr>
     <% }) %>
     </table>
+  </script>
+
+  <script type="text/template" id="modal-tpl">
+    <div class="modal hide fade" tabindex="-1" role="dialog" aria-hidden="true">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+        <h3><%= title %></h3>
+      </div>
+      <div class="modal-body"></div>
+    </div>
   </script>
 
 </body>

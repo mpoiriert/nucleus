@@ -23,6 +23,8 @@ class FieldDefinition
 
     protected $relatedModel;
 
+    protected $relatedModelController;
+
     protected $name;
 
     protected $description;
@@ -66,6 +68,8 @@ class FieldDefinition
     protected $valueController;
 
     protected $valueControllerRemoteId;
+
+    protected $valueControllerLocalId;
 
     public static function create()
     {
@@ -113,9 +117,10 @@ class FieldDefinition
         return $this->type . ($this->isArray ? '[]' : '');
     }
 
-    public function setRelatedModel(ModelDefinition $model)
+    public function setRelatedModel(ModelDefinition $model, $modelController = null)
     {
         $this->relatedModel = $model;
+        $this->relatedModelController = $modelController;
         return $this;
     }
 
@@ -127,6 +132,11 @@ class FieldDefinition
     public function getRelatedModel()
     {
         return $this->relatedModel;
+    }
+
+    public function getRelatedModelController()
+    {
+        return $this->relatedModelController;
     }
 
     public function setIsArray($isArray = trye)
@@ -297,10 +307,11 @@ class FieldDefinition
         return $this->constraints;
     }
 
-    public function setValueController($controllerName, $remoteId = 'id')
+    public function setValueController($controllerName, $remoteId = 'id', $localId = null)
     {
         $this->valueController = $controllerName;
         $this->valueControllerRemoteId = $remoteId;
+        $this->valueControllerLocalId = $localId;
         return $this;
     }
 
@@ -317,6 +328,11 @@ class FieldDefinition
     public function getValueControllerRemoteId()
     {
         return $this->valueControllerRemoteId;
+    }
+
+    public function getValueControllerLocalId()
+    {
+        return $this->valueControllerLocalId;
     }
 
     /**
