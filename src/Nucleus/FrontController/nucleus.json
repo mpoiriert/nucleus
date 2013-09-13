@@ -6,6 +6,9 @@
         "frontController": {
             "class": "Nucleus\\FrontController\\FrontController"
         },
+        "frontControllerExceptionHandler": {
+            "class": "Nucleus\\FrontController\\EventDispatchingExceptionHandler"
+        },
         "jsonResponseAdapter": {
             "class": "Nucleus\\FrontController\\JsonResponseAdapter"
         },
