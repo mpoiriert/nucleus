@@ -10,6 +10,9 @@
   {{ assetBag.add("/nucleus/asset/dashboard/app.css") }}
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/jquery-1.10.1.min.js") }}
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/jqueryui/js/jquery-ui-1.10.3.custom.min.js") }}
+  {{ assetBag.add("/nucleus/asset/dashboard/vendor/jqueryui/css/ui-lightness/jquery-ui-1.10.3.custom.min.css") }}
+  {{ assetBag.add("/nucleus/asset/dashboard/vendor/jqueryui-timepicker/jquery-ui-timepicker-addon.js") }}
+  {{ assetBag.add("/nucleus/asset/dashboard/vendor/jqueryui-timepicker/jquery-ui-timepicker-addon.css") }}
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/json2.js") }}
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/underscore-min.js") }}
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/backbone-min.js") }}
@@ -74,8 +77,9 @@
                 <input type="<%= field.field_type %>" name="<%= field.name %>" value="1"
                   data-type="<%= field.formated_type %>" <% if ((typeof(values[field.name]) != 'undefined' && values[field.name]) || (typeof(values[field.name]) == 'undefined' && field.defaultValue === true)) print("checked"); %>>
               <% } else { %>
-                <input type="<%= field.field_type %>" name="<%= field.name %>" value="<%= values[field.name] || field.defaultValue %>"
-                  data-type="<%= field.formated_type %>" class="input-xlarge">
+                <input type="<% if (_.contains(['text', 'password'], field.field_type)) print(field.field_type); else print('text'); %>" name="<%= field.name %>" value="<%= values[field.name] || field.defaultValue %>"
+                  data-type="<%= field.formated_type %>" class="input-xlarge"
+                  <% if (!_.contains(['text', 'password'], field.field_type)) print('data-fieldtype="' + field.field_type + '" data-fieldoptions=\'' + JSON.stringify(field.field_options) + "'"); %>>
               <% } %>
             <% } else { %>
               <% if (field.identifier && typeof(values[field.name]) != 'undefined') { %>

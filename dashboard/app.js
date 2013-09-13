@@ -588,12 +588,18 @@ $(function() {
                     }
                 });
             });
+
+            parent.find('input[data-fieldtype]').each(function() {
+                var $this = $(this);
+                var ft = $this.data('fieldtype');
+                $this[ft]($this.data('fieldoptions'));
+            });
         },
         renderTabs: function() {
             var self = this;
             this.$('.nav-tabs a[data-related]').on('click', function() {
-                var $this = $(this),
-                    pan = self.$('div.tab-pane[id="' + $this.attr('href').substr(1) + '"]');
+                var $this = $(this);
+                var pan = self.$('div.tab-pane[id="' + $this.attr('href').substr(1) + '"]');
 
                 if (!pan.hasClass('loaded')) {
                     self.renderRelatedTab($this.data('related'), pan);
@@ -761,8 +767,8 @@ $(function() {
                 return;
             }
 
-            var tpl = _.template($('#list-pagination-tpl').html()),
-                pagination = $(tpl({ nb_pages: this.nbPages }));
+            var tpl = _.template($('#list-pagination-tpl').html());
+            var pagination = $(tpl({ nb_pages: this.nbPages }));
 
             this.$body.append(pagination);
             this.$pagination = pagination;
@@ -821,9 +827,9 @@ $(function() {
             });
         },
         makeSortable: function() {
-            var table = this.$('table tbody'),
-                url = this.options.behaviors.sortable.url,
-                originalIndex;
+            var table = this.$('table tbody');
+            var url = this.options.behaviors.sortable.url;
+            var originalIndex;
 
             table.sortable({
                 axis: "y",
@@ -1165,8 +1171,8 @@ $(function() {
                 return this.menu;
             }
 
-            var parent = this._buildMenuTree(_.initial(items)),
-                item = _.last(items);
+            var parent = this._buildMenuTree(_.initial(items));
+            var item = _.last(items);
 
             if (parent.items[item]) {
                 return parent.items[item];

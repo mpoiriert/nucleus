@@ -200,8 +200,24 @@ class DashboardModelBehavior extends Behavior
             $script .= "\n->setStringRepr(true)";
         }
 
-        if ($t = $this->getFormFieldType($column->getName())) {
-            $script .= "\n->setFormFieldType('$t')";
+        $options = array();
+        if (!($type = $this->getFormFieldType($column->getName()))) {
+            if ($column->isTemporalType()) {
+                if ($column->getType() == 'DATE') {
+                    $type = 'datepicker';
+                    $options['dateFormat'] = 'mm/dd/yy';
+                } else if ($column->getType() == 'TIME') {
+                    $type = 'timepicker';
+                    $options['timeFormat'] = 'HH:mm:ss';
+                } else if ($column->getType() == 'TIMESTAMP') {
+                    $type = 'datetimepicker';
+                    $options = array('dateFormat' => 'yy-mm-dd', 'timeFormat' => 'HH:mm:ss');
+                }
+            }
+        }
+
+        if ($type) {
+            $script .= "\n->setFormFieldType('$type', " . var_export($options, true) . ")";
         }
 
         return $script;

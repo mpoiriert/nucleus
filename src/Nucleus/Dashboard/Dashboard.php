@@ -344,6 +344,7 @@ class Dashboard
                 'type' => $f->getType(),
                 'is_array' => $f->isArray(),
                 'field_type' => $f->getFormFieldType(),
+                'field_options' => $f->getFormFieldOptions(),
                 'formated_type' => $f->getFormatedType(),
                 'name' => $f->getProperty(),
                 'title' => $f->getName(),
