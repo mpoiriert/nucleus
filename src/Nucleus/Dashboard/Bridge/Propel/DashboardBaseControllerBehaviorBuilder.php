@@ -6,12 +6,22 @@ use OMBuilder;
 
 class DashboardBaseControllerBehaviorBuilder extends OMBuilder
 {
-    public function getParameter($name)
+    public function getControllerBehavior()
     {
         if ($this->getTable()->hasBehavior('dashboard_parent_controller')) {
-            return $this->getTable()->getBehavior('dashboard_parent_controller')->getParameter($name);
+            return $this->getTable()->getBehavior('dashboard_parent_controller');
         }
-        return $this->getTable()->getBehavior('dashboard_controller')->getParameter($name);
+        return $this->getTable()->getBehavior('dashboard_controller');
+    }
+
+    public function getParameter($name)
+    {
+        return $this->getControllerBehavior()->getParameter($name);
+    }
+
+    public function getListParameter($name)
+    {
+        return $this->getControllerBehavior()->getListParameter($name);
     }
 
     public function getUnprefixedClassname()
@@ -209,17 +219,10 @@ abstract class " . $this->getClassname() . "
 
         $secureAnnotation = $this->getSecureAnnotation();
 
-        return "
-    /**
-     * @\Nucleus\IService\Dashboard\Action(menu=false)
-     * {$secureAnnotation}
-     * @return \\{$childObjectClassname}[]
-     */
-    public function list{$pname}(\${$localId})
-    {
-        \$obj = \\{$queryClassname}::create()->findPK(\${$localId});
-        return \$obj->get{$pname}();
-    }
+        $script = '';
+
+        if (!in_array($table->getName(), $this->getListParameter('noaddchildren'))) {
+            $script .= "
 
     /**
      * @\Nucleus\IService\Dashboard\Action(menu=false)
@@ -231,6 +234,20 @@ abstract class " . $this->getClassname() . "
         \$child = \\{$childQueryClassname}::create()->findPK(\${$remoteId});
         \$obj->add{$name}(\$child);
         \$obj->save();
+    }";
+        }
+
+        return $script . "
+
+    /**
+     * @\Nucleus\IService\Dashboard\Action(menu=false)
+     * {$secureAnnotation}
+     * @return \\{$childObjectClassname}[]
+     */
+    public function list{$pname}(\${$localId})
+    {
+        \$obj = \\{$queryClassname}::create()->findPK(\${$localId});
+        return \$obj->get{$pname}();
     }
 
     /**

@@ -236,7 +236,7 @@ class DashboardModelBehavior extends Behavior
         $fcol = $fcols[0];
 
         $script = "\\Nucleus\\Dashboard\\FieldDefinition::create()\n"
-                . "->setProperty('" . ucfirst($table->getName()) . "s')\n"
+                . "->setProperty('" . $table->getPhpName() . "s')\n"
                 . "->setAccessMethod(\\Nucleus\\Dashboard\\FieldDefinition::ACCESS_GETTER_SETTER)\n"
                 . "->setName('" . $table->getName() . "s')\n"
                 . "->setType('object[]')\n"

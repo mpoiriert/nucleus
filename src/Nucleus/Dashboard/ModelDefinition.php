@@ -111,6 +111,10 @@ class ModelDefinition
                 return $field;
             }
         }
+        if ($ids = $this->getIdentifierFields()) {
+            return $ids[0];
+        }
+        return $this->fields[0];
     }
 
     public function getFields()

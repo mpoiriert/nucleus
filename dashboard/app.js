@@ -864,7 +864,10 @@ $(function() {
             return this;
         },
         renderInput: function() {
-            this.view = new Dashboard.FormWidgetView(this.action.schema.input);
+            this.view = new Dashboard.FormWidgetView(_.extend({
+                field_visibility: ['edit'],
+                tabs_for_related_models: false
+            }, this.action.schema.input));
             this.view.options.refreshable = false;
             this.view.parent = this;
             this.listenTo(this.view, 'submit', function(data) { 

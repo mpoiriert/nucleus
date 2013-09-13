@@ -13,13 +13,19 @@ class DashboardControllerBehavior extends Behavior
         'credentials' => null,
         'menu' => null,
         'edit' => 'true',
-        'is_concrete_parent' => 'false'
+        'is_concrete_parent' => 'false',
+        'noaddchildren' => ''
     );
 
     protected $additionalBuilders = array(
         '\Nucleus\Dashboard\Bridge\Propel\DashboardBaseControllerBehaviorBuilder',
         '\Nucleus\Dashboard\Bridge\Propel\DashboardControllerBehaviorBuilder'
     );
+
+    public function getListParameter($name)
+    {
+        return array_filter(array_map('trim', explode(',', $this->getParameter($name))));
+    }
 
     public function modifyTable()
     {
