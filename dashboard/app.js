@@ -855,6 +855,7 @@ $(function() {
         initialize: function() {
             this.action = this.options.action;
             this.listenTo(this.action, 'input', this.renderInput);
+            this.listenTo(this.action, 'before_execute', this.updateUrl);
             this.listenTo(this.action, 'response', this.renderResponse);
             this.listenTo(this.action, 'error', this.renderError);
             this.listenTo(this.action, 'redirect', this._redirectHandler);
@@ -864,16 +865,14 @@ $(function() {
             return this;
         },
         renderInput: function() {
+            this.updateUrl();
             this.view = new Dashboard.FormWidgetView(_.extend({
                 field_visibility: ['edit'],
                 tabs_for_related_models: false
             }, this.action.schema.input));
             this.view.options.refreshable = false;
             this.view.parent = this;
-            this.listenTo(this.view, 'submit', function(data) { 
-                this.freeze();
-                this.action.execute(data); 
-            });
+            this.listenTo(this.view, 'submit', this.execute);
             this.$el.empty().append(this.view.render().el);
             this.trigger('render', this);
         },
@@ -912,15 +911,6 @@ $(function() {
             this.listenTo(view, 'done', function() { this.trigger('done'); });
             this.listenTo(view, 'submit', this.pipe);
 
-            var url = this.action.url;
-            if (data && this.action.schema.input.type != 'form') {
-                var params = $.param(data);
-                if (params) {
-                    url += '?' + params;
-                }
-            }
-            Dashboard.router.navigate(url);
-
             this.view = view;
             this.$el.empty().append(view.render().el);
             this.trigger('render', this);
@@ -930,6 +920,20 @@ $(function() {
             if (this.view) {
                 this.view.showError(message);
             }
+        },
+        execute: function(data) {
+            this.freeze();
+            this.action.execute(data); 
+        },
+        updateUrl: function(data) {
+            var url = this.action.url;
+            if (data && this.action.schema.input.type != 'form') {
+                var params = $.param(data);
+                if (params) {
+                    url += '?' + params;
+                }
+            }
+            Dashboard.router.navigate(url);
         },
         pipe: function(data) {
             this.view && this.view.freeze();
@@ -990,7 +994,7 @@ $(function() {
             this.doExecute(data);
         },
         doExecute: function(data) {
-            this.trigger('before_execute');
+            this.trigger('before_execute', data);
             this.lastRequest = data;
             this._call(data,
                 _.bind(this.handleResponse, this),
@@ -1142,7 +1146,7 @@ $(function() {
                     this.runActionOnLoad = this.defaultAction;
                 }
                 if (this.runActionOnLoad) {
-                    this.runAction(this.runActionOnLoad[0], this.runActionOnLoad[1]);
+                    this.runAction(this.runActionOnLoad[0], this.runActionOnLoad[1], this.runActionOnLoad[2]);
                     this.runActionOnLoad = false;
                 }
             }, this));
@@ -1181,7 +1185,7 @@ $(function() {
         },
         runAction: function(controller, action, data) {
             if (!this.loaded) {
-                this.runActionOnLoad = [controller, action];
+                this.runActionOnLoad = [controller, action, data];
                 return;
             }
 
@@ -1224,8 +1228,6 @@ $(function() {
             actionView.previous = this.currentActionView;
             this.currentActionView = actionView;
             this.$('#main').append(actionView.$el);
-
-            Dashboard.router.navigate(actionView.action.url.substr(1));
         },
         highlightMenu: function(menuName) {
             var menu_segs = menuName.split('/'), top = _.head(menu_segs);
