@@ -15,6 +15,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Nucleus\IService\EventDispatcher\IEventDispatcherService;
 use Nucleus\IService\FrontController\UnableToAdaptResponseToContentTypeException;
+use Nucleus\IService\FrontController\IExceptionHandler;
+use Exception;
 
 /**
  * Description of FrontController
@@ -56,6 +58,11 @@ class FrontController
      * @var array
      */
     private $defaultAcceptableContentTypes = array('text/html');
+    
+    /**
+     * @var IExceptionHandler 
+     */
+    private $frontControllerExceptionHandler;
 
     /**
      * @param \Nucleus\IService\Invoker\IInvokerService $invoker
@@ -68,11 +75,13 @@ class FrontController
         IServiceContainer $serviceContainer, 
         IInvokerService $invoker, 
         Router $routing, 
-        IEventDispatcherService $eventDispatcher
+        IEventDispatcherService $eventDispatcher,
+        IExceptionHandler $frontControllerExceptionHandler
     )
     {
         $this->invoker = $invoker;
         $this->serviceContainer = $serviceContainer;
+        $this->frontControllerExceptionHandler = $frontControllerExceptionHandler;
         $this->routing = $routing;
         $this->eventDispatcher = $eventDispatcher;
     }
@@ -115,9 +124,13 @@ class FrontController
         $response = new Response();
         $parameters = array_merge($request->query->all(), $request->request->all());
         $service = $this->serviceContainer->getServiceByName($serviceName);
-        $executionResult = $this->invoker->invoke(
-            array($service, $methodName), $parameters, array($request, $response)
-        );
+        try {
+            $executionResult = $this->invoker->invoke(
+                array($service, $methodName), $parameters, array($request, $response)
+            );
+        } catch(Exception $e) {
+            $executionResult = $this->frontControllerExceptionHandler->handleException($e, $request, $response);
+        }
         if($executionResult instanceof RedirectResponse){
             $response->prepare($request);
             return $executionResult;

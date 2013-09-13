@@ -3,6 +3,7 @@ phpunit.xml
 composer.lock
 composer.phar
 autoload.php
+/report/
 /vendor/
 /cache/
 web/nucleus
