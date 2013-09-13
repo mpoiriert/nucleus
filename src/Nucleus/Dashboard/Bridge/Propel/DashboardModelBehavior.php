@@ -19,7 +19,10 @@ class DashboardModelBehavior extends Behavior
         'noedit' => '',
         'noview' => '',
         'noquery' => '',
-        'children' => ''
+        'children' => '',
+        'noaddchildren' => '',
+        'nocreatechildren' => '',
+        'noremovechildren' => ''
     );
 
     public function objectAttributes()
@@ -245,6 +248,13 @@ class DashboardModelBehavior extends Behavior
         $table = $fk->getTable();
         $fqdn = $table->getNamespace() . '\\' . $table->getPhpName();
         $controllerFqdn = $table->getPhpName() . 'DashboardController';
+        
+        $actions = array();
+        foreach (array('add', 'create', 'remove') as $a) {
+            if (!in_array($table->getName(), $this->getListParameter("no{$a}children"))) {
+                $actions[] = $a;
+            }
+        }
 
         $lcols = $fk->getLocalColumnObjects();
         $lcol = $lcols[0];
@@ -257,7 +267,7 @@ class DashboardModelBehavior extends Behavior
                 . "->setName('" . $table->getName() . "s')\n"
                 . "->setType('object[]')\n"
                 . "->setVisibility(array('view', 'edit'))\n"
-                . "->setRelatedModel(\\$fqdn::getDashboardModelDefinition(), '$controllerFqdn')\n"
+                . "->setRelatedModel(\\$fqdn::getDashboardModelDefinition(), '$controllerFqdn', array('" . implode("', '", $actions) . "'))\n"
                 . "->setValueController('" . $this->getTable()->getPhpName() . "DashboardController', '" . $lcol->getPhpName() . "', '" . $fcol->getPhpName() . "')";
 
         return $script;

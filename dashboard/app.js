@@ -414,26 +414,33 @@ $(function() {
             var table = render_table(_.filter(this.options.model.fields, _.bind(function(f) {
                 return f.name != this.options.remote_id; }, this)), data);
 
-            var tb = new Dashboard.ToolbarView({ buttons: [
-                {
+            var buttons = [];
+            if (_.contains(this.options.model.actions, 'remove')) {
+                buttons.push({
                     name: 'remove', 
                     controller: this.options.controller,
                     title: 'Remove',
                     icon: 'trash'
-                },
-                {
+                });
+            }
+            if (_.contains(this.options.model.actions, 'create')) {
+                buttons.push({
                     name: 'create',
                     controller: this.options.controller,
-                    title: 'Create',
+                    title: 'Add New',
                     icon: 'plus'
-                },
-                {
+                });
+            }
+            if (_.contains(this.options.model.actions, 'add')) {
+                buttons.push({
                     name: 'add',
                     controller: this.options.controller,
-                    title: 'Add',
+                    title: 'Add Existing',
                     icon: 'plus'
-                }
-            ]});
+                });
+            }
+
+            var tb = new Dashboard.ToolbarView({ buttons: buttons});
 
             this.$el.empty().append(table).append(tb.render().el);
             this.unfreeze();

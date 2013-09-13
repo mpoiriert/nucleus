@@ -333,7 +333,8 @@ class Dashboard
                     'name' => $m->getName(),
                     'identifier' => array_map(function($f) { return $f->getProperty(); }, $m->getIdentifierFields()),
                     'repr' => $m->getStringReprField()->getProperty(),
-                    'controller' => $f->getRelatedModelController()
+                    'controller' => $f->getRelatedModelController(),
+                    'actions' => $f->getRelatedModelActions()
                 );
 
                 if ($recurse) {

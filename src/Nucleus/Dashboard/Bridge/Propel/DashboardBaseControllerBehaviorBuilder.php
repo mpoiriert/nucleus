@@ -218,11 +218,19 @@ abstract class " . $this->getClassname() . "
         $childQueryClassname = $this->getNewStubQueryBuilder($table)->getFullyQualifiedClassname();
 
         $secureAnnotation = $this->getSecureAnnotation();
+        
+        return "
 
-        $script = '';
-
-        if (!in_array($table->getName(), $this->getListParameter('noaddchildren'))) {
-            $script .= "
+    /**
+     * @\Nucleus\IService\Dashboard\Action(menu=false)
+     * {$secureAnnotation}
+     * @return \\{$childObjectClassname}[]
+     */
+    public function list{$pname}(\${$localId})
+    {
+        \$obj = \\{$queryClassname}::create()->findPK(\${$localId});
+        return \$obj->get{$pname}();
+    }
 
     /**
      * @\Nucleus\IService\Dashboard\Action(menu=false)
@@ -234,20 +242,6 @@ abstract class " . $this->getClassname() . "
         \$child = \\{$childQueryClassname}::create()->findPK(\${$remoteId});
         \$obj->add{$name}(\$child);
         \$obj->save();
-    }";
-        }
-
-        return $script . "
-
-    /**
-     * @\Nucleus\IService\Dashboard\Action(menu=false)
-     * {$secureAnnotation}
-     * @return \\{$childObjectClassname}[]
-     */
-    public function list{$pname}(\${$localId})
-    {
-        \$obj = \\{$queryClassname}::create()->findPK(\${$localId});
-        return \$obj->get{$pname}();
     }
 
     /**

@@ -25,6 +25,8 @@ class FieldDefinition
 
     protected $relatedModelController;
 
+    protected $relatedModelActions = array('add', 'create', 'remove');
+
     protected $name;
 
     protected $description;
@@ -119,10 +121,13 @@ class FieldDefinition
         return $this->type . ($this->isArray ? '[]' : '');
     }
 
-    public function setRelatedModel(ModelDefinition $model, $modelController = null)
+    public function setRelatedModel(ModelDefinition $model, $modelController = null, $actions = null)
     {
         $this->relatedModel = $model;
         $this->relatedModelController = $modelController;
+        if ($actions !== null) {
+            $this->relatedModelActions = $actions;
+        }
         return $this;
     }
 
@@ -139,6 +144,11 @@ class FieldDefinition
     public function getRelatedModelController()
     {
         return $this->relatedModelController;
+    }
+
+    public function getRelatedModelActions()
+    {
+        return $this->relatedModelActions;
     }
 
     public function setIsArray($isArray = trye)
