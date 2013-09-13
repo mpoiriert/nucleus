@@ -39,5 +39,6 @@ class EventDispatchingExceptionHandler implements IExceptionHandler
             $exception,
             array('request'=>$request,'response'=>$response)
         );
+        return $exception;
     }
 }

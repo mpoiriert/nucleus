@@ -143,6 +143,9 @@ class FrontController
 
     private function completeResponse(Request $request, Response $response, $result)
     {
+        if($response->getContent()) {
+           return; 
+        }
         $contentTypes = $request->getAcceptableContentTypes();
         $this->processContentTypes($contentTypes, $request, $response, $result);
     }
