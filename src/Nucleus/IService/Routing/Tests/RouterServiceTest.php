@@ -104,4 +104,16 @@ abstract class RouterServiceTest extends \PHPUnit_Framework_TestCase
         $result = $routing->generate('test');
         $this->assertEquals('/test-en-us', $result);
     }
+    
+    public function testGenerateRouteI18nFromCurrentContext()
+    {
+        $request = \Symfony\Component\HttpFoundation\Request::create('http://www.test.com/translate-fr-fr');
+        $routing = $this->loadRoutingService();
+        $routing->addRoute('translate', '/translate-fr-fr', array('_culture'=>'fr-fr'));
+        $routing->addRoute('translate', '/translate-en-us', array('_culture'=>'en-us'));
+        $routing->setCurrentRequest($request);
+        $result = $routing->generateI18nRouteFromCurrentRequest('en-us');
+        $this->assertEquals('/translate-en-us',$result);
+            
+    }
 }

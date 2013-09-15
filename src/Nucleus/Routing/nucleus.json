@@ -2,6 +2,9 @@
     "services": {
         "routing": {
             "class": "Nucleus\\Routing\\Router"
+        },
+        "routingTwigExtension": {
+            "class": "Nucleus\\Routing\\RoutingTwigExtension"
         }
     },
     "nucleus": {
