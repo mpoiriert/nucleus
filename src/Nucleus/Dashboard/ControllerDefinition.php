@@ -10,7 +10,7 @@ class ControllerDefinition
 
     protected $name;
 
-    protected $title;
+    protected $menu;
 
     protected $actions = array();
 
@@ -45,8 +45,8 @@ class ControllerDefinition
     public function setName($name)
     {
         $this->name = $name;
-        if ($this->title === null) {
-            $this->title = ucfirst($name);
+        if ($this->menu === null) {
+            $this->menu = ucfirst($name);
         }
         return $this;
     }
@@ -56,15 +56,15 @@ class ControllerDefinition
         return $this->name;
     }
 
-    public function setTitle($title)
+    public function setMenu($menu)
     {
-        $this->title = $title;
+        $this->menu = $menu;
         return $this;
     }
 
-    public function getTitle()
+    public function getMenu()
     {
-        return $this->title;
+        return $this->menu;
     }
 
     public function setActions(array $actions)
