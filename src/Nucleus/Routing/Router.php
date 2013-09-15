@@ -16,6 +16,8 @@ use Symfony\Component\Routing\Generator\UrlGenerator;
 use InvalidArgumentException;
 use Nucleus\IService\Routing\IRouterService;
 use Symfony\Component\HttpFoundation\Request;
+use ArrayObject;
+use Nucleus\IService\EventDispatcher\IEventDispatcherService;
 
 /**
  * Description of Router
@@ -44,6 +46,11 @@ class Router implements IRouterService
      */
     private $urlGenerator;
     
+    /**
+     * @var IEventDispatcherService
+     */
+    private $eventDispatcher;
+    
     private $defaultParameters = array();
     
     /**
@@ -56,8 +63,9 @@ class Router implements IRouterService
      * 
      * @\Nucleus\IService\DependencyInjection\Inject
      */
-    public function __construct()
+    public function __construct(IEventDispatcherService $eventDispatcher)
     {
+        $this->eventDispatcher = $eventDispatcher;
         $this->routeCollection = new RouteCollection();
         $this->context = new RequestContext();
         $this->urlMatcher = new UrlMatcher($this->routeCollection, $this->context);
@@ -211,5 +219,31 @@ class Router implements IRouterService
     public function setCurrentRequest(Request $request)
     {
         $this->context->fromRequest($request);
+    }
+
+    public function generateI18nRouteFromCurrentRequest($culture, $referenceType = self::ABSOLUTE_PATH, $scheme = null)
+    {
+        $result = $this->match(
+            $this->context->getPathInfo(),
+            $this->context->getHost(),
+            $this->context->getScheme(),
+            $this->context->getMethod()
+        );
+          
+        $route = $result['_route'];
+        
+        if(strpos($route, ':i18n:') != false) {
+            list(,,$route) = explode(':',$route,3);
+        }
+        
+        $result['_culture'] = $culture;
+        unset($result['_route']);
+        $parameters = new ArrayObject($result);
+        $this->eventDispatcher->dispatch(
+            'Routing.preGenrateI18nRouteFromCurrentRequest',
+            $this,
+            compact('culture','referenceType','scheme','parameters')
+        );
+        return $this->generate($route, $parameters->getArrayCopy(), $referenceType, $scheme);
     }
 }

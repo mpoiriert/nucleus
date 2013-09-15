@@ -50,6 +50,8 @@ interface IRouterService
     
     public function setCurrentRequest(Request $request);
     
+    public function generateI18nRouteFromCurrentRequest($culture,  $referenceType = self::ABSOLUTE_PATH, $scheme=null);
+    
     /**
      * Set a default parameter that will be use for any route generation if not
      * available in the generate parameters array. Set null to remove it. If
