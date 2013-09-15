@@ -44,7 +44,7 @@ class RoutingTwigExtension extends Twig_Extension
         );
     }
 
-    public function routeTranslation($culture,  $referenceType = self::ABSOLUTE_PATH, $scheme=null)
+    public function routeTranslation($culture,  $referenceType = IRouterService::ABSOLUTE_PATH, $scheme=null)
     {
         return $this->routing->generateI18nRouteFromCurrentRequest($culture, $referenceType, $scheme);
     }
