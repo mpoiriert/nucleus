@@ -39,7 +39,7 @@ class RoutingTwigExtension extends Twig_Extension
     {
         return array(
             new Twig_SimpleFunction(
-                'kohana_route', array($this, 'nucleus_current_i18n_route'), array('is_safe' => array('html'))
+                'nucleus_current_i18n_route', array($this, 'routeTranslation'), array('is_safe' => array('html'))
             )
         );
     }
