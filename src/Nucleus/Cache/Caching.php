@@ -31,9 +31,9 @@ class Caching extends BaseAspect
     {
         $cacheService = $this->getCacheService();
 
-        $cacheEntryName = $this->getCacheEntryName($invocation);
-        
         $annotation = $this->getCacheableAnnotation($invocation);
+        
+        $cacheEntryName = $this->getCacheEntryName($invocation, $annotation);
         
         try {
             $result = $cacheService->get($cacheEntryName, $annotation->namespace);
@@ -50,6 +50,31 @@ class Caching extends BaseAspect
     }
     
     /**
+     * Invalidate methods
+     *
+     * @param MethodInvocation $invocation Invocation
+     *
+     * @Go\Lang\Annotation\Around("@annotation(Nucleus\IService\Cache\Invalidate)")
+     */
+    public function aroundInvalidate(MethodInvocation $invocation)
+    {
+        $cacheService = $this->getCacheService();
+         
+        $annotation = $this->getInvalidateAnnotation($invocation);
+        
+        $result = $invocation->proceed();
+        
+        $cacheEntryName = $this->getCacheEntryName($invocation, $annotation);
+        
+        $cacheService->delete(
+            $cacheEntryName, 
+            $annotation->namespace
+        );
+        
+        return $result;
+    }
+    
+    /**
      * @param MethodInvocation $invocation
      * @return \Nucleus\IService\Cache\Cacheable
      */
@@ -58,13 +83,41 @@ class Caching extends BaseAspect
         return $this->getAnnotation($invocation, 'Nucleus\IService\Cache\Cacheable');
     }
     
-    private function getCacheEntryName(MethodInvocation $invocation)
+    /**
+     * @param MethodInvocation $invocation
+     * @return \Nucleus\IService\Cache\Invalidate
+     */
+    private function getInvalidateAnnotation(MethodInvocation $invocation)
     {
+        return $this->getAnnotation($invocation, 'Nucleus\IService\Cache\Invalidate');
+    }
+    
+    private function getCacheEntryName(MethodInvocation $invocation, $annotation)
+    {
+        if(isset($annotation->keyName)) {
+            return $this->getCacheEntryNameFromString($invocation, $annotation->keyName);
+        }
+        
         return sprintf(
             '%s__%s__%s',
             get_class($invocation->getThis()),
             $invocation->getMethod()->getName(),
             serialize($invocation->getArguments())
+        );
+    }
+    
+    private function getCacheEntryNameFromString(MethodInvocation $invocation, $name)
+    {
+        $arguments = $invocation->getArguments();
+        $replaces = array();
+        foreach($invocation->getMethod()->getParameters() as $parameter) {
+            /* @var $parameter \ReflectionParameter */
+            $replaces['$' . $parameter->getName()] = serialize($arguments[$parameter->getPosition()]);
+        }
+        return str_replace(
+            array_keys($replaces), 
+            array_values($replaces), 
+            $name
         );
     }
 }

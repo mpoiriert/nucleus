@@ -59,6 +59,21 @@ abstract class CacheServiceTest extends PHPUnit_Framework_TestCase
         $this->assertEquals('value',$service->get('name'));
     }
     
+    public function testDelete()
+    {
+        $service = $this->loadCacheService();
+        
+        $this->assertFalse($service->has('delete'));
+
+        $service->set('delete','value');
+        
+        $this->assertTrue($service->has('delete'));
+        
+        $service->delete('delete');
+        
+        $this->assertFalse($service->has('delete'));
+    }
+    
     public function testClearNamespace()
     {
         $service = $this->loadCacheService();
@@ -96,5 +111,25 @@ abstract class CacheServiceTest extends PHPUnit_Framework_TestCase
         foreach($namespaces as $namespace) {
            $this->assertFalse($service->has('name',$namespace));
         }
+    }
+    
+    public function testAnnotations()
+    {
+        $class = new ClassWithCache();
+        
+        $value1 = uniqid();
+        $value2 = uniqid();
+        
+        $class->delete('toto');
+        
+        $this->assertEquals($value1, $class->get('toto', $value1));
+        
+        //Value key is not taken in consideration so the value set before
+        //should be return
+        $this->assertEquals($value1, $class->get('toto', $value2));
+        
+        $class->delete('toto');
+        
+        $this->assertEquals($value2, $class->get('toto', $value2));
     }
 }
