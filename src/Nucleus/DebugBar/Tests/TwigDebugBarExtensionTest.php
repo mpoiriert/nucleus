@@ -34,7 +34,7 @@ class TwigDebugBarExtensionTest extends Twig_Test_IntegrationTestCase
 
 class JavascriptRenderer extends \DebugBar\JavascriptRenderer
 {
-    public function render($initialize = true)
+    public function render($initialize = true, $renderStackedData = true)
     {
         return 'debugToolbar';
     }
