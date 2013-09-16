@@ -115,6 +115,10 @@ $(function() {
             var is_array = false;
             var localized = $this.hasClass('localized');
 
+            if ($this.hasClass('serialized-in-data')) {
+                v = $this.data('serialized');
+            }
+
             if (!v && ignoreEmptyValues) {
                 return;
             }
@@ -241,7 +245,7 @@ $(function() {
     };
 
     var delete_table_row = function(table, id) {
-        table.find('input[value="' + JSON.stringify(id) + '"]').parents('tr').remove();
+        table.find("input[value='" + JSON.stringify(id) + "']").parents('tr').remove();
     };
 
     var create_modal = function(title, view) {
@@ -474,6 +478,15 @@ $(function() {
             this.$el.empty().append(table).append(tb.render().el);
             this.unfreeze();
 
+            if (!this.value_controller) {
+                $('<input />')
+                    .attr({ type: 'hidden', name: this.field.name})
+                    .addClass('serialized-in-data')
+                    .data('type', this.field.formated_type)
+                    .data('serialized', this.data)
+                    .appendTo(this.$el);
+            }
+
             tb.buttons().first().addClass('disabled');
             table.find('tbody tr').on('click', function() {
                 tb.buttons().first().removeClass('disabled');
@@ -481,12 +494,7 @@ $(function() {
 
             this.listenTo(tb, 'btn-click', function(controller, action) {
                 if (action == 'remove') {
-                    if (this.value_controller) {
-                        this.executeRemove(serialize_table(table));
-                    } else {
-                        delete_table_row(table, serialize_table(table));
-                        this.refresh();
-                    }
+                    this.executeRemove(serialize_table(table));
                 } else if (action == 'add') {
                     this.renderAdd();
                 } else if (action == 'create') {
@@ -496,9 +504,14 @@ $(function() {
         },
         executeRemove: function(id) {
             this.freeze();
-            var action = new Dashboard.Action(this.value_controller.controller, 'remove' + this.field.name);
-            this.listenTo(action, 'response', this.refresh);
-            action.execute(_.extend({}, this.data, id));
+            if (this.value_controller) {
+                var action = new Dashboard.Action(this.value_controller.controller, 'remove' + this.field.name);
+                this.listenTo(action, 'response', this.refresh);
+                action.execute(_.extend({}, this.data, id));
+            } else {
+                this.updateData();
+                this.refresh();
+            }
         },
         renderCreate: function() {
             var options = {
@@ -528,7 +541,9 @@ $(function() {
                 });
             } else {
                 this.listenTo(view, 'submit', function(data) {
+                    modal.modal('hide').remove();
                     this.data.push(data);
+                    this.updateData();
                     this.refresh();
                 });
             }
@@ -562,6 +577,11 @@ $(function() {
             });
             
             modal.modal('show');
+        },
+        updateData: function() {
+            var data = {};
+            data[this.field.name] = this.data;
+            this.trigger('submit', data);
         }
     });
 
@@ -776,6 +796,7 @@ $(function() {
             });
         },
         renderRelatedTab: function(fieldName, pan) {
+            var self = this;
             var field = get_field(this.options.fields, fieldName);
             var data = {};
 
@@ -786,8 +807,16 @@ $(function() {
             }
 
             var view = new Dashboard.RelatedModelsView({
+                controller: this.parent.action.controller,
                 field: field,
                 data: data
+            });
+
+            this.listenTo(view, 'submit', function(data) {
+                _.each(get_identifiers(this.options.fields), function(f) {
+                    data[f.name] = self.model[f.name];
+                });
+                this.trigger('submit', data);
             });
 
             pan.empty().append(view.render().el);

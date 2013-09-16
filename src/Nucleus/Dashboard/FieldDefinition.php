@@ -405,6 +405,13 @@ class FieldDefinition
      */
     public function setValue($object, $value)
     {
+        if ($this->isArray && $this->relatedModel !== null) {
+            $m = $this->relatedModel;
+            $value = array_map(function($v) use ($m) {
+                return $m->instanciateObject($v);
+            }, $value);
+        }
+
         if ($this->isAccessedUsingProperty()) {
             $object->{$this->property} = $value;
             return $this;
