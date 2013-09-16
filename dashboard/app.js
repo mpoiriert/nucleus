@@ -240,6 +240,10 @@ $(function() {
         return data;
     };
 
+    var delete_table_row = function(table, id) {
+        table.find('input[value="' + JSON.stringify(id) + '"]').parents('tr').remove();
+    };
+
     var create_modal = function(title, view) {
         var modal = $(render_template('#modal-tpl', { title: title })).appendTo('body');
         modal.find('.modal-body').append(view.el);
@@ -415,6 +419,10 @@ $(function() {
         className: 'related-models-view',
         initialize: function() {
             Dashboard.RelatedModelsView.__super__.initialize.apply(this);
+            this.field = this.options.field;
+            this.data = this.options.data;
+            this.value_controller = this.field.value_controller;
+            this.model = this.field.related_model;
         },
         render: function() {
             this.$el.html('<em>Loading...</em>');
@@ -422,42 +430,46 @@ $(function() {
             return this;
         },
         refresh: function() {
-            var action = new Dashboard.Action(this.options.controller, 'list' + this.options.name);
             this.freeze();
-            this.listenTo(action, 'response', this.renderTable);
-            action.execute(this.options.query_data)
+            if (this.value_controller) {
+                var action = new Dashboard.Action(this.value_controller.controller, 'list' + this.field.name);
+                this.listenTo(action, 'response', this.renderTable);
+                action.execute(this.data);
+            } else {
+                this.renderTable(this.data);
+            }
         },
         renderTable: function(data) {
-            var table = render_table(_.filter(this.options.model.fields, _.bind(function(f) {
-                return f.name != this.options.remote_id; }, this)), data);
+            var table = render_table(_.filter(this.model.fields, _.bind(function(f) {
+                return !this.value_controller || f.name != this.value_controller.remote_id; }, this)), data);
 
             var buttons = [];
-            if (_.contains(this.options.model.actions, 'remove')) {
+            if (!this.model.controller || _.contains(this.model.actions, 'remove')) {
                 buttons.push({
                     name: 'remove', 
-                    controller: this.options.controller,
+                    controller: '',
                     title: 'Remove',
                     icon: 'trash'
                 });
             }
-            if (_.contains(this.options.model.actions, 'create')) {
+            if (!this.model.controller || _.contains(this.model.actions, 'create')) {
                 buttons.push({
                     name: 'create',
-                    controller: this.options.controller,
+                    controller: '',
                     title: 'Add New',
                     icon: 'plus'
                 });
             }
-            if (_.contains(this.options.model.actions, 'add')) {
+            if (this.value_controller && _.contains(this.model.actions, 'add')) {
                 buttons.push({
                     name: 'add',
-                    controller: this.options.controller,
+                    controller: '',
                     title: 'Add Existing',
                     icon: 'plus'
                 });
             }
 
-            var tb = new Dashboard.ToolbarView({ buttons: buttons});
+            var tb = new Dashboard.ToolbarView({ buttons: buttons });
 
             this.$el.empty().append(table).append(tb.render().el);
             this.unfreeze();
@@ -469,7 +481,12 @@ $(function() {
 
             this.listenTo(tb, 'btn-click', function(controller, action) {
                 if (action == 'remove') {
-                    this.executeRemove(serialize_table(table));
+                    if (this.value_controller) {
+                        this.executeRemove(serialize_table(table));
+                    } else {
+                        delete_table_row(table, serialize_table(table));
+                        this.refresh();
+                    }
                 } else if (action == 'add') {
                     this.renderAdd();
                 } else if (action == 'create') {
@@ -478,45 +495,57 @@ $(function() {
             });
         },
         executeRemove: function(id) {
-            var action = new Dashboard.Action(this.options.controller, 'remove' + this.options.name);
             this.freeze();
+            var action = new Dashboard.Action(this.value_controller.controller, 'remove' + this.field.name);
             this.listenTo(action, 'response', this.refresh);
-            action.execute(_.extend({}, this.options.query_data, id));
+            action.execute(_.extend({}, this.data, id));
         },
         renderCreate: function() {
-            var action = new Dashboard.Action(this.options.model.controller, 'add', null, false);
-            var view = new Dashboard.FormWidgetView({
+            var options = {
                 tabs_for_related_models: false,
                 action_title: 'Create',
                 show_title: false,
-                model_name: this.options.model.name,
-                fields: this.options.model.fields,
-                hidden_fields: [this.options.remote_id],
-                field_visibility: ['edit'],
-                model: this.options.query_data
-            });
+                model_name: this.model.name,
+                fields: this.model.fields,
+                field_visibility: ['edit']
+            };
+
+            if (this.value_controller) {
+                options.hidden_fields = [this.value_controller.remote_id];
+                options.model = this.data;
+            }
+
+            var view = new Dashboard.FormWidgetView(options);
             var modal = create_modal(view.computeTitle(), view.render());
 
-            connect_action_to_view(action, view);
+            if (this.value_controller) {
+                var action = new Dashboard.Action(this.model.controller, 'add', null, false);
+                connect_action_to_view(action, view);
 
-            this.listenTo(action, 'response', function(data) {
-                modal.modal('hide').remove();
-                this.refresh();
-            });
+                this.listenTo(action, 'response', function(data) {
+                    modal.modal('hide').remove();
+                    this.refresh();
+                });
+            } else {
+                this.listenTo(view, 'submit', function(data) {
+                    this.data.push(data);
+                    this.refresh();
+                });
+            }
             
             modal.modal('show');
         },
         renderAdd: function() {
-            var viewAction = new Dashboard.Action(this.options.model.controller, 'view', null, false);
-            var addAction = new Dashboard.Action(this.options.controller, 'add' + this.options.name);
+            var viewAction = new Dashboard.Action(this.model.controller, 'view', null, false);
+            var addAction = new Dashboard.Action(this.value_controller.controller, 'add' + this.field.name);
             var view = new Dashboard.FormWidgetView({
                 tabs_for_related_models: false,
                 action_title: 'Add',
                 show_title: false,
-                model_name: this.options.model.name,
+                model_name: this.model.name,
                 force_edit: true,
-                fields: _.filter(this.options.model.fields, _.bind(function(f) {
-                    return f.name == this.options.local_id; }, this))
+                fields: _.filter(this.model.fields, _.bind(function(f) {
+                    return f.name == this.value_controller.local_id; }, this))
             });
             var modal = create_modal(view.computeTitle(), view.render());
 
@@ -524,7 +553,7 @@ $(function() {
             addAction.on('error', view.showError);
 
             this.listenTo(viewAction, 'response', function(data) {
-                addAction.execute(_.extend({}, data, this.options.query_data));
+                addAction.execute(_.extend({}, data, this.data));
             });
 
             this.listenTo(addAction, 'response', function(data) {
@@ -571,7 +600,7 @@ $(function() {
             if (this.options.tabs_for_related_models) {
                 tabs.push(this.options.model_name);
                 for (var i = 0; i < this.options.fields.length; i++) {
-                    if (this.options.fields[i].value_controller && this.options.fields[i].is_array) {
+                    if (this.options.fields[i].related_model && this.options.fields[i].is_array) {
                         tabs.push(this.options.fields[i].name);
                     }
                 }
@@ -592,7 +621,7 @@ $(function() {
             var values = this.model || {};
             var fields = filter_visible_fields(this.options.fields, this.options.field_visibility);
 
-            fields = _.filter(fields, function(f) { return !f.value_controller || !f.is_array; });
+            fields = _.filter(fields, function(f) { return !f.related_model || !f.is_array; });
 
             this.renderFields(parent, fields, values);
             this.renderFormButtons(parent);
@@ -750,15 +779,15 @@ $(function() {
             var field = get_field(this.options.fields, fieldName);
             var data = {};
 
-            data[field.value_controller.remote_id] = this.model[get_identifiers(this.options.fields)[0].name];
+            if (field.value_controller) {
+                data[field.value_controller.remote_id] = this.model[get_identifiers(this.options.fields)[0].name];
+            } else {
+                data = this.model[fieldName];
+            }
 
             var view = new Dashboard.RelatedModelsView({
-                controller: field.value_controller.controller,
-                remote_id: field.value_controller.remote_id,
-                local_id: field.value_controller.local_id,
-                name: field.name,
-                query_data: data,
-                model: field.related_model
+                field: field,
+                data: data
             });
 
             pan.empty().append(view.render().el);

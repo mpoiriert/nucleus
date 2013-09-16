@@ -108,3 +108,7 @@ body {
 .form-action-view .controls .value {
     line-height: 30px;
 }
+
+.form-action-view .nav-tabs {
+    width: 250px;
+}
