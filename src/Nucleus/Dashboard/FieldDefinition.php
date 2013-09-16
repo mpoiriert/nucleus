@@ -25,6 +25,8 @@ class FieldDefinition
 
     protected $relatedModelController;
 
+    protected $relatedModelActions = array('add', 'create', 'remove');
+
     protected $name;
 
     protected $description;
@@ -44,6 +46,8 @@ class FieldDefinition
     protected $getterName;
 
     protected $formFieldType;
+
+    protected $formFieldOptions = array();
 
     protected $visibility = array(
         FieldDefinition::VISIBILITY_LIST,
@@ -70,6 +74,8 @@ class FieldDefinition
     protected $valueControllerRemoteId;
 
     protected $valueControllerLocalId;
+
+    protected $i18n;
 
     public static function create()
     {
@@ -117,10 +123,13 @@ class FieldDefinition
         return $this->type . ($this->isArray ? '[]' : '');
     }
 
-    public function setRelatedModel(ModelDefinition $model, $modelController = null)
+    public function setRelatedModel(ModelDefinition $model, $modelController = null, $actions = null)
     {
         $this->relatedModel = $model;
         $this->relatedModelController = $modelController;
+        if ($actions !== null) {
+            $this->relatedModelActions = $actions;
+        }
         return $this;
     }
 
@@ -137,6 +146,11 @@ class FieldDefinition
     public function getRelatedModelController()
     {
         return $this->relatedModelController;
+    }
+
+    public function getRelatedModelActions()
+    {
+        return $this->relatedModelActions;
     }
 
     public function setIsArray($isArray = trye)
@@ -263,15 +277,21 @@ class FieldDefinition
         return $this->setterName;
     }
 
-    public function setFormFieldType($type)
+    public function setFormFieldType($type, array $options = array())
     {
         $this->formFieldType = $type;
+        $this->formFieldOptions = $options;
         return $this;
     }
 
     public function getFormFieldType()
     {
         return $this->formFieldType;
+    }
+
+    public function getFormFieldOptions()
+    {
+        return $this->formFieldOptions;
     }
 
     public function setVisibility($visibility)
@@ -335,6 +355,22 @@ class FieldDefinition
         return $this->valueControllerLocalId;
     }
 
+    public function setI18n(array $locales)
+    {
+        $this->i18n = $locales;
+        return $this;
+    }
+
+    public function isTranslatable()
+    {
+        return !empty($this->i18n);
+    }
+
+    public function getI18n()
+    {
+        return $this->i18n;
+    }
+
     /**
      * Returns the field's value from an object
      * 
@@ -349,7 +385,16 @@ class FieldDefinition
             }
             return $object->{$this->property};
         }
-        return call_user_func(array($object, $this->getGetterMethodName()));
+
+        if (!$this->isTranslatable()) {
+            return call_user_func(array($object, $this->getGetterMethodName()));
+        }
+
+        $values = array();
+        foreach ($this->i18n as $locale) {
+            $values[$locale] = call_user_func(array($object, $this->getGetterMethodName()), array(), $locale);
+        }
+        return $values;
     }
 
     /**
@@ -360,11 +405,27 @@ class FieldDefinition
      */
     public function setValue($object, $value)
     {
+        if ($this->isArray && $this->relatedModel !== null) {
+            $m = $this->relatedModel;
+            $value = array_map(function($v) use ($m) {
+                return $m->instanciateObject($v);
+            }, $value);
+        }
+
         if ($this->isAccessedUsingProperty()) {
             $object->{$this->property} = $value;
             return $this;
         }
-        call_user_func(array($object, $this->getSetterMethodName()), $value);
+
+        if (!$this->isTranslatable()) {
+            call_user_func(array($object, $this->getSetterMethodName()), $value);
+            return $this;
+        }
+
+        foreach ($value as $locale => $v) {
+            call_user_func(array($object, $this->getSetterMethodName()), $v, $locale);
+        }
+
         return $this;
     }
 }
