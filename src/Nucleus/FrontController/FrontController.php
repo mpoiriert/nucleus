@@ -154,7 +154,7 @@ class FrontController
             $executionResult = $this->frontControllerExceptionHandler->handleException($e, $request, $response);
         }
         
-        $finalResponse = $this->completeResponse($executionResult, $request, $response, $result);
+        $finalResponse = $this->completeResponse($executionResult, $request, $response);
         $finalResponse->prepare($request);
         return $finalResponse;
     }
