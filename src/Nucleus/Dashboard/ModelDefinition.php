@@ -273,7 +273,7 @@ class ModelDefinition
         $array = array();
         $class = new ReflectionClass($obj);
         foreach ($this->getFields() as $f) {
-            if (!$f->isArray() || !$f->hasRelatedModel()) {
+            if (!$f->hasValueController() || !$f->isArray()) {
                 $array[$f->getProperty()] = $f->getValue($obj);
             }
         }

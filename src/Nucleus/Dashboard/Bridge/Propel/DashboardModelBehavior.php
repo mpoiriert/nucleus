@@ -19,7 +19,10 @@ class DashboardModelBehavior extends Behavior
         'noedit' => '',
         'noview' => '',
         'noquery' => '',
-        'children' => ''
+        'children' => '',
+        'noaddchildren' => '',
+        'nocreatechildren' => '',
+        'noremovechildren' => ''
     );
 
     public function objectAttributes()
@@ -200,8 +203,24 @@ class DashboardModelBehavior extends Behavior
             $script .= "\n->setStringRepr(true)";
         }
 
-        if ($t = $this->getFormFieldType($column->getName())) {
-            $script .= "\n->setFormFieldType('$t')";
+        $options = array();
+        if (!($type = $this->getFormFieldType($column->getName()))) {
+            if ($column->isTemporalType()) {
+                if ($column->getType() == 'DATE') {
+                    $type = 'datepicker';
+                    $options['dateFormat'] = 'mm/dd/yy';
+                } else if ($column->getType() == 'TIME') {
+                    $type = 'timepicker';
+                    $options['timeFormat'] = 'HH:mm:ss';
+                } else if ($column->getType() == 'TIMESTAMP') {
+                    $type = 'datetimepicker';
+                    $options = array('dateFormat' => 'yy-mm-dd', 'timeFormat' => 'HH:mm:ss');
+                }
+            }
+        }
+
+        if ($type) {
+            $script .= "\n->setFormFieldType('$type', " . var_export($options, true) . ")";
         }
 
         return $script;
@@ -215,7 +234,8 @@ class DashboardModelBehavior extends Behavior
                 . "->setName('" . $name . "')\n"
                 . "->setType('string')\n"
                 . "->setOptional(true)\n"
-                . "->setVisibility(array('" . implode("', '", $this->getVisibility($name, array('list', 'view', 'edit'))) . "'))";
+                . "->setVisibility(array('" . implode("', '", $this->getVisibility($name, array('list', 'view', 'edit'))) . "'))\n"
+                . "->setI18n(array('fr', 'en'))";
 
         if ($t = $this->getFormFieldType($name)) {
             $script .= "\n->setFormFieldType('$t')";
@@ -229,6 +249,13 @@ class DashboardModelBehavior extends Behavior
         $table = $fk->getTable();
         $fqdn = $table->getNamespace() . '\\' . $table->getPhpName();
         $controllerFqdn = $table->getPhpName() . 'DashboardController';
+        
+        $actions = array();
+        foreach (array('add', 'create', 'remove') as $a) {
+            if (!in_array($table->getName(), $this->getListParameter("no{$a}children"))) {
+                $actions[] = $a;
+            }
+        }
 
         $lcols = $fk->getLocalColumnObjects();
         $lcol = $lcols[0];
@@ -241,7 +268,7 @@ class DashboardModelBehavior extends Behavior
                 . "->setName('" . $table->getName() . "s')\n"
                 . "->setType('object[]')\n"
                 . "->setVisibility(array('view', 'edit'))\n"
-                . "->setRelatedModel(\\$fqdn::getDashboardModelDefinition(), '$controllerFqdn')\n"
+                . "->setRelatedModel(\\$fqdn::getDashboardModelDefinition(), '$controllerFqdn', array('" . implode("', '", $actions) . "'))\n"
                 . "->setValueController('" . $this->getTable()->getPhpName() . "DashboardController', '" . $lcol->getPhpName() . "', '" . $fcol->getPhpName() . "')";
 
         return $script;
