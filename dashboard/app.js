@@ -1225,23 +1225,37 @@ $(function() {
                 if (item instanceof Dashboard.Menu) {
                     if (self.options.render_submenus) {
                         var ul = item.render(false, true).$el;
+                        var toggle = a;
 
-                        a.html(name + ' <b class="caret"></b>');
                         if (!submenu) {
-                            a.addClass("dropdown-toggle").data('toggle', "dropdown");
+                            toggle = $('<a href="#" class="btn"><b class="caret"></b></a>');
+                            var child = _.toArray(item.items)[0];
+                            a.on('click', function(e) {
+                                Dashboard.app.runAction(child.controller, child.name);
+                                self.trigger('click', child);
+                                e.preventDefault();
+                            });
                         }
+
+                        toggle.addClass("dropdown-toggle").data('toggle', "dropdown");
 
                         if (as_buttons) {
                             a.addClass('btn');
-                            var grp = $('<div class="btn-group" />').append(a).append(ul);
+                            var grp = $('<div class="btn-group" />').append(a);
+                            if (!submenu) {
+                                grp.append(toggle);
+                            }
+                            grp.append(ul);
                             li.append(grp);
                         } else {
+                            li.append(a);
                             if (submenu) {
                                 li.addClass('dropdown-submenu');
+                                li.append(toggle);
                             } else {
                                 li.addClass('dropdown');
                             }
-                            li.append(a).append(ul);
+                            li.append(ul);
                         }
                     } else {
                         a.appendTo(li).on('click', function(e) {
