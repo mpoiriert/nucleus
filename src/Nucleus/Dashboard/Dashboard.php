@@ -333,7 +333,8 @@ class Dashboard
                     'name' => $m->getName(),
                     'identifier' => array_map(function($f) { return $f->getProperty(); }, $m->getIdentifierFields()),
                     'repr' => $m->getStringReprField()->getProperty(),
-                    'controller' => $f->getRelatedModelController()
+                    'controller' => $f->getRelatedModelController(),
+                    'actions' => $f->getRelatedModelActions()
                 );
 
                 if ($recurse) {
@@ -344,6 +345,7 @@ class Dashboard
                 'type' => $f->getType(),
                 'is_array' => $f->isArray(),
                 'field_type' => $f->getFormFieldType(),
+                'field_options' => $f->getFormFieldOptions(),
                 'formated_type' => $f->getFormatedType(),
                 'name' => $f->getProperty(),
                 'title' => $f->getName(),
@@ -353,7 +355,8 @@ class Dashboard
                 'identifier' => $f->isIdentifier(),
                 'visibility' => $f->getVisibility(),
                 'related_model' => $related,
-                'value_controller' => $valueController
+                'value_controller' => $valueController,
+                'i18n' => $f->getI18n()
             );
         }, $fields));
     }

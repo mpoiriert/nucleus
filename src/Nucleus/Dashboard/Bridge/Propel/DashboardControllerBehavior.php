@@ -13,8 +13,7 @@ class DashboardControllerBehavior extends Behavior
         'credentials' => null,
         'menu' => null,
         'edit' => 'true',
-        'is_concrete_parent' => 'false',
-        'noaddchildren' => ''
+        'is_concrete_parent' => 'false'
     );
 
     protected $additionalBuilders = array(
