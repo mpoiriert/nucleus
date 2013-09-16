@@ -16,16 +16,11 @@ namespace Nucleus\IService\Cache;
  * 
  * @Target({"METHOD"})
  */
-class Cacheable
+class Invalidate
 {
     /**
-     * @var integer
-     */
-    public $timeToLive = 0;
-    
-    /**
      * The cache key name if specified. Can use the parameters of the entry
-     * to replace some value. Usefull in junction of Invalidate annotation
+     * to replace some value. Use in junction of the Cacheable annotation
      * 
      * Ex: keyName="salt.$paramName1,$paramName2" 
      * 

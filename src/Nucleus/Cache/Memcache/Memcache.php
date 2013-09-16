@@ -70,6 +70,12 @@ class Memcache extends BaseCacheService
         $entry = $this->memcache->get($key);
         return $entry !== false ? $entry : null;
     }
+    
+    public function delete($name, $namespace = ICacheService::NAMESPACE_DEFAULT) 
+    {
+        $key = $this->getKey($name, $namespace);
+        $this->memcache->delete($key);
+    }
 
     public function storeEntry($name, $entry, $timeToLive, $namespace)
     {

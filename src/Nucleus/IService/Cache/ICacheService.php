@@ -57,6 +57,14 @@ interface ICacheService
     public function has($name, $namespace = ICacheService::NAMESPACE_DEFAULT);
     
     /**
+     * Delete a cache entry base on it's name and namespace
+     * 
+     * @param string $name
+     * @param string $namespace
+     */
+    public function delete($name, $namespace = ICacheService::NAMESPACE_DEFAULT);
+    
+    /**
      * Clear a specific namespace
      * 
      * @param string $namespace

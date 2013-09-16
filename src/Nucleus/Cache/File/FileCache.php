@@ -71,6 +71,12 @@ class FileCache extends BaseCacheService
         $this->fileSystem->dumpFile($file, $entry);
     }
     
+    public function delete($name, $namespace = ICacheService::NAMESPACE_DEFAULT) 
+    {
+        $key = $this->getFile($name, $namespace);
+        $this->fileSystem->remove(array($key));
+    }
+    
     private function getFile($name, $namespace)
     {
         $namespace = $this->sanitize($namespace);
