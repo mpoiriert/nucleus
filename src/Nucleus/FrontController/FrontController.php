@@ -14,8 +14,9 @@ use Nucleus\Routing\Router;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Nucleus\IService\EventDispatcher\IEventDispatcherService;
-use Nucleus\IService\FrontController\UnableToAdaptResponseToContentTypeException;
 use Nucleus\IService\FrontController\IExceptionHandler;
+use Nucleus\IService\FrontController\Error404Exception;
+use Symfony\Component\Routing\Exception\ResourceNotFoundException;
 use Exception;
 
 /**
@@ -103,10 +104,28 @@ class FrontController
     public function handleRequest(Request $request)
     {
         $this->routing->setCurrentRequest($request);
-        $result = $this->routing->match($request->getPathInfo());
-        $request->request->add($result);
+        
+        $response = new Response();
+        
+        try {
+            $result = $this->routing->match($request->getPathInfo());
+            $request->request->add($result);
+        } catch (ResourceNotFoundException $e) {
+            $exception = new Error404Exception($e);
+            $executionResult = $this->frontControllerExceptionHandler->handleException(
+                $exception, 
+                $request, 
+                $response
+            );
+            $this->completeResponse($executionResult, $request, $response)->send();
+            return;
+        }
+        
         $this->execute(
-            $result['_service']['name'], $result['_service']['method'], $request
+            $result['_service']['name'], 
+            $result['_service']['method'], 
+            $request, 
+            $response
         )->send();
     }
 
@@ -118,10 +137,13 @@ class FrontController
      * 
      * @return Response
      */
-    public function execute($serviceName, $methodName, Request $request)
+    public function execute($serviceName, $methodName, Request $request, Response $response = null)
     {
         $this->routing->setCurrentRequest($request);
-        $response = new Response();
+        if(is_null($response)) {
+            $response = new Response();
+        }
+        
         $parameters = array_merge($request->query->all(), $request->request->all());
         $service = $this->serviceContainer->getServiceByName($serviceName);
         try {
@@ -131,23 +153,31 @@ class FrontController
         } catch(Exception $e) {
             $executionResult = $this->frontControllerExceptionHandler->handleException($e, $request, $response);
         }
-        if($executionResult instanceof RedirectResponse){
-            $response->prepare($request);
-            return $executionResult;
-        }
-        $result = array('result' => $executionResult);
-        $this->completeResponse($request, $response, $result);
-        $response->prepare($request);
-        return $response;
+        
+        $finalResponse = $this->completeResponse($executionResult, $request, $response, $result);
+        $finalResponse->prepare($request);
+        return $finalResponse;
     }
 
-    private function completeResponse(Request $request, Response $response, $result)
+    /**
+     * @param mixed $executionResult
+     * @param Request $request
+     * @param Response $response
+     * @return Response
+     */
+    private function completeResponse($executionResult, Request $request, Response $response)
     {
+        if($executionResult instanceof RedirectResponse){
+            return $executionResult;
+        }
+        
+        $result = array('result' => $executionResult);
         if($response->getContent()) {
-           return; 
+           return $response;
         }
         $contentTypes = $request->getAcceptableContentTypes();
         $this->processContentTypes($contentTypes, $request, $response, $result);
+        return $response;
     }
     
     private function processContentTypes($contentTypes, Request $request, Response $response, $result) 
