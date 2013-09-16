@@ -194,6 +194,23 @@ $(function() {
         return vfields;
     };
 
+    var find_indexes_matching_pk = function(values, id) {
+        var indexes = [];
+        mainloop:
+        for (var i = 0; i < values.length; i++) {
+            for (var k in id) {
+                if (values[i][k] != id[k]) {
+                    continue mainloop;
+                }
+            }
+            indexes.push(i);
+        }
+        return indexes;
+    };
+
+    var find_object_matching_pk = function(values, id) {
+        return values[find_indexes_matching_pk(values, id)[0]];
+    };
 
     var format_value = function(v, f) {
         if (f && f.i18n) {
@@ -453,7 +470,17 @@ $(function() {
                     name: 'remove', 
                     controller: '',
                     title: 'Remove',
-                    icon: 'trash'
+                    icon: 'trash',
+                    disabled: true
+                });
+            }
+            if (!this.model.controller || _.contains(this.model.actions, 'edit')) {
+                buttons.push({
+                    name: 'edit', 
+                    controller: '',
+                    title: 'Edit',
+                    icon: 'edit',
+                    disabled: true
                 });
             }
             if (!this.model.controller || _.contains(this.model.actions, 'create')) {
@@ -487,14 +514,15 @@ $(function() {
                     .appendTo(this.$el);
             }
 
-            tb.buttons().first().addClass('disabled');
             table.find('tbody tr').on('click', function() {
-                tb.buttons().first().removeClass('disabled');
+                tb.buttons().removeClass('disabled');
             });
 
             this.listenTo(tb, 'btn-click', function(controller, action) {
                 if (action == 'remove') {
                     this.executeRemove(serialize_table(table));
+                } else if (action == 'edit') {
+                    this.renderEdit(serialize_table(table)); 
                 } else if (action == 'add') {
                     this.renderAdd();
                 } else if (action == 'create') {
@@ -509,26 +537,56 @@ $(function() {
                 this.listenTo(action, 'response', this.refresh);
                 action.execute(_.extend({}, this.data, id));
             } else {
+                var index_to_delete = find_indexes_matching_pk(this.data, id);
+                index_to_delete.reverse();
+
+                for (var i = 0; i < index_to_delete.length; i++) {
+                    delete this.data[index_to_delete[i]];
+                }
+
                 this.updateData();
                 this.refresh();
             }
         },
-        renderCreate: function() {
-            var options = {
-                tabs_for_related_models: false,
-                action_title: 'Create',
-                show_title: false,
-                model_name: this.model.name,
-                fields: this.model.fields,
-                field_visibility: ['edit']
-            };
+        renderEdit: function(id) {
+            var view, modal;
+
+            var create_form = _.bind(function(data) {
+                view = this.createModelForm(data);
+                modal = create_modal(view.computeTitle(), view.render());
+                return view;
+            }, this);
 
             if (this.value_controller) {
-                options.hidden_fields = [this.value_controller.remote_id];
-                options.model = this.data;
+                var viewAction = new Dashboard.Action(this.model.controller, 'view', null, false);
+                this.listenTo(viewAction, 'error', this.showError);
+                this.listenTo(viewAction, 'response', function(data) {
+                    create_form(data);
+                    var action = new Dashboard.Action(this.model.controller, 'save', null, false);
+                    connect_action_to_view(action, view);
+                    this.listenTo(action, 'response', function() {
+                        modal.modal('hide').remove();
+                        this.refresh();
+                    });
+                    modal.modal('show');
+                });
+                viewAction.execute(_.extend({}, id, this.data));
+            } else {
+                var index = find_indexes_matching_pk(this.data, id)[0];
+                create_form(this.data[index]);
+                this.listenTo(view, 'submit', function(data) {
+                    modal.modal('hide').remove();
+                    this.data[index] = data;
+                    this.updateData();
+                    this.refresh();
+                });
+                modal.modal('show');
             }
-
-            var view = new Dashboard.FormWidgetView(options);
+        },
+        renderCreate: function() {
+            var view = this.createModelForm(this.data, {
+                fields: _.filter(this.model.fields, function(f) { return !f.identifier; })
+            });
             var modal = create_modal(view.computeTitle(), view.render());
 
             if (this.value_controller) {
@@ -549,6 +607,24 @@ $(function() {
             }
             
             modal.modal('show');
+        },
+        createModelForm: function(data, options) {
+            var options = _.extend({
+                tabs_for_related_models: false,
+                action_title: 'Create',
+                show_title: false,
+                model_name: this.model.name,
+                fields: this.model.fields,
+                field_visibility: ['edit', 'view'],
+                model: data
+            }, options || {});
+
+            if (this.value_controller) {
+                options.hidden_fields = [this.value_controller.remote_id];
+            }
+
+            var view = new Dashboard.FormWidgetView(options);
+            return view;
         },
         renderAdd: function() {
             var viewAction = new Dashboard.Action(this.model.controller, 'view', null, false);
@@ -816,7 +892,7 @@ $(function() {
                 _.each(get_identifiers(this.options.fields), function(f) {
                     data[f.name] = self.model[f.name];
                 });
-                this.trigger('submit', data);
+                this.trigger('submit', data, false);
             });
 
             pan.empty().append(view.render().el);
@@ -1141,7 +1217,8 @@ $(function() {
         },
         pipe: function(data) {
             this.view && this.view.freeze();
-            var pipe = this.action.pipe(data);
+            var link_events = arguments.length > 1 ? arguments[1] : true;
+            var pipe = this.action.pipe(data, link_events);
         },
         _redirectHandler: function(controller, action, data) { 
             this.trigger('redirect', controller, action, data); 
@@ -1227,10 +1304,13 @@ $(function() {
             this.trigger('error', message);
         },
         pipe: function(data) {
+            var link_events = arguments.length > 1 ? arguments[1] : true;
             if (this.allow_flow && this.schema.output.flow == 'pipe') {
                 var action = new Dashboard.Action(this.controller, this.schema.output.next_action, data);
-                this.listenTo(action, 'response', function(resp) { this.trigger('response', resp); });
-                this.listenTo(action, 'error', function(msg) { this.trigger('error', msg); });
+                if (link_events) {
+                    this.listenTo(action, 'response', function(resp) { this.trigger('response', resp); });
+                    this.listenTo(action, 'error', function(msg) { this.trigger('error', msg); });
+                }
                 action.override_method = 'post';
                 action.execute();
                 return action;

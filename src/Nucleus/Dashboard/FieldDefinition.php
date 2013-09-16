@@ -409,7 +409,7 @@ class FieldDefinition
             $m = $this->relatedModel;
             $value = array_map(function($v) use ($m) {
                 return $m->instanciateObject($v);
-            }, $value);
+            }, array_filter($value));
         }
 
         if ($this->isAccessedUsingProperty()) {

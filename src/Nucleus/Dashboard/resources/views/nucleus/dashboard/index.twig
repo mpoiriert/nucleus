@@ -39,7 +39,7 @@
     <div class="btn-group">
     <% _.each(buttons, function(btn) { %>
       <% if (btn.name != current_action) { %>
-        <a href="<%= base_url + btn.controller + '/' + btn.name %>" data-controller="<%= btn.controller %>" data-action="<%= btn.name %>" class="btn"><i class="icon-<%= btn.icon %>"></i> <%= btn.title %></a>
+        <a href="<%= base_url + btn.controller + '/' + btn.name %>" data-controller="<%= btn.controller %>" data-action="<%= btn.name %>" class="btn <% if (btn.disabled) print('disabled'); %>"><i class="icon-<%= btn.icon %>"></i> <%= btn.title %></a>
       <% } %>
     <% }); %>
     </div>
