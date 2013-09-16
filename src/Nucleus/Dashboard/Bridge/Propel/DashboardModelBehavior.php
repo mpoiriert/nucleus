@@ -234,7 +234,8 @@ class DashboardModelBehavior extends Behavior
                 . "->setName('" . $name . "')\n"
                 . "->setType('string')\n"
                 . "->setOptional(true)\n"
-                . "->setVisibility(array('" . implode("', '", $this->getVisibility($name, array('list', 'view', 'edit'))) . "'))";
+                . "->setVisibility(array('" . implode("', '", $this->getVisibility($name, array('list', 'view', 'edit'))) . "'))\n"
+                . "->setI18n(array('fr', 'en'))";
 
         if ($t = $this->getFormFieldType($name)) {
             $script .= "\n->setFormFieldType('$t')";

@@ -355,7 +355,8 @@ class Dashboard
                 'identifier' => $f->isIdentifier(),
                 'visibility' => $f->getVisibility(),
                 'related_model' => $related,
-                'value_controller' => $valueController
+                'value_controller' => $valueController,
+                'i18n' => $f->getI18n()
             );
         }, $fields));
     }

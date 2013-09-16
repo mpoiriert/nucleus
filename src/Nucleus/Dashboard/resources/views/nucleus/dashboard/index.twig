@@ -60,42 +60,18 @@
     </div>
   </script>
 
-  <script type="text/template" id="form-action-tpl">
-    <% _.each(fields, function(field) { %>
-      <% if (!_.contains(hidden_fields, field.name)) { %>
-        <div class="control-group">
-          <label class="control-label" for="<%= field.name %>"><%= field.title %></label>
-          <div class="controls">
-            <% if (force_edit || _.contains(field.visibility, 'edit')) { %>
-              <% if (field.value_controller && !field.is_array) { %>
-                <select name="<%= field.name %>" data-type="<%= field.formated_type %>" data-value="<%= values[field.name] || field.defaultValue %>"
-                  data-url="/<%= field.value_controller.controller %>/listAll?__offset=-1" data-related='<%= JSON.stringify(field.related_model) %>' class="related">
-                </select>
-              <% } else if (field.field_type == 'textarea') { %>
-                <textarea name="<%= field.name %>" data-type="<%= field.formated_type %>" class="input-xlarge"><%= values[field.name] || field.defaultValue %></textarea>
-              <% } else if (field.field_type == 'checkbox' || field.field_type == 'radio') { %>
-                <input type="<%= field.field_type %>" name="<%= field.name %>" value="1"
-                  data-type="<%= field.formated_type %>" <% if ((typeof(values[field.name]) != 'undefined' && values[field.name]) || (typeof(values[field.name]) == 'undefined' && field.defaultValue === true)) print("checked"); %>>
-              <% } else { %>
-                <input type="<% if (_.contains(['text', 'password'], field.field_type)) print(field.field_type); else print('text'); %>" name="<%= field.name %>" value="<%= values[field.name] || field.defaultValue %>"
-                  data-type="<%= field.formated_type %>" class="input-xlarge"
-                  <% if (!_.contains(['text', 'password'], field.field_type)) print('data-fieldtype="' + field.field_type + '" data-fieldoptions=\'' + JSON.stringify(field.field_options) + "'"); %>>
-              <% } %>
-            <% } else { %>
-              <% if (field.identifier && typeof(values[field.name]) != 'undefined') { %>
-                <input type="hidden" name="<%= field.name %>" value="<%= values[field.name] %>">
-              <% } %>
-              <%= values[field.name] %>
-            <% } %>
-          </div>
-        </div>
-      <% } else { %>
-        <input type="hidden" name="<%= field.name %>" value="<%= values[field.name] %>">
-      <% } %>
-    <% }) %>
-    <div class="form-actions">
-      <button type="submit" class="btn btn-primary">Submit</button>
-    </div>
+  <script type="text/template" id="table-tpl">
+    <table class="table table-bordered table-striped table-condensed">
+      <thead>
+        <tr>
+          <th width="30"></th>
+          <% _.each(fields, function(f) { %>
+            <th data-field="<%= f.name %>"><%= f.title %></th>
+          <% }) %>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </script>
 
   <script type="text/template" id="object-action-tpl">
@@ -110,20 +86,6 @@
       </dd>
     <% }) %>
     </dl>
-  </script>
-
-  <script type="text/template" id="list-action-tpl">
-    <table class="table table-bordered table-striped table-condensed">
-      <thead>
-        <tr>
-          <th width="30"></th>
-          <% _.each(fields, function(f) { %>
-            <th data-field="<%= f.name %>"><%= f.title %></th>
-          <% }) %>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
   </script>
 
   <script type="text/template" id="list-filters-tpl">

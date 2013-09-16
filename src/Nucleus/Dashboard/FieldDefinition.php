@@ -75,6 +75,8 @@ class FieldDefinition
 
     protected $valueControllerLocalId;
 
+    protected $i18n;
+
     public static function create()
     {
         return new FieldDefinition();
@@ -353,6 +355,22 @@ class FieldDefinition
         return $this->valueControllerLocalId;
     }
 
+    public function setI18n(array $locales)
+    {
+        $this->i18n = $locales;
+        return $this;
+    }
+
+    public function isTranslatable()
+    {
+        return !empty($this->i18n);
+    }
+
+    public function getI18n()
+    {
+        return $this->i18n;
+    }
+
     /**
      * Returns the field's value from an object
      * 
@@ -367,7 +385,16 @@ class FieldDefinition
             }
             return $object->{$this->property};
         }
-        return call_user_func(array($object, $this->getGetterMethodName()));
+
+        if (!$this->isTranslatable()) {
+            return call_user_func(array($object, $this->getGetterMethodName()));
+        }
+
+        $values = array();
+        foreach ($this->i18n as $locale) {
+            $values[$locale] = call_user_func(array($object, $this->getGetterMethodName()), array(), $locale);
+        }
+        return $values;
     }
 
     /**
@@ -382,7 +409,16 @@ class FieldDefinition
             $object->{$this->property} = $value;
             return $this;
         }
-        call_user_func(array($object, $this->getSetterMethodName()), $value);
+
+        if (!$this->isTranslatable()) {
+            call_user_func(array($object, $this->getSetterMethodName()), $value);
+            return $this;
+        }
+
+        foreach ($value as $locale => $v) {
+            call_user_func(array($object, $this->getSetterMethodName()), $v, $locale);
+        }
+
         return $this;
     }
 }

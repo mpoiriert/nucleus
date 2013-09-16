@@ -62,7 +62,10 @@ $(function() {
             } else if (err_callback) {
                 err_callback && err_callback(data.result.message);
             }
-        }, this));
+        }, this))
+        .fail(function(xhr, status) {
+            err_callback && err_callback(status);
+        });
     };
 
     RestEndpoint.prototype.clearCache = function() {
@@ -85,6 +88,13 @@ $(function() {
 
     // ----------------------------------------------------
     
+    var render_template = function(id, data) {
+        var tpl = _.template($(id).html());
+        return tpl(_.extend({
+            render_template: render_template
+        }, data));
+    };
+
     var serialize = function(container) {
         var ignoreEmptyValues = arguments.length > 1 ? arguments[1] : false;
         var o = {};
@@ -94,20 +104,26 @@ $(function() {
             "float": parseFloat
         };
         $(container).find(':input:not(button)').each(function() {
-            if (this.type == 'radio' && !this.checked) {
+            var $this = $(this);
+
+            if ($this.hasClass('no-serialize') || (this.type == 'radio' && !this.checked)) {
                 return;
             }
 
-            var $this = $(this), 
-                v = this.value || '', 
-                t = $this.data('type') || 'string', 
-                is_array = false;
+            var v = this.value || '';
+            var t = $this.data('type') || 'string';
+            var is_array = false;
+            var localized = $this.hasClass('localized');
 
             if (!v && ignoreEmptyValues) {
                 return;
             }
 
-            if (this.type == 'checkbox' && (t == 'bool' || t == 'boolean')) {
+            if (localized) {
+                v = $this.data('localized');
+            } else if (is_array) {
+                v = v.split(',');
+            } else if (this.type == 'checkbox' && (t == 'bool' || t == 'boolean')) {
                 if (!this.checked && ignoreEmptyValues) {
                     return;
                 }
@@ -122,8 +138,8 @@ $(function() {
             var cast = map[t] !== undefined ? map[t] : function(v) { return v; };
 
             if (is_array) {
-                v = _.map(v.split(","), cast);
-            } else {
+                v = _.map(v, cast);
+            } else if (!localized) {
                 v = cast(v);
             }
 
@@ -175,7 +191,10 @@ $(function() {
     };
 
 
-    var format_value = function(v) {
+    var format_value = function(v, f) {
+        if (f && f.i18n) {
+            v = v[f.i18n[0]];
+        }
         if (v === false) {
             return 'false';
         } else if (v === true) {
@@ -185,10 +204,9 @@ $(function() {
     };
 
     var render_table = function(fields, rows, with_value_controller) {
-        var tpl = _.template($('#list-action-tpl').html()),
-            vfields = filter_visible_fields(fields, 'list'),
-            table = $(tpl({ fields: vfields })),
-            tbody = '';
+        var vfields = filter_visible_fields(fields, 'list');
+        var table = $(render_template('#table-tpl', { fields: vfields }));
+        var tbody = '';
 
         _.each(rows, function(row, index) {
             tbody += '<tr><td align="center"><input type="radio" name="id" value=\'' + JSON.stringify(build_pk(fields, row)) + '\'></td>';
@@ -199,9 +217,9 @@ $(function() {
                     var url = Dashboard.config.base_url + "/" + f.value_controller.controller + "/edit?" + f.value_controller.remote_id + '=' + row[f.name];
                     tbody += '<a href="' + url + '" class="related" data-model="' + f.related_model.name + '" data-controller="' + f.value_controller.controller + '" ' +
                              'data-action="edit" data-params=\'{"' + f.value_controller.remote_id + '": "' + row[f.name] + '"}\'>' + 
-                             format_value(row[f.name]) + '</a>';
+                             format_value(row[f.name], f) + '</a>';
                 } else {
-                    tbody += format_value(row[f.name]);
+                    tbody += format_value(row[f.name], f);
                 }
                 tbody += '</td>';
             });
@@ -223,8 +241,7 @@ $(function() {
     };
 
     var create_modal = function(title, view) {
-        var tpl = _.template($('#modal-tpl').html());
-        var modal = $(tpl({ title: title })).appendTo('body');
+        var modal = $(render_template('#modal-tpl', { title: title })).appendTo('body');
         modal.find('.modal-body').append(view.el);
         modal.modal({ show: false });
         return modal;
@@ -249,7 +266,6 @@ $(function() {
     Dashboard.ToolbarView = Backbone.View.extend({
         tagName: 'div',
         className: 'btn-toolbar',
-        template: _.template($('#toolbar-tpl').html()),
         events: {
             "click a.btn": "btnClick"
         },
@@ -260,7 +276,7 @@ $(function() {
             this.base_url = this.options.base_url || '';
         },
         render: function() {
-            this.$el.html(this.template({ 
+            this.$el.html(render_template('#toolbar-tpl', { 
                 base_url: this.base_url, 
                 buttons: this.options.buttons,
                 current_action: this.options.current_action
@@ -401,6 +417,7 @@ $(function() {
             Dashboard.RelatedModelsView.__super__.initialize.apply(this);
         },
         render: function() {
+            this.$el.html('<em>Loading...</em>');
             this.refresh();
             return this;
         },
@@ -524,7 +541,6 @@ $(function() {
      */
     Dashboard.FormWidgetView = Dashboard.BaseWidgetView.extend({
         className: 'form-action-view form-horizontal',
-        template: _.template($('#form-action-tpl').html()),
         options: {
             title: null,
             show_title: true,
@@ -562,8 +578,7 @@ $(function() {
             }
 
             if (tabs.length > 1) {
-                var tpl = _.template($('#tabs-tpl').html());
-                this.$el.append(tpl({ tabs: tabs }));
+                this.$el.append(render_template('#tabs-tpl', { tabs: tabs }));
                 this.renderForm(this.$('.tab-pane[id="tab-0"]'));
                 this.$('.nav-tabs a[href="#tab-0"]').parent().addClass('active');
                 this.renderTabs();
@@ -579,28 +594,145 @@ $(function() {
 
             fields = _.filter(fields, function(f) { return !f.value_controller || !f.is_array; });
 
-            parent.append(this.template({ 
-                fields: fields,
-                hidden_fields: this.options.hidden_fields,
-                force_edit: this.options.force_edit,
-                values: values 
-            }));
+            this.renderFields(parent, fields, values);
+            this.renderFormButtons(parent);
+        },
+        renderFormButtons: function(parent) {
+            parent.append('<div class="form-actions"><button type="submit" class="btn btn-primary">Submit</button></div>');
+        },
+        renderFields: function(form, fields, model) {
+            var self = this;
+            _.each(fields, function(field) {
+                var value = typeof(model[field.name]) == 'undefined' ? field.defaultValue : model[field.name];
+                if (!_.contains(self.options.hidden_fields, field.name)) {
+                    form.append(self.renderField(field, value));
+                } else {
+                    form.append(self.renderHiddenField(field, value));
+                }
+            });
+        },
+        renderField: function(field, value) {
+            if (!this.options.force_edit && !_.contains(field.visibility, 'edit')) {
+                return this.wrapInBootstrapControlGroup(field.title, [
+                    this.renderHiddenField(field, value), 
+                    $('<span class="value" />').text(value)
+                ]);
+            }
+            return this.renderEditableField(field, value);
+        },
+        renderEditableField: function(field, value) {
+            var input;
+            if (field.value_controller && !field.is_array) {
+                input = this.renderValueControllerSelectBox(field, value);
+            } else if (field.field_type == 'checkbox' || field.field_type == 'radio') {
+                input = this.renderBooleanField(field, value);
+            } else {
+                input = this.renderInputField(field, value);
+            }
 
-            parent.find('select.related').each(function() {
-                var $this = $(this), m = $this.data('related'), v = $this.data('value');
-                Dashboard.api.call('get', Dashboard.config.base_url + $this.data('url'), function(resp) {
-                    for (var i = 0; i < resp.data.length; i++) {
-                        var s = v == resp.data[i][m.identifier[0]] ? 'selected="selected"' : '';
-                        $this.append('<option value="' + resp.data[i][m.identifier[0]] + '" ' + s + '>' + resp.data[i][m.repr] + '</option>');
+            var inputs = [input];
+            if (field.i18n) {
+                this.makeFieldLocalizable(inputs, input, field, value);
+            }
+
+            return this.wrapInBootstrapControlGroup(field.title, inputs);
+        },
+        renderHiddenField: function(field, value) {
+            return $('<input />').attr({ type: 'hidden', name: field.name }).val(value);
+        },
+        renderValueControllerSelectBox: function(field, value) {
+            var select = this.createInputWithAttrs('select', field).addClass('related');
+
+            var url = Dashboard.config.base_url + "/" + field.value_controller.controller  + "/listAll?__offset=-1";
+            var m = field.related_model;
+
+            select.append('<option>Loading...</option>');
+            select[0].disabled = true;
+
+            Dashboard.api.call('get',  url, function(resp) {
+                select.empty();
+                for (var i = 0; i < resp.data.length; i++) {
+                    var s = value == resp.data[i][m.identifier[0]] ? 'selected="selected"' : '';
+                    select.append('<option value="' + resp.data[i][m.identifier[0]] + '" ' + s + '>' + resp.data[i][m.repr] + '</option>');
+                }
+                select[0].disabled = false;
+            });
+
+            return select;
+        },
+        renderBooleanField: function(field, value) {
+            var input = this.createInputWithAttrs('input', field)
+                .attr('type', field.field_type)
+                .val('1');
+
+            if (value) {
+                input[0].checked = true;
+            }
+
+            return input;
+        },
+        renderInputField: function(field, value) {
+            var tagName = field.field_type == 'textarea' ? 'textarea' : 'input';
+            var input = this.createInputWithAttrs(tagName, field).val(value);
+            if (field.field_type != 'textarea') {
+                if (!_.contains(['text', 'password'], field.field_type)) {
+                    input.attr('type', 'text');
+                    input[field.field_type](field.field_options);
+                } else {
+                    input.attr('type', field.field_type);
+                }
+            }
+            return input;
+        },
+        makeFieldLocalizable: function(inputs, input, field, values) {
+            var select = this.renderLocaleSelectionBox(field);
+            inputs.unshift(select);
+
+            values = values || {};
+
+            select.data('target', input).on('change', function() {
+                input.val(values[this.value] || '');
+                $('select.localizer').each(function() {
+                    if (this.value != select.val()) {
+                        $(this).val(select.val()).change();
                     }
                 });
             });
 
-            parent.find('input[data-fieldtype]').each(function() {
-                var $this = $(this);
-                var ft = $this.data('fieldtype');
-                $this[ft]($this.data('fieldoptions'));
+            input.data('localized', values)
+                 .addClass('localized')
+                 .val(values[field.i18n[0]] || '')
+                 .on('keypress blur', function() {
+                     values[select.val()] = this.value;
+                     input.data('localized', values);
+                 });
+
+            return input;
+        },
+        renderLocaleSelectionBox: function(field) {
+            var select = $('<select />')
+                .attr('name', field.name + '.locale')
+                .addClass('localizer');
+
+            _.each(field.i18n, function(locale) {
+                select.append($('<option />').attr('value', locale).text(locale));
             });
+
+            return select;
+        },
+        createInputWithAttrs: function(tagName, field) {
+            var input = $('<' + tagName + ' />')
+                .attr('name', field.name)
+                .data('type', field.formated_type)
+                .addClass('input-xxlarge');
+            return input;
+        },
+        wrapInBootstrapControlGroup: function(label, items) {
+            var ctrlgrp = $('<div class="control-group" />');
+            ctrlgrp.append('<label class="control-label">' + label + '</label>');
+            var controls = $('<div class="controls" />').appendTo(ctrlgrp);
+            _.each(items, function(item) { controls.append(item); });
+            return ctrlgrp;
         },
         renderTabs: function() {
             var self = this;
@@ -610,6 +742,7 @@ $(function() {
 
                 if (!pan.hasClass('loaded')) {
                     self.renderRelatedTab($this.data('related'), pan);
+                    pan.addClass('loaded');
                 }
             });
         },
@@ -637,14 +770,16 @@ $(function() {
      */
     Dashboard.ObjectWidgetView = Dashboard.BaseWidgetView.extend({
         className: 'object-action-view',
-        template: _.template($('#object-action-tpl').html()),
         render: function() {
             var values = this.model || {};
 
             this.$el.empty();
             this.renderTitleWithIdentifier(this.options.model_name)
                 .renderToolbar()
-                .append(this.template({ fields: filter_visible_fields(this.options.fields, 'view'), model: this.model }));
+                .append(render_template('#object-action-tpl', { 
+                    fields: filter_visible_fields(this.options.fields, 'view'), 
+                    model: this.model 
+                }));
 
             return this;
         }
@@ -655,7 +790,6 @@ $(function() {
      */
     Dashboard.ListWidgetView = Dashboard.BaseWidgetView.extend({
         className: 'list-action-view',
-        template: _.template($('#list-action-tpl').html()),
         initialize: function() {
             Dashboard.ListWidgetView.__super__.initialize.apply(this);
             this.nbPages = 1;
@@ -735,13 +869,13 @@ $(function() {
                     popoverTimeout = setTimeout(function() {
                         Dashboard.api.call('get', Dashboard.config.base_url + '/' + a.data('controller') + '/view', a.data('params'), function(resp) {
                             var p = a.data('popover');
-                            p.options.content = _.template($('#related-popover-tpl').html())({ data: resp });
+                            p.options.content = render_template('#related-popover-tpl', { data: resp });
                             p.setContent();
                         });
                         a.popover({
                             trigger: 'manual',
                             html: true,
-                            content: '<em>loading...</em>',
+                            content: '<em>Loading...</em>',
                             title: a.data('model'),
                             placement: 'bottom'
                         }).popover('show');
@@ -774,8 +908,7 @@ $(function() {
                 return;
             }
 
-            var tpl = _.template($('#list-pagination-tpl').html());
-            var pagination = $(tpl({ nb_pages: this.nbPages }));
+            var pagination = $(render_template('#list-pagination-tpl', { nb_pages: this.nbPages }));
 
             this.$body.append(pagination);
             this.$pagination = pagination;
@@ -812,8 +945,8 @@ $(function() {
         },
         renderFilters: function() {
             this.addSidebar();
-            var tpl = _.template($('#list-filters-tpl').html()), self = this;
-            this.$sidebar.html(tpl({ fields: filter_visible_fields(this.options.fields, 'query') }));
+            var self = this;
+            this.$sidebar.html(render_template('#list-filters-tpl', { fields: filter_visible_fields(this.options.fields, 'query') }));
             this.$sidebar.find('button.filter').on('click', function(e) {
                 e.preventDefault();
                 var filters = serialize(self.$sidebar, true);
@@ -986,6 +1119,10 @@ $(function() {
 
     _.extend(Dashboard.Action.prototype, Backbone.Events, {
         getSchema: function(callback) {
+            if (this.schema) {
+                callback(this.schema);
+                return;
+            }
             Dashboard.api.get(RestEndpoint.cached(this.schema_url), _.bind(function(schema) {
                 this.schema = schema;
                 callback(schema);

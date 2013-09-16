@@ -86,3 +86,25 @@ body {
     background: #fff;
     z-index: 10000;
 }
+
+.form-action-view select.localizer {
+    width: 70px;
+    margin-right: 10px;
+    vertical-align: top;
+}
+
+.form-action-view textarea {
+    height: 100px;
+}
+
+.modal {
+    width: 800px;
+}
+
+.form-action-view .control-label {
+    font-weight: bold;
+}
+
+.form-action-view .controls .value {
+    line-height: 30px;
+}
