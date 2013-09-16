@@ -1216,6 +1216,12 @@ $(function() {
                 var li = $('<li/>').appendTo(self.$el),
                     a = $('<a href="#" />').text(name);
 
+                if (item instanceof Dashboard.Menu && _.size(item.items) == 1) {
+                    var parent = item;
+                    item = _.toArray(item.items)[0];
+                    item.icon = parent.icon;
+                }
+
                 if (item instanceof Dashboard.Menu) {
                     if (self.options.render_submenus) {
                         var ul = item.render(false, true).$el;
