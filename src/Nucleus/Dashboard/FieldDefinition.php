@@ -446,8 +446,8 @@ class FieldDefinition
             }, array_filter($value));
         }
 
-        if ($this->formFieldType == 'file' && substr($value, 0, 12) == 'data:;base64') {
-            $value = base64_decode(substr($value, 12));
+        if ($this->formFieldType == 'file' && substr($value, 0, 5) == 'data:') {
+            $value = base64_decode(substr($value, strpos($value, ',') + 1));
         }
 
         if ($this->isAccessedUsingProperty()) {
