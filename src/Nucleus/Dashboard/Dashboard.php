@@ -235,7 +235,7 @@ class Dashboard
 
         if (($model = $action->getInputModel()) !== null) {
             $json['model_name'] = $model->getName();
-            $json['fields'] = $this->getFieldsSchema($model->getFields());
+            $json['fields'] = $this->getFieldsSchema($model->getPublicFields());
         }
 
         return $json;
@@ -303,7 +303,7 @@ class Dashboard
 
         if (($model = $action->getReturnModel()) !== null) {
             $json['model_name'] = $model->getName();
-            $json['fields'] = $this->getFieldsSchema($model->getFields());
+            $json['fields'] = $this->getFieldsSchema($model->getPublicFields());
         }
 
         return $json;
@@ -338,7 +338,7 @@ class Dashboard
                 );
 
                 if ($recurse) {
-                    $related['fields'] = $self->getFieldsSchema($m->getFields(), false);
+                    $related['fields'] = $self->getFieldsSchema($m->getPublicFields(), false);
                 }
             }
             return array(
@@ -495,10 +495,19 @@ class Dashboard
      */
     protected function getInputData(Request $request)
     {
-        if ($request->getMethod() === 'POST') {
-            return json_decode($request->request->get('data'), true);
+        if ($request->getMethod() === 'GET') {
+            return $request->query->all();
         }
-        return $request->query->all();
+
+        $data = json_decode($request->request->get('data'), true);
+
+        foreach ($request->files->all() as $key => $file) {
+            if ($file->isValid()) {
+                $data[$key] = file_get_contents($file->getPathname());
+            }
+        }
+
+        return $data;
     }
 
     /**
