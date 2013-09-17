@@ -8,10 +8,10 @@ class DashboardBaseControllerBehaviorBuilder extends OMBuilder
 {
     public function getControllerBehavior()
     {
-        if ($this->getTable()->hasBehavior('dashboard_parent_controller')) {
-            return $this->getTable()->getBehavior('dashboard_parent_controller');
+        if ($this->getTable()->hasBehavior('dashboard_controller')) {
+            return $this->getTable()->getBehavior('dashboard_controller');
         }
-        return $this->getTable()->getBehavior('dashboard_controller');
+        return $this->getTable()->getBehavior('dashboard_parent_controller');
     }
 
     public function getParameter($name)
