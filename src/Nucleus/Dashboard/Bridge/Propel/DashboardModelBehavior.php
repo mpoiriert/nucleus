@@ -207,7 +207,10 @@ class DashboardModelBehavior extends Behavior
             $fks = $column->getForeignKeys();
             $fk = $fks[0];
             $table = $fk->getForeignTable();
-            if (count($fk->getForeignColumns()) == 1 && $table->hasBehavior('dashboard_controller')) {
+            if (!($b = $table->getBehavior('dashboard_controller'))) {
+                $b = $table->getBehavior('dashboard_parent_controller');
+            }
+            if (count($fk->getForeignColumns()) == 1 && $b) {
                 $fcols = $fk->getForeignColumnObjects();
                 $fcol = $fcols[0];
                 $fqdn = $table->getNamespace() . '\\' . $table->getPhpName();
@@ -310,7 +313,7 @@ class DashboardModelBehavior extends Behavior
                 . "->setName('files')\n"
                 . "->setType('object[]')\n"
                 . "->setVisibility(array('view', 'edit'))\n"
-                . "->setRelatedModel(\\UgroupMedia\\Pnp\\File\\File::getDashboardModelDefinition(), 'FileDashboardController', array('create', 'remove'))\n"
+                . "->setRelatedModel(\\UgroupMedia\\Pnp\\File\\File::getDashboardModelDefinition(), 'FileDashboardController', array('create', 'edit', 'remove'))\n"
                 . "->setValueController('FileDashboardController', 'FileBagName', 'Id'));\n\n";
 
         return $script;
