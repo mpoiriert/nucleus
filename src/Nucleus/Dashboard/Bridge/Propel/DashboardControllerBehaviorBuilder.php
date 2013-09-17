@@ -6,6 +6,8 @@ use OMBuilder;
 
 class DashboardControllerBehaviorBuilder extends OMBuilder
 {
+    public $overwrite = false;
+    
     public function getParameter($name)
     {
         if ($this->getTable()->hasBehavior('dashboard_parent_controller')) {
