@@ -17,6 +17,8 @@ class FieldDefinition
 
     protected $property;
 
+    protected $internalProperty;
+
     protected $type;
 
     protected $isArray = false;
@@ -77,6 +79,8 @@ class FieldDefinition
 
     protected $i18n;
 
+    protected $isInternal = false;
+
     public static function create()
     {
         return new FieldDefinition();
@@ -85,12 +89,26 @@ class FieldDefinition
     public function setProperty($name)
     {
         $this->property = $name;
+        if ($this->internalProperty === null) {
+            $this->internalProperty = $name;
+        }
         return $this;
     }
 
     public function getProperty()
     {
         return $this->property;
+    }
+
+    public function setInternalProperty($name)
+    {
+        $this->internalProperty = $name;
+        return $this;
+    }
+
+    public function getInternalProperty()
+    {
+        return $this->internalProperty;
     }
 
     public function setType($type)
@@ -264,7 +282,7 @@ class FieldDefinition
     public function getGetterMethodName()
     {
         if ($this->getterName === null) {
-            return 'get' . ucfirst($this->property);
+            return 'get' . ucfirst($this->internalProperty);
         }
         return $this->getterName;
     }
@@ -272,7 +290,7 @@ class FieldDefinition
     public function getSetterMethodName()
     {
         if ($this->setterName === null) {
-            return 'set' . ucfirst($this->property);
+            return 'set' . ucfirst($this->internalProperty);
         }
         return $this->setterName;
     }
@@ -371,6 +389,22 @@ class FieldDefinition
         return $this->i18n;
     }
 
+    public function isSerializable()
+    {
+        return $this->type != 'resource';
+    }
+
+    public function setInternal($internal = true)
+    {
+        $this->isInternal = $internal;
+        return $this;
+    }
+
+    public function isInternal()
+    {
+        return $this->isInternal;
+    }
+
     /**
      * Returns the field's value from an object
      * 
@@ -380,10 +414,10 @@ class FieldDefinition
     public function getValue($object)
     {
         if ($this->isAccessedUsingProperty()) {
-            if (!property_exists($object, $this->property)) {
+            if (!property_exists($object, $this->internalProperty)) {
                 return $this->defaultValue;
             }
-            return $object->{$this->property};
+            return $object->{$this->internalProperty};
         }
 
         if (!$this->isTranslatable()) {
@@ -412,8 +446,12 @@ class FieldDefinition
             }, array_filter($value));
         }
 
+        if ($this->formFieldType == 'file' && substr($value, 0, 12) == 'data:;base64') {
+            $value = base64_decode(substr($value, 12));
+        }
+
         if ($this->isAccessedUsingProperty()) {
-            $object->{$this->property} = $value;
+            $object->{$this->internalProperty} = $value;
             return $this;
         }
 

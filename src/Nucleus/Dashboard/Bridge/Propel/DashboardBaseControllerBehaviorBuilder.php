@@ -65,6 +65,10 @@ abstract class " . $this->getClassname() . "
                 $script .= $this->addChildActions($fk);
             }
         }
+
+        if ($this->getTable()->hasBehavior('file_bag')) {
+            $script .= $this->addFileBagActions();
+        }
     }
 
     protected function addListAction()
@@ -254,6 +258,50 @@ abstract class " . $this->getClassname() . "
         \$child = \\{$childQueryClassname}::create()->findPK(\${$remoteId});
         \$obj->remove{$name}(\$child);
         \$obj->save();
+    }
+";
+    }
+
+    protected function addFileBagActions()
+    {
+        $localId = $this->getStubObjectBuilder()->getClassname() . 'Id';
+        $queryClassname = $this->getStubQueryBuilder()->getFullyQualifiedClassname();
+        list($funcargs, $callargs) = $this->getPrimaryKeyAsArgs();
+        $secureAnnotation = $this->getSecureAnnotation();
+
+        return "
+
+    /**
+     * @\Nucleus\IService\Dashboard\Action(menu=false)
+     * {$secureAnnotation}
+     * @return \\UgroupMedia\\Pnp\\File\\File[]
+     */
+    public function listFiles(\${$localId})
+    {
+        \$obj = \\{$queryClassname}::create()->findPK(\${$localId});
+        return \$obj->getFiles();
+    }
+
+    /**
+     * @\Nucleus\IService\Dashboard\Action(menu=false)
+     * {$secureAnnotation}
+     */
+    public function addFiles(\${$localId}, \$Id)
+    {
+        \$obj = \\{$queryClassname}::create()->findPK(\${$localId});
+        \$file = \\UgroupMedia\\Pnp\\File\\FileQuery::create()->findPK(\$Id);
+        \$obj->addFile(\$file);
+    }
+
+    /**
+     * @\Nucleus\IService\Dashboard\Action(menu=false)
+     * {$secureAnnotation}
+     */
+    public function removeFiles(\${$localId}, \$Id)
+    {
+        \$obj = \\{$queryClassname}::create()->findPK(\${$localId});
+        \$file = \\UgroupMedia\\Pnp\\File\\FileQuery::create()->findPK(\$Id);
+        \$obj->removeFile(\$file);
     }
 ";
     }

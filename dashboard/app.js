@@ -95,18 +95,43 @@ $(function() {
         }, data));
     };
 
-    var serialize = function(container) {
-        var ignoreEmptyValues = arguments.length > 1 ? arguments[1] : false;
+    var serialize = function(container, callback) {
+        var ignoreEmptyValues = false;
+        if (arguments.length > 2) {
+            ignoreEmptyValues = callback;
+            callback = arguments[2];
+        }
+
+        var inputs = $(container).find(':input:not(button)');
+        var lock = inputs.length;
         var o = {};
         var map = {
             "int": function(v) { return parseInt(v, 10); },
             "double": parseFloat,
             "float": parseFloat
         };
-        $(container).find(':input:not(button)').each(function() {
+
+        var done = function() {
+            if (--lock == 0) {
+                callback(o);
+            }
+        };
+
+        inputs.each(function() {
             var $this = $(this);
+            var self = this;
 
             if ($this.hasClass('no-serialize') || (this.type == 'radio' && !this.checked)) {
+                return done();
+            }
+
+            if (this.type == 'file') {
+                var reader = new FileReader();
+                reader.onloadend = function(evt) {
+                    o[self.name] = reader.result;
+                    done();
+                };
+                reader.readAsDataURL(this.files[0]);
                 return;
             }
 
@@ -120,7 +145,7 @@ $(function() {
             }
 
             if (!v && ignoreEmptyValues) {
-                return;
+                return done();
             }
 
             if (localized) {
@@ -129,7 +154,7 @@ $(function() {
                 v = v.split(',');
             } else if (this.type == 'checkbox' && (t == 'bool' || t == 'boolean')) {
                 if (!this.checked && ignoreEmptyValues) {
-                    return;
+                    return done();
                 }
                 v = this.checked;
             }
@@ -148,8 +173,8 @@ $(function() {
             }
 
             o[this.name] = v;
+            done();
         });
-        return o;
     };
 
     var get_identifiers = function(fields) {
@@ -340,6 +365,7 @@ $(function() {
             refreshable: true
         },
         initialize: function() {
+            this.$el.attr('enctype', 'multipart/form-data');
             this.$body = this.$el;
             this.overrideRequestData = {};
         },
@@ -403,10 +429,14 @@ $(function() {
             this.$body = body;
         },
         toolbarClick: function(controller, action) {
-            this.trigger('tbclick', controller, action, this.serialize());
+            this.serialize(_.bind(function(data) {
+                this.trigger('tbclick', controller, action, data);
+            }, this));
         },
         handleFormSubmited: function(e) {
-            this.trigger('submit', this.serialize());
+            this.serialize(_.bind(function(data) {
+                this.trigger('submit', data);
+            }, this));
             e.preventDefault();
         },
         freeze: function() {
@@ -427,8 +457,8 @@ $(function() {
             }
             this.$error.text(message);
         },
-        serialize: function() {
-            return serialize(this.$body);
+        serialize: function(callback) {
+            serialize(this.$body, callback);
         }
     });
 
@@ -585,15 +615,19 @@ $(function() {
         },
         renderCreate: function() {
             var view = this.createModelForm(this.data, {
-                fields: _.filter(this.model.fields, function(f) { return !f.identifier; })
+                fields: this.model.fields
             });
             var modal = create_modal(view.computeTitle(), view.render());
 
             if (this.value_controller) {
                 var action = new Dashboard.Action(this.model.controller, 'add', null, false);
-                connect_action_to_view(action, view);
-
+                this.listenTo(action, 'error', view.showError);
+                this.listenTo(view, 'submit', function(data) {
+                    view.freeze();
+                    action.execute(_.extend({}, data, this.data));
+                });
                 this.listenTo(action, 'response', function(data) {
+                    view.unfreeze();
                     modal.modal('hide').remove();
                     this.refresh();
                 });
@@ -799,8 +833,9 @@ $(function() {
         renderInputField: function(field, value) {
             var tagName = field.field_type == 'textarea' ? 'textarea' : 'input';
             var input = this.createInputWithAttrs(tagName, field).val(value);
+            var knownTypes = ['text', 'password', 'file'];
             if (field.field_type != 'textarea') {
-                if (!_.contains(['text', 'password'], field.field_type)) {
+                if (!_.contains(knownTypes, field.field_type)) {
                     input.attr('type', 'text');
                     input[field.field_type](field.field_options);
                 } else {
@@ -877,7 +912,11 @@ $(function() {
             var data = {};
 
             if (field.value_controller) {
-                data[field.value_controller.remote_id] = this.model[get_identifiers(this.options.fields)[0].name];
+                if (typeof(this.model[field.value_controller.remote_id]) != 'undefined') {
+                    data[field.value_controller.remote_id] = this.model[field.value_controller.remote_id];
+                } else {
+                    data[field.value_controller.remote_id] = this.model[get_identifiers(this.options.fields)[0].name];
+                }
             } else {
                 data = this.model[fieldName];
             }
@@ -1083,9 +1122,10 @@ $(function() {
             this.$sidebar.html(render_template('#list-filters-tpl', { fields: filter_visible_fields(this.options.fields, 'query') }));
             this.$sidebar.find('button.filter').on('click', function(e) {
                 e.preventDefault();
-                var filters = serialize(self.$sidebar, true);
-                self.overrideRequestData.__filters = JSON.stringify(filters);
-                self.refresh(true);
+                serialize(self.$sidebar, true, function(filters) {
+                    self.overrideRequestData.__filters = JSON.stringify(filters);
+                    self.refresh(true);
+                });
             });
             this.$sidebar.find('button.reset').on('click', function(e) {
                 e.preventDefault();
@@ -1112,14 +1152,16 @@ $(function() {
                     ui.item.find('input[type="radio"]')[0].checked = true;
                 },
                 stop: function(e, ui) {
-                    var delta = ui.item.index() - originalIndex,
-                        data = _.extend({ delta: delta }, serialize(ui.item));
-                    Dashboard.api.call('post', url, data);
+                    serialize(ui.item, function(data) {
+                        var delta = ui.item.index() - originalIndex;
+                        var data = _.extend({ delta: delta }, data);
+                        Dashboard.api.call('post', url, data);
+                    });
                 }
             });
         },
-        serialize: function() {
-            return serialize_table(this.$table);
+        serialize: function(callback) {
+            callback(serialize_table(this.$table));
         },
         freeze: function() {
             Dashboard.app.showOverlay(this.$el);
