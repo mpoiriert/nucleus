@@ -69,16 +69,14 @@ class ModelDefinition
 
     public function addField(FieldDefinition $field)
     {
-        $this->fields[] = $field;
+        $this->fields[$field->getName()] = $field;
         return $this;
     }
 
     public function getField($name)
     {
-        foreach ($this->fields as $field) {
-            if ($field->getName() === $name) {
-                return $field;
-            }
+        if (isset($this->fields[$name])) {
+            return $this->fields[$name];
         }
         return null;
     }
@@ -114,18 +112,23 @@ class ModelDefinition
         if ($ids = $this->getIdentifierFields()) {
             return $ids[0];
         }
-        return $this->fields[0];
+        return reset($this->fields);
     }
 
     public function getFields()
     {
-        return $this->fields;
+        return array_values($this->fields);
     }
 
     public function getVisibleFields($visibility)
     {
         return array_filter($this->fields, function($f) use ($visibility) { 
             return $f->isVisible($visibility); });
+    }
+
+    public function getPublicFields()
+    {
+        return array_filter($this->fields, function($f) { return !$f->isInternal(); });
     }
 
     public function setActions(array $actions)
@@ -252,7 +255,10 @@ class ModelDefinition
      */
     public function populateObject($obj, $data)
     {
-        foreach ($this->getVisibleFields(FieldDefinition::VISIBILITY_EDIT) as $f) {
+        foreach ($this->getFields() as $f) {
+            if (!$f->isInternal() && !$f->isVisible(FieldDefinition::VISIBILITY_EDIT)) {
+                continue;
+            }
             $p = $f->getProperty();
             if (!isset($data[$p])) {
                 continue;
@@ -273,7 +279,7 @@ class ModelDefinition
         $array = array();
         $class = new ReflectionClass($obj);
         foreach ($this->getFields() as $f) {
-            if (!$f->hasValueController() || !$f->isArray()) {
+            if (!$f->isInternal() && $f->isSerializable() && (!$f->hasValueController() || !$f->isArray())) {
                 $array[$f->getProperty()] = $f->getValue($obj);
             }
         }
