@@ -18,7 +18,7 @@ use Nucleus\IService\Routing\IRouterService;
 use Symfony\Component\HttpFoundation\Request;
 use ArrayObject;
 use Nucleus\IService\EventDispatcher\IEventDispatcherService;
-
+use Nucleus\IService\Routing\NoHostFoundForCultureException;
 /**
  * Description of Router
  *
@@ -53,6 +53,8 @@ class Router implements IRouterService
     
     private $defaultParameters = array();
     
+    private $cultureHosts = array();
+    
     /**
      * @\Nucleus\IService\ApplicationContext\BoundToSession
      */
@@ -70,6 +72,41 @@ class Router implements IRouterService
         $this->context = new RequestContext();
         $this->urlMatcher = new UrlMatcher($this->routeCollection, $this->context);
         $this->urlGenerator = new UrlGenerator($this->routeCollection, $this->context);
+    }
+    
+    public function setHostForCulture($host, $culture = 'default')
+    {
+        $this->cultureHosts[$this->normalizeCulture($culture)] = $host;
+    }
+    
+    private function normalizeCulture($culture) 
+    {
+        return strtolower(str_replace('_', '-', $culture));
+    }
+    
+    /**
+     * @param string $culture
+     * @return string
+     * @throws NoHostFoundForCultureException
+     * @throws \InvalidArgumentException
+     */
+    public function getHostForCulture($culture = 'default')
+    {
+        $culture = $this->normalizeCulture($culture);
+        if(array_key_exists($culture, $this->cultureHosts)) {
+            return $this->cultureHosts[$culture];
+        }
+        
+        if($culture == 'default') {
+            throw new NoHostFoundForCultureException(NoHostFoundForCultureException::formatMessage($culture));
+        }
+       
+        try {
+          return $this->getHostForCulture(get_parent_culture($culture));
+        } catch (NoHostFoundForCultureException $e) {
+            throw new NoHostFoundForCultureException(NoHostFoundForCultureException::formatMessage($culture));
+        }
+        
     }
     
     /**
@@ -128,10 +165,20 @@ class Router implements IRouterService
         $cultures = $this->getCultures($parameters);
 
         $route = null;
+        $oldHost = $this->context->getHost();
         try {
             foreach ($cultures as $culture) {
                 $routeName = $this->getI18nRouteName($name, $culture);
                 if ($this->routeCollection->get($routeName)) {
+                    try {
+                        $host = $this->getHostForCulture($culture == '' ? 'default' : $culture);
+                        $this->context->setHost($host);
+                        if($host != $oldHost) {
+                            $referenceType = self::ABSOLUTE_URL;
+                        }
+                    } catch(NoHostFoundForCultureException $e) {
+                        //We do nothing with the exception, it will use the request domain
+                    }
                     $route = $this->urlGenerator->generate($routeName, $parameters, $referenceType);
                     break;
                 }
@@ -145,9 +192,11 @@ class Router implements IRouterService
             if ($scheme) {
                 $this->context->setScheme($oldScheme);
             }
+            $this->context->setHost($oldHost);
             throw $e;
         }
         
+        $this->context->setHost($oldHost);
         if ($scheme) {
             $this->context->setScheme($oldScheme);
         }
@@ -163,13 +212,15 @@ class Router implements IRouterService
             $culture = $parameters['_culture'];
         }
 
+        $culture = $this->normalizeCulture($culture);
+        
         switch(strlen($culture)) {
             case 0:
                 return array('');
             case 2:
                 return array($culture,'');
             case 5:
-                return array($culture, substr($culture,0,-3),'');
+                return array($culture, substr($culture,0,2),'');
         }
 
         throw new InvalidArgumentException('The culture [' . $culture . '] does not have a valid format');

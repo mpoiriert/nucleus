@@ -107,3 +107,37 @@ function usort_multi_level(&$array, array $callbacks)
             return 0;
         });
 }
+
+function get_parent_culture($culture, $separators = array())
+{
+    if(empty($separators)) {
+        $separators = array('_','-');
+    }
+    
+    if($culture == 'default') {
+        return null;
+    }
+    
+    if(strlen($culture) <= 2) {
+        return 'default';
+    }
+    
+    if(strlen($culture) != 5) {
+        throw new InvalidArgumentException('The culture [' . $culture . '] as a invalid format.');
+    }
+    
+    foreach($separators as $separator) {
+        $position = strpos($culture, $separator);
+        if($position === false) {
+            continue;
+        }
+        
+        if($position != 2) {
+            throw new InvalidArgumentException('The culture [' . $culture . '] as a invalid format.');
+        }
+        
+        return substr($culture, 0,2);
+    }
+    
+    throw new InvalidArgumentException('The culture [' . $culture . '] as a invalid format.');
+}
