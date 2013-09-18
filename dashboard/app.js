@@ -95,18 +95,43 @@ $(function() {
         }, data));
     };
 
-    var serialize = function(container) {
-        var ignoreEmptyValues = arguments.length > 1 ? arguments[1] : false;
+    var serialize = function(container, callback) {
+        var ignoreEmptyValues = false;
+        if (arguments.length > 2) {
+            ignoreEmptyValues = callback;
+            callback = arguments[2];
+        }
+
+        var inputs = $(container).find(':input:not(button)');
+        var lock = inputs.length;
         var o = {};
         var map = {
             "int": function(v) { return parseInt(v, 10); },
             "double": parseFloat,
             "float": parseFloat
         };
-        $(container).find(':input:not(button)').each(function() {
+
+        var done = function() {
+            if (--lock == 0) {
+                callback(o);
+            }
+        };
+
+        inputs.each(function() {
             var $this = $(this);
+            var self = this;
 
             if ($this.hasClass('no-serialize') || (this.type == 'radio' && !this.checked)) {
+                return done();
+            }
+
+            if (this.type == 'file') {
+                var reader = new FileReader();
+                reader.onloadend = function(evt) {
+                    o[self.name] = reader.result;
+                    done();
+                };
+                reader.readAsDataURL(this.files[0]);
                 return;
             }
 
@@ -120,7 +145,7 @@ $(function() {
             }
 
             if (!v && ignoreEmptyValues) {
-                return;
+                return done();
             }
 
             if (localized) {
@@ -129,7 +154,7 @@ $(function() {
                 v = v.split(',');
             } else if (this.type == 'checkbox' && (t == 'bool' || t == 'boolean')) {
                 if (!this.checked && ignoreEmptyValues) {
-                    return;
+                    return done();
                 }
                 v = this.checked;
             }
@@ -148,8 +173,8 @@ $(function() {
             }
 
             o[this.name] = v;
+            done();
         });
-        return o;
     };
 
     var get_identifiers = function(fields) {
@@ -194,6 +219,23 @@ $(function() {
         return vfields;
     };
 
+    var find_indexes_matching_pk = function(values, id) {
+        var indexes = [];
+        mainloop:
+        for (var i = 0; i < values.length; i++) {
+            for (var k in id) {
+                if (values[i][k] != id[k]) {
+                    continue mainloop;
+                }
+            }
+            indexes.push(i);
+        }
+        return indexes;
+    };
+
+    var find_object_matching_pk = function(values, id) {
+        return values[find_indexes_matching_pk(values, id)[0]];
+    };
 
     var format_value = function(v, f) {
         if (f && f.i18n) {
@@ -323,6 +365,7 @@ $(function() {
             refreshable: true
         },
         initialize: function() {
+            this.$el.attr('enctype', 'multipart/form-data');
             this.$body = this.$el;
             this.overrideRequestData = {};
         },
@@ -386,10 +429,14 @@ $(function() {
             this.$body = body;
         },
         toolbarClick: function(controller, action) {
-            this.trigger('tbclick', controller, action, this.serialize());
+            this.serialize(_.bind(function(data) {
+                this.trigger('tbclick', controller, action, data);
+            }, this));
         },
         handleFormSubmited: function(e) {
-            this.trigger('submit', this.serialize());
+            this.serialize(_.bind(function(data) {
+                this.trigger('submit', data);
+            }, this));
             e.preventDefault();
         },
         freeze: function() {
@@ -410,8 +457,8 @@ $(function() {
             }
             this.$error.text(message);
         },
-        serialize: function() {
-            return serialize(this.$body);
+        serialize: function(callback) {
+            serialize(this.$body, callback);
         }
     });
 
@@ -453,7 +500,17 @@ $(function() {
                     name: 'remove', 
                     controller: '',
                     title: 'Remove',
-                    icon: 'trash'
+                    icon: 'trash',
+                    disabled: true
+                });
+            }
+            if (!this.model.controller || _.contains(this.model.actions, 'edit')) {
+                buttons.push({
+                    name: 'edit', 
+                    controller: '',
+                    title: 'Edit',
+                    icon: 'edit',
+                    disabled: true
                 });
             }
             if (!this.model.controller || _.contains(this.model.actions, 'create')) {
@@ -487,14 +544,15 @@ $(function() {
                     .appendTo(this.$el);
             }
 
-            tb.buttons().first().addClass('disabled');
             table.find('tbody tr').on('click', function() {
-                tb.buttons().first().removeClass('disabled');
+                tb.buttons().removeClass('disabled');
             });
 
             this.listenTo(tb, 'btn-click', function(controller, action) {
                 if (action == 'remove') {
                     this.executeRemove(serialize_table(table));
+                } else if (action == 'edit') {
+                    this.renderEdit(serialize_table(table)); 
                 } else if (action == 'add') {
                     this.renderAdd();
                 } else if (action == 'create') {
@@ -509,33 +567,67 @@ $(function() {
                 this.listenTo(action, 'response', this.refresh);
                 action.execute(_.extend({}, this.data, id));
             } else {
+                var index_to_delete = find_indexes_matching_pk(this.data, id);
+                index_to_delete.reverse();
+
+                for (var i = 0; i < index_to_delete.length; i++) {
+                    delete this.data[index_to_delete[i]];
+                }
+
                 this.updateData();
                 this.refresh();
             }
         },
-        renderCreate: function() {
-            var options = {
-                tabs_for_related_models: false,
-                action_title: 'Create',
-                show_title: false,
-                model_name: this.model.name,
-                fields: this.model.fields,
-                field_visibility: ['edit']
-            };
+        renderEdit: function(id) {
+            var view, modal;
+
+            var create_form = _.bind(function(data) {
+                view = this.createModelForm(data);
+                modal = create_modal(view.computeTitle(), view.render());
+                return view;
+            }, this);
 
             if (this.value_controller) {
-                options.hidden_fields = [this.value_controller.remote_id];
-                options.model = this.data;
+                var viewAction = new Dashboard.Action(this.model.controller, 'view', null, false);
+                this.listenTo(viewAction, 'error', this.showError);
+                this.listenTo(viewAction, 'response', function(data) {
+                    create_form(data);
+                    var action = new Dashboard.Action(this.model.controller, 'save', null, false);
+                    connect_action_to_view(action, view);
+                    this.listenTo(action, 'response', function() {
+                        modal.modal('hide').remove();
+                        this.refresh();
+                    });
+                    modal.modal('show');
+                });
+                viewAction.execute(_.extend({}, id, this.data));
+            } else {
+                var index = find_indexes_matching_pk(this.data, id)[0];
+                create_form(this.data[index]);
+                this.listenTo(view, 'submit', function(data) {
+                    modal.modal('hide').remove();
+                    this.data[index] = data;
+                    this.updateData();
+                    this.refresh();
+                });
+                modal.modal('show');
             }
-
-            var view = new Dashboard.FormWidgetView(options);
+        },
+        renderCreate: function() {
+            var view = this.createModelForm(this.data, {
+                fields: this.model.fields
+            });
             var modal = create_modal(view.computeTitle(), view.render());
 
             if (this.value_controller) {
                 var action = new Dashboard.Action(this.model.controller, 'add', null, false);
-                connect_action_to_view(action, view);
-
+                this.listenTo(action, 'error', view.showError);
+                this.listenTo(view, 'submit', function(data) {
+                    view.freeze();
+                    action.execute(_.extend({}, data, this.data));
+                });
                 this.listenTo(action, 'response', function(data) {
+                    view.unfreeze();
                     modal.modal('hide').remove();
                     this.refresh();
                 });
@@ -549,6 +641,24 @@ $(function() {
             }
             
             modal.modal('show');
+        },
+        createModelForm: function(data, options) {
+            var options = _.extend({
+                tabs_for_related_models: false,
+                action_title: 'Create',
+                show_title: false,
+                model_name: this.model.name,
+                fields: this.model.fields,
+                field_visibility: ['edit', 'view'],
+                model: data
+            }, options || {});
+
+            if (this.value_controller) {
+                options.hidden_fields = [this.value_controller.remote_id];
+            }
+
+            var view = new Dashboard.FormWidgetView(options);
+            return view;
         },
         renderAdd: function() {
             var viewAction = new Dashboard.Action(this.model.controller, 'view', null, false);
@@ -723,8 +833,9 @@ $(function() {
         renderInputField: function(field, value) {
             var tagName = field.field_type == 'textarea' ? 'textarea' : 'input';
             var input = this.createInputWithAttrs(tagName, field).val(value);
+            var knownTypes = ['text', 'password', 'file'];
             if (field.field_type != 'textarea') {
-                if (!_.contains(['text', 'password'], field.field_type)) {
+                if (!_.contains(knownTypes, field.field_type)) {
                     input.attr('type', 'text');
                     input[field.field_type](field.field_options);
                 } else {
@@ -801,7 +912,11 @@ $(function() {
             var data = {};
 
             if (field.value_controller) {
-                data[field.value_controller.remote_id] = this.model[get_identifiers(this.options.fields)[0].name];
+                if (typeof(this.model[field.value_controller.remote_id]) != 'undefined') {
+                    data[field.value_controller.remote_id] = this.model[field.value_controller.remote_id];
+                } else {
+                    data[field.value_controller.remote_id] = this.model[get_identifiers(this.options.fields)[0].name];
+                }
             } else {
                 data = this.model[fieldName];
             }
@@ -816,7 +931,7 @@ $(function() {
                 _.each(get_identifiers(this.options.fields), function(f) {
                     data[f.name] = self.model[f.name];
                 });
-                this.trigger('submit', data);
+                this.trigger('submit', data, false);
             });
 
             pan.empty().append(view.render().el);
@@ -1007,9 +1122,10 @@ $(function() {
             this.$sidebar.html(render_template('#list-filters-tpl', { fields: filter_visible_fields(this.options.fields, 'query') }));
             this.$sidebar.find('button.filter').on('click', function(e) {
                 e.preventDefault();
-                var filters = serialize(self.$sidebar, true);
-                self.overrideRequestData.__filters = JSON.stringify(filters);
-                self.refresh(true);
+                serialize(self.$sidebar, true, function(filters) {
+                    self.overrideRequestData.__filters = JSON.stringify(filters);
+                    self.refresh(true);
+                });
             });
             this.$sidebar.find('button.reset').on('click', function(e) {
                 e.preventDefault();
@@ -1036,14 +1152,16 @@ $(function() {
                     ui.item.find('input[type="radio"]')[0].checked = true;
                 },
                 stop: function(e, ui) {
-                    var delta = ui.item.index() - originalIndex,
-                        data = _.extend({ delta: delta }, serialize(ui.item));
-                    Dashboard.api.call('post', url, data);
+                    serialize(ui.item, function(data) {
+                        var delta = ui.item.index() - originalIndex;
+                        var data = _.extend({ delta: delta }, data);
+                        Dashboard.api.call('post', url, data);
+                    });
                 }
             });
         },
-        serialize: function() {
-            return serialize_table(this.$table);
+        serialize: function(callback) {
+            callback(serialize_table(this.$table));
         },
         freeze: function() {
             Dashboard.app.showOverlay(this.$el);
@@ -1141,7 +1259,8 @@ $(function() {
         },
         pipe: function(data) {
             this.view && this.view.freeze();
-            var pipe = this.action.pipe(data);
+            var link_events = arguments.length > 1 ? arguments[1] : true;
+            var pipe = this.action.pipe(data, link_events);
         },
         _redirectHandler: function(controller, action, data) { 
             this.trigger('redirect', controller, action, data); 
@@ -1227,10 +1346,13 @@ $(function() {
             this.trigger('error', message);
         },
         pipe: function(data) {
+            var link_events = arguments.length > 1 ? arguments[1] : true;
             if (this.allow_flow && this.schema.output.flow == 'pipe') {
                 var action = new Dashboard.Action(this.controller, this.schema.output.next_action, data);
-                this.listenTo(action, 'response', function(resp) { this.trigger('response', resp); });
-                this.listenTo(action, 'error', function(msg) { this.trigger('error', msg); });
+                if (link_events) {
+                    this.listenTo(action, 'response', function(resp) { this.trigger('response', resp); });
+                    this.listenTo(action, 'error', function(msg) { this.trigger('error', msg); });
+                }
                 action.override_method = 'post';
                 action.execute();
                 return action;

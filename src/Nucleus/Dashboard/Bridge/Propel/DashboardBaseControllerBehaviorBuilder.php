@@ -8,10 +8,10 @@ class DashboardBaseControllerBehaviorBuilder extends OMBuilder
 {
     public function getControllerBehavior()
     {
-        if ($this->getTable()->hasBehavior('dashboard_parent_controller')) {
-            return $this->getTable()->getBehavior('dashboard_parent_controller');
+        if ($this->getTable()->hasBehavior('dashboard_controller')) {
+            return $this->getTable()->getBehavior('dashboard_controller');
         }
-        return $this->getTable()->getBehavior('dashboard_controller');
+        return $this->getTable()->getBehavior('dashboard_parent_controller');
     }
 
     public function getParameter($name)
@@ -64,6 +64,10 @@ abstract class " . $this->getClassname() . "
             foreach ($b->getChildrenFKs() as $fk) {
                 $script .= $this->addChildActions($fk);
             }
+        }
+
+        if ($this->getTable()->hasBehavior('file_bag')) {
+            $script .= $this->addFileBagActions();
         }
     }
 
@@ -254,6 +258,50 @@ abstract class " . $this->getClassname() . "
         \$child = \\{$childQueryClassname}::create()->findPK(\${$remoteId});
         \$obj->remove{$name}(\$child);
         \$obj->save();
+    }
+";
+    }
+
+    protected function addFileBagActions()
+    {
+        $localId = $this->getStubObjectBuilder()->getClassname() . 'Id';
+        $queryClassname = $this->getStubQueryBuilder()->getFullyQualifiedClassname();
+        list($funcargs, $callargs) = $this->getPrimaryKeyAsArgs();
+        $secureAnnotation = $this->getSecureAnnotation();
+
+        return "
+
+    /**
+     * @\Nucleus\IService\Dashboard\Action(menu=false)
+     * {$secureAnnotation}
+     * @return \\UgroupMedia\\Pnp\\File\\File[]
+     */
+    public function listFiles(\${$localId})
+    {
+        \$obj = \\{$queryClassname}::create()->findPK(\${$localId});
+        return \$obj->getFiles();
+    }
+
+    /**
+     * @\Nucleus\IService\Dashboard\Action(menu=false)
+     * {$secureAnnotation}
+     */
+    public function addFiles(\${$localId}, \$Id)
+    {
+        \$obj = \\{$queryClassname}::create()->findPK(\${$localId});
+        \$file = \\UgroupMedia\\Pnp\\File\\FileQuery::create()->findPK(\$Id);
+        \$obj->addFile(\$file);
+    }
+
+    /**
+     * @\Nucleus\IService\Dashboard\Action(menu=false)
+     * {$secureAnnotation}
+     */
+    public function removeFiles(\${$localId}, \$Id)
+    {
+        \$obj = \\{$queryClassname}::create()->findPK(\${$localId});
+        \$file = \\UgroupMedia\\Pnp\\File\\FileQuery::create()->findPK(\$Id);
+        \$obj->removeFile(\$file);
     }
 ";
     }

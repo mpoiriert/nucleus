@@ -12,7 +12,7 @@ class DashboardModelBehavior extends Behavior
         'include' => null,
         'exclude' => null,
         'delete_action' => 'true',
-        'aliases' => '',
+        'namealiases' => '',
         'htmlfields' => '',
         'repr' => 'id',
         'nolist' => '',
@@ -22,7 +22,9 @@ class DashboardModelBehavior extends Behavior
         'children' => '',
         'noaddchildren' => '',
         'nocreatechildren' => '',
-        'noremovechildren' => ''
+        'noremovechildren' => '',
+        'internal' => '',
+        'propertylaliases' => ''
     );
 
     public function objectAttributes()
@@ -32,6 +34,9 @@ class DashboardModelBehavior extends Behavior
 
     public function objectMethods($builder)
     {
+        $builder->declareClass('Nucleus\Dashboard\ModelDefinition');
+        $builder->declareClass('Nucleus\Dashboard\FieldDefinition');
+        $builder->declareClass('Nucleus\Dashboard\ActionDefinition');
         return $this->addGetModelDefinitionMethod($builder);
     }
 
@@ -92,6 +97,9 @@ class DashboardModelBehavior extends Behavior
         if ($table->hasBehavior('sortable')) {
             $excludedFields[] = $table->getBehavior('sortable')->getParameter('rank_column');
         }
+        if ($table->hasBehavior('versionable')) {
+            $excludedFields[] = $table->getBehavior('versionable')->getParameter('version_column');
+        }
 
         $script = "public static function getDashboardModelDefinition() {\n"
                 . "if (self::\$dashboardModelDefinition !== null) {\nreturn self::\$dashboardModelDefinition;\n}\n";
@@ -100,12 +108,12 @@ class DashboardModelBehavior extends Behavior
             $parentClass = $parent->getNamespace() . '\\' . $parent->getPhpName();
             $script .= "self::\$dashboardModelDefinition = \$model = clone \\{$parentClass}::getDashboardModelDefinition();\n\n";
         } else {
-            $script .= "self::\$dashboardModelDefinition = \$model = \\Nucleus\\Dashboard\\ModelDefinition::create();\n\n";
+            $script .= "self::\$dashboardModelDefinition = \$model = ModelDefinition::create();\n\n";
         }
 
         $script .= "\$model->setClassName('" . $builder->getStubObjectBuilder()->getFullyQualifiedClassname() . "')\n"
                  . "->setLoader(function(\$pk) { return \\" . $builder->getStubQueryBuilder()->getFullyQualifiedClassname() . "::create()->findPK(\$pk); })\n"
-                 . "->setValidationMethod(\\Nucleus\\Dashboard\\ModelDefinition::VALIDATE_WITH_METHOD);\n\n";
+                 . "->setValidationMethod(ModelDefinition::VALIDATE_WITH_METHOD);\n\n";
 
         foreach ($table->getColumns() as $column) {
             if ($includedFields !== null && !in_array($column->getName(), $includedFields)) {
@@ -135,8 +143,12 @@ class DashboardModelBehavior extends Behavior
             $script .= "\$model->addField(" . $this->addChildFieldDefinition($fk) . ");\n\n";
         }
 
+        if ($table->hasBehavior('file_bag')) {
+            $script .= $this->addFileBagFields();
+        }
+
         if (!$isParent && $this->getParameter('delete_action') == 'true') {
-            $script .= "\$model->addAction(\\Nucleus\\Dashboard\\ActionDefinition::create()\n"
+            $script .= "\$model->addAction(ActionDefinition::create()\n"
                      . "->setName('delete')\n"
                      . "->setTitle('Delete')\n"
                      . "->setIcon('trash'));\n\n";
@@ -153,9 +165,10 @@ class DashboardModelBehavior extends Behavior
 
         $name = ucfirst(str_replace('_', ' ', $this->getAlias($column->getName())));
 
-        $script = "\\Nucleus\\Dashboard\\FieldDefinition::create()\n"
-                . "->setProperty('" . $column->getPhpName() . "')\n"
-                . "->setAccessMethod(\\Nucleus\\Dashboard\\FieldDefinition::ACCESS_GETTER_SETTER)\n"
+        $script = "FieldDefinition::create()\n"
+                . "->setProperty('" . $this->getAlias($column->getPhpName(), 'propertyaliases') . "')\n"
+                . "->setInternalProperty('" . $column->getPhpName() . "')\n"
+                . "->setAccessMethod(FieldDefinition::ACCESS_GETTER_SETTER)\n"
                 . "->setName('" . $name . "')\n"
                 . "->setType('" . $column->getPhpType() . "')\n"
                 . "->setIdentifier(" . ($isIdentifier ? 'true' : 'false') . ")\n"
@@ -169,10 +182,14 @@ class DashboardModelBehavior extends Behavior
                 $this->getTable()->getBehavior('timestampable')->getParameter('update_column')));
         }
 
+        if ($column->isLobType()) {
+            $visibility = array();
+        }
+
         if ($editable) {
             $visibility[] = 'edit';
         }
-        if (!$queryable) {
+        if ($queryable) {
             $visibility[] = 'query';
         }
         $script .= "\n->setVisibility(array('" . implode("', '", $this->getVisibility($column->getName(), $visibility)) . "'))";
@@ -190,7 +207,10 @@ class DashboardModelBehavior extends Behavior
             $fks = $column->getForeignKeys();
             $fk = $fks[0];
             $table = $fk->getForeignTable();
-            if (count($fk->getForeignColumns()) == 1 && $table->hasBehavior('dashboard_controller')) {
+            if (!($b = $table->getBehavior('dashboard_controller'))) {
+                $b = $table->getBehavior('dashboard_parent_controller');
+            }
+            if (count($fk->getForeignColumns()) == 1 && $b) {
                 $fcols = $fk->getForeignColumnObjects();
                 $fcol = $fcols[0];
                 $fqdn = $table->getNamespace() . '\\' . $table->getPhpName();
@@ -201,6 +221,10 @@ class DashboardModelBehavior extends Behavior
 
         if ($this->getParameter('repr') == $column->getName()) {
             $script .= "\n->setStringRepr(true)";
+        }
+
+        if (in_array($column->getName(), $this->getListParameter('internal'))) {
+            $script .= "\n->setInternal(true)";
         }
 
         $options = array();
@@ -216,6 +240,8 @@ class DashboardModelBehavior extends Behavior
                     $type = 'datetimepicker';
                     $options = array('dateFormat' => 'yy-mm-dd', 'timeFormat' => 'HH:mm:ss');
                 }
+            } else if ($column->isLobType()) {
+                $type = 'file';
             }
         }
 
@@ -228,9 +254,9 @@ class DashboardModelBehavior extends Behavior
 
     protected function addI18nFieldDefinition($name)
     {
-        $script = "\\Nucleus\\Dashboard\\FieldDefinition::create()\n"
+        $script = "FieldDefinition::create()\n"
                 . "->setProperty('" . ucfirst($name) . "')\n"
-                . "->setAccessMethod(\\Nucleus\\Dashboard\\FieldDefinition::ACCESS_GETTER_SETTER)\n"
+                . "->setAccessMethod(FieldDefinition::ACCESS_GETTER_SETTER)\n"
                 . "->setName('" . $name . "')\n"
                 . "->setType('string')\n"
                 . "->setOptional(true)\n"
@@ -262,9 +288,9 @@ class DashboardModelBehavior extends Behavior
         $fcols = $fk->getForeignColumnObjects();
         $fcol = $fcols[0];
 
-        $script = "\\Nucleus\\Dashboard\\FieldDefinition::create()\n"
+        $script = "FieldDefinition::create()\n"
                 . "->setProperty('" . $table->getPhpName() . "s')\n"
-                . "->setAccessMethod(\\Nucleus\\Dashboard\\FieldDefinition::ACCESS_GETTER_SETTER)\n"
+                . "->setAccessMethod(FieldDefinition::ACCESS_GETTER_SETTER)\n"
                 . "->setName('" . $table->getName() . "s')\n"
                 . "->setType('object[]')\n"
                 . "->setVisibility(array('view', 'edit'))\n"
@@ -274,9 +300,28 @@ class DashboardModelBehavior extends Behavior
         return $script;
     }
 
-    protected function getAlias($name)
+    protected function addFileBagFields()
     {
-        $aliases = array_filter(explode(',', $this->getParameter('aliases')));
+        $script = "\$model->addField(FieldDefinition::create()\n"
+                . "->setProperty('FileBagName')\n"
+                . "->setAccessMethod(FieldDefinition::ACCESS_GETTER_SETTER)\n"
+                . "->setVisibility(array()));\n\n";
+
+        $script .= "\$model->addField(FieldDefinition::create()\n"
+                . "->setProperty('Files')\n"
+                . "->setAccessMethod(FieldDefinition::ACCESS_GETTER_SETTER)\n"
+                . "->setName('files')\n"
+                . "->setType('object[]')\n"
+                . "->setVisibility(array('view', 'edit'))\n"
+                . "->setRelatedModel(\\UgroupMedia\\Pnp\\File\\File::getDashboardModelDefinition(), 'FileDashboardController', array('create', 'edit', 'remove'))\n"
+                . "->setValueController('FileDashboardController', 'FileBagName', 'Id'));\n\n";
+
+        return $script;
+    }
+
+    protected function getAlias($name, $param = 'namealiases')
+    {
+        $aliases = array_filter(explode(',', $this->getParameter($param)));
         foreach ($aliases as $alias) {
             list($c, $a) = explode(':', $alias, 2);
             if ($c == $name) {
