@@ -13,6 +13,7 @@ class ActionDefinition
     const RETURN_LIST = 'list';
     const RETURN_OBJECT= 'object';
     const RETURN_FORM = 'form';
+    const RETURN_REDIRECT = 'redirect';
 
     const FLOW_NONE = 'none';
     const FLOW_DELEGATE = 'delegate';
@@ -219,7 +220,9 @@ class ActionDefinition
         if ($nextActionName !== null) {
             $this->setNextAction($nextActionName);
         }
-        if ($flow !== self::FLOW_NONE) {
+        if ($flow == self::FLOW_REDIRECT && $nextActionName == '$return') {
+            $this->returnType = self::RETURN_REDIRECT;
+        } else if ($flow !== self::FLOW_NONE) {
             $this->returnType = self::RETURN_FORM;
         }
         return $this;
