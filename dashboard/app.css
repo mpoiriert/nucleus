@@ -22,11 +22,14 @@ body {
 
 #main {
     padding: 10px;
+    margin-top: 25px;
 }
 
 #submenu {
     background: #efefef;
     padding-left: 8px;
+    width: 100%;
+    z-index: 100;
 }
     #submenu ul {
         list-style: none;
@@ -83,7 +86,7 @@ body {
 #overlay {
     position: absolute;
     opacity: .4;
-    background: #fff;
+    background: #fff url(ajax-loader.gif) center center no-repeat;
     z-index: 10000;
 }
 
@@ -99,6 +102,7 @@ body {
 
 .modal {
     width: 800px;
+    margin-left: -400px;
 }
 
 .form-action-view .control-label {
