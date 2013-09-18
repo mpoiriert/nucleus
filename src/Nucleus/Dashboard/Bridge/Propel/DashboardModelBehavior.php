@@ -23,6 +23,7 @@ class DashboardModelBehavior extends Behavior
         'noaddchildren' => '',
         'nocreatechildren' => '',
         'noremovechildren' => '',
+        'noeditchildren' => '',
         'internal' => '',
         'propertylaliases' => ''
     );
@@ -87,7 +88,7 @@ class DashboardModelBehavior extends Behavior
         }
 
         $indexColumns = array();
-        foreach ($table->getIndices() as $index) {
+        foreach (array_merge($table->getIndices(), $table->getUnices()) as $index) {
             foreach ($index->getColumns() as $c) {
                 $indexColumns[] = $c;
             }
@@ -227,7 +228,7 @@ class DashboardModelBehavior extends Behavior
             $script .= "\n->setInternal(true)";
         }
 
-        $options = array();
+        $options = null;
         if (!($type = $this->getFormFieldType($column->getName()))) {
             if ($column->isTemporalType()) {
                 if ($column->getType() == 'DATE') {
@@ -277,7 +278,7 @@ class DashboardModelBehavior extends Behavior
         $controllerFqdn = $table->getPhpName() . 'DashboardController';
         
         $actions = array();
-        foreach (array('add', 'create', 'remove') as $a) {
+        foreach (array('add', 'edit', 'create', 'remove') as $a) {
             if (!in_array($table->getName(), $this->getListParameter("no{$a}children"))) {
                 $actions[] = $a;
             }
@@ -291,7 +292,7 @@ class DashboardModelBehavior extends Behavior
         $script = "FieldDefinition::create()\n"
                 . "->setProperty('" . $table->getPhpName() . "s')\n"
                 . "->setAccessMethod(FieldDefinition::ACCESS_GETTER_SETTER)\n"
-                . "->setName('" . $table->getName() . "s')\n"
+                . "->setName('" . $this->getAlias($table->getName(), 'childaliases') . "')\n"
                 . "->setType('object[]')\n"
                 . "->setVisibility(array('view', 'edit'))\n"
                 . "->setRelatedModel(\\$fqdn::getDashboardModelDefinition(), '$controllerFqdn', array('" . implode("', '", $actions) . "'))\n"
@@ -310,7 +311,7 @@ class DashboardModelBehavior extends Behavior
         $script .= "\$model->addField(FieldDefinition::create()\n"
                 . "->setProperty('Files')\n"
                 . "->setAccessMethod(FieldDefinition::ACCESS_GETTER_SETTER)\n"
-                . "->setName('files')\n"
+                . "->setName('Files')\n"
                 . "->setType('object[]')\n"
                 . "->setVisibility(array('view', 'edit'))\n"
                 . "->setRelatedModel(\\UgroupMedia\\Pnp\\File\\File::getDashboardModelDefinition(), 'FileDashboardController', array('create', 'edit', 'remove'))\n"
