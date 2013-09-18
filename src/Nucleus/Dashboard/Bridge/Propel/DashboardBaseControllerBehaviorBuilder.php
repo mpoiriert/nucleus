@@ -54,8 +54,9 @@ abstract class " . $this->getClassname() . "
         if ($this->getParameter('is_concrete_parent') == 'true') {
             $script .= $this->addConcreteInheritanceViewAction();
         } else {
-            $script .= $this->addViewAction();
-            if ($this->getParameter('edit') == 'true') {
+            $editable = $this->getParameter('edit') == 'true';
+            $script .= $this->addViewAction(!$editable);
+            if ($editable) {
                 $script .= $this->addAddAction() . $this->addEditAction();
             }
         }
@@ -134,16 +135,21 @@ abstract class " . $this->getClassname() . "
 ";
     }
 
-    protected function addViewAction()
+    protected function addViewAction($onModel = false)
     {
         $objectClassname = $this->getStubObjectBuilder()->getFullyQualifiedClassname();
         $queryClassname = $this->getStubQueryBuilder()->getFullyQualifiedClassname();
         $secureAnnotation = $this->getSecureAnnotation();
         list($funcargs, $callargs) = $this->getPrimaryKeyAsArgs();
 
+        $params = '';
+        if ($onModel) {
+            $params = ', on_model="' . $objectClassname . '"';
+        }
+
         return "
     /**
-     * @\Nucleus\IService\Dashboard\Action(title=\"View\", menu=false)
+     * @\Nucleus\IService\Dashboard\Action(title=\"View\", icon=\"eye-open\", in=\"call\", menu=false $params)
      * {$secureAnnotation}
      * @return \\{$objectClassname}
      */

@@ -217,7 +217,7 @@ class ModelDefinition
         if (count($id) === 1) {
             $args = array($id[0]);
         } else {
-            $args = empty($id) ? $data : $id;
+            $args = empty($id) ? $data : array($id);
         }
 
         if (!($obj = call_user_func_array($this->loader, $args))) {
@@ -295,7 +295,7 @@ class ModelDefinition
     {
         if ($this->validationMethod === self::VALIDATE_WITH_METHOD) {
             if (!method_exists($object, 'validate')) {
-                throw new DefinitionBuilderException("Missing validate() method on object");
+                return true;
             }
             if (!call_user_func(array($object, 'validate'))) {
                 $violations = implode("\n", $object->getValidationFailures());
