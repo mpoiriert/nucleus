@@ -249,7 +249,8 @@ class Dashboard
             $json['next_action'] = $action->getNextAction();
         }
 
-        if (in_array($action->getReturnType(), array(ActionDefinition::RETURN_NONE, ActionDefinition::RETURN_REDIRECT))) {
+        $limitedSchemaActions = array(ActionDefinition::RETURN_NONE, ActionDefinition::RETURN_REDIRECT, ActionDefinition::RETURN_FILE);
+        if (in_array($action->getReturnType(), $limitedSchemaActions)) {
             return $json;
         }
 
@@ -312,7 +313,8 @@ class Dashboard
                 $valueController = array(
                     'controller' => $f->getValueController(),
                     'remote_id' => $f->getValueControllerRemoteId(),
-                    'local_id' => $f->getValueControllerLocalId()
+                    'local_id' => $f->getValueControllerLocalId(),
+                    'embed' => $f->isValueControllerEmbeded()
                 );
             }
             $related = null;
@@ -388,7 +390,10 @@ class Dashboard
 
         $action->applyBehaviors('afterInvoke', array($model, &$result, $request, $response));
 
-        return $this->formatInvokedResponse($request, $action, $result);
+        if ($result instanceof Response) {
+            return $result;
+        }
+        return $this->formatInvokedResponse($request, $response, $action, $result);
     }
 
     /**
@@ -415,7 +420,10 @@ class Dashboard
 
         $action->applyBehaviors('afterModelInvoke', array($model, &$result, $request, $response));
 
-        return $this->formatInvokedResponse($request, $modelAction, $result, $object);
+        if ($result instanceof Response) {
+            return $result;
+        }
+        return $this->formatInvokedResponse($request, $response, $modelAction, $result, $object);
     }
 
     /**
@@ -524,12 +532,13 @@ class Dashboard
      * Formats the result of an invoked action to be used as the query response
      * 
      * @param Request $request
+     * @param Response $response
      * @param ActionDefinition $action
      * @param mixed $result
      * @param object $obj The object used if this was a model action
      * @return array                 
      */
-    protected function formatInvokedResponse(Request $request, ActionDefinition $action, $result, $obj = null)
+    protected function formatInvokedResponse(Request $request, Response $response, ActionDefinition $action, $result, $obj = null)
     {
         $model = $action->getReturnModel();
         $data = null;
@@ -541,6 +550,19 @@ class Dashboard
                     $data[] = $model->convertObjectToArray($item);
                 }
             }
+        } else if ($action->getReturnType() === ActionDefinition::RETURN_FILE) {
+            $filename = $action->getName();
+            if (is_array($result)) {
+                list($filename, $result) = $result;
+            }
+            $response->headers->set('Content-Type', 'application/octet-stream');
+            $response->headers->set('Content-Disposition', 'attachment; filename=' . $filename);
+            $response->headers->set('Expires', '0');
+            $response->headers->set('Cache-Control', 'must-revalidate, post-check=0, pre-check=0');
+            $response->headers->set('Pragma', 'public');
+            $response->headers->set('Content-Length', strlen($result));
+            $response->setContent($result);
+            return $response;
         } else if ($action->getReturnType() === ActionDefinition::RETURN_NONE) {
             $data = null;
         } else if ($result === null) {

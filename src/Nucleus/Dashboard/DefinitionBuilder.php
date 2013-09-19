@@ -308,7 +308,8 @@ class DefinitionBuilder
             $action->setReturnType($annotation->out);
         }
 
-        if (!in_array($action->getReturnType(), array(ActionDefinition::RETURN_NONE, ActionDefinition::RETURN_REDIRECT))) {
+        $noModelTypes = array(ActionDefinition::RETURN_NONE, ActionDefinition::RETURN_REDIRECT, ActionDefinition::RETURN_FILE);
+        if (!in_array($action->getReturnType(), $noModelTypes)) {
             if ((!$annotation || $annotation->model === null) && !$returnTag) {
                 throw new DefinitionBuilderException("Action '{$action->getName()}' returns something but has no model attached");
             }
@@ -353,6 +354,10 @@ class DefinitionBuilder
                 }
             } else {
                 $type = $com['type'];
+            }
+
+            if (in_array($type, array('Symfony\Component\HttpFoundation\Request', 'Symfony\Component\HttpFoundation\Response'))) {
+                continue;
             }
 
             $field = new FieldDefinition();

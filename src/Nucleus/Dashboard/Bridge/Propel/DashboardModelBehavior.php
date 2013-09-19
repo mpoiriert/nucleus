@@ -25,7 +25,8 @@ class DashboardModelBehavior extends Behavior
         'noremovechildren' => '',
         'noeditchildren' => '',
         'internal' => '',
-        'propertylaliases' => ''
+        'propertylaliases' => '',
+        'nofkembed' => ''
     );
 
     public function objectAttributes()
@@ -215,8 +216,9 @@ class DashboardModelBehavior extends Behavior
                 $fcols = $fk->getForeignColumnObjects();
                 $fcol = $fcols[0];
                 $fqdn = $table->getNamespace() . '\\' . $table->getPhpName();
+                $embed = !in_array($column->getName(), $this->getListParameter('nofkembed'));
                 $script .= "\n->setRelatedModel(\\$fqdn::getDashboardModelDefinition())"
-                         . "\n->setValueController('" . $table->getPhpName() . "DashboardController', '" . $fcol->getPhpName() . "')";
+                         . "\n->setValueController('" . $table->getPhpName() . "DashboardController', '" . $fcol->getPhpName() . "', null, " . ($embed ? 'true' : 'false') . ")";
             }
         }
 
@@ -276,9 +278,14 @@ class DashboardModelBehavior extends Behavior
         $table = $fk->getTable();
         $fqdn = $table->getNamespace() . '\\' . $table->getPhpName();
         $controllerFqdn = $table->getPhpName() . 'DashboardController';
+
+        $availableActions = array('edit', 'create', 'remove');
+        if (!$table->getIsCrossRef()) {
+            $availableActions[] = 'add';
+        }
         
         $actions = array();
-        foreach (array('add', 'edit', 'create', 'remove') as $a) {
+        foreach ($availableActions as $a) {
             if (!in_array($table->getName(), $this->getListParameter("no{$a}children"))) {
                 $actions[] = $a;
             }
