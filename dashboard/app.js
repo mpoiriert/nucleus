@@ -1238,12 +1238,13 @@ $(function() {
             this.action.execute();
             return this;
         },
-        renderInput: function() {
+        renderInput: function(data) {
             this.updateUrl();
             this.view = new Dashboard.FormWidgetView(_.extend({
                 field_visibility: ['edit'],
                 tabs_for_related_models: false,
-                title_with_id: false
+                title_with_id: false,
+                model: data
             }, this.action.schema.input));
             this.view.options.refreshable = false;
             this.view.parent = this;
@@ -1272,6 +1273,7 @@ $(function() {
                 this.freeze();
                 var action = new Dashboard.Action(controller, action);
                 action.getSchema(_.bind(function(schema) {
+                    this.unfreeze();
                     if (schema.output.type != 'file' && (schema.input.type == 'form' || schema.output.type != 'none')) {
                         this._redirectHandler(action.controller, action.name, data);
                     } else {
@@ -1365,10 +1367,10 @@ $(function() {
         execute: function(data) {
             data = data || this.data;
             this.getSchema(_.bind(function(schema) {
-                if (!$.isEmptyObject(data) || schema.input.type != 'form') {
+                if (schema.input.type != 'form' || (!$.isEmptyObject(data) && _.size(data) == schema.input.fields.length)) {
                     this.doExecute(data);
                 } else {
-                    this.trigger('input');
+                    this.trigger('input', data);
                 }
             }, this));
             return this;
