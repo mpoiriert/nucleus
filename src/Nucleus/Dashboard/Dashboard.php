@@ -1,10 +1,5 @@
 <?php
 
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
-
 namespace Nucleus\Dashboard;
 
 use Nucleus\IService\Invoker\IInvokerService;
@@ -19,11 +14,6 @@ use LimitIterator;
 use Countable;
 use ArrayIterator;
 
-/**
- * Description of Dashboard
- *
- * @author Martin
- */
 class Dashboard
 {
     /**
@@ -257,11 +247,9 @@ class Dashboard
 
         if (!in_array($action->getFlow(), array(ActionDefinition::FLOW_NONE, ActionDefinition::FLOW_DELEGATE))) {
             $json['next_action'] = $action->getNextAction();
-            $json['next_url'] = $this->routing->generate('dashboard.invoke',
-                array('controllerName' => $controller->getName(), 'actionName' => $action->getNextAction()));
         }
 
-        if ($action->getReturnType() === ActionDefinition::RETURN_NONE) {
+        if (in_array($action->getReturnType(), array(ActionDefinition::RETURN_NONE, ActionDefinition::RETURN_REDIRECT))) {
             return $json;
         }
 
@@ -544,6 +532,8 @@ class Dashboard
     protected function formatInvokedResponse(Request $request, ActionDefinition $action, $result, $obj = null)
     {
         $model = $action->getReturnModel();
+        $data = null;
+
         if ($action->getReturnType() === ActionDefinition::RETURN_LIST) {
             $data = array();
             if ($result !== null) {
@@ -555,8 +545,10 @@ class Dashboard
             $data = null;
         } else if ($result === null) {
             $data = null;
-        } else {
+        } else if ($model) {
             $data = $model->convertObjectToArray($result);
+        } else if ($result) {
+            $data = $result;
         }
 
         $action->applyBehaviors('formatInvokedResponse', array(&$data));

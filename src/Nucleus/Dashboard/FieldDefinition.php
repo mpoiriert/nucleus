@@ -49,7 +49,7 @@ class FieldDefinition
 
     protected $formFieldType;
 
-    protected $formFieldOptions = array();
+    protected $formFieldOptions;
 
     protected $visibility = array(
         FieldDefinition::VISIBILITY_LIST,
@@ -295,7 +295,7 @@ class FieldDefinition
         return $this->setterName;
     }
 
-    public function setFormFieldType($type, array $options = array())
+    public function setFormFieldType($type, $options = null)
     {
         $this->formFieldType = $type;
         $this->formFieldOptions = $options;

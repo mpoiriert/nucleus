@@ -4,6 +4,9 @@
   <meta http-equiv="content-type" content="text/html; charset=utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard</title>
+  <script type="text/javascript">
+  var CKEDITOR_BASEPATH = '/nucleus/asset/dashboard/vendor/ckeditor/';
+  </script>
   {{ assetBag }}
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/bootstrap/css/bootstrap.min.css") }}
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/bootstrap/css/bootstrap-responsive.min.css") }}
@@ -17,6 +20,9 @@
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/underscore-min.js") }}
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/backbone-min.js") }}
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/bootstrap/js/bootstrap.min.js") }}
+  {{ assetBag.add("/nucleus/asset/dashboard/vendor/ckeditor/ckeditor.js") }}
+  {{ assetBag.add("/nucleus/asset/dashboard/vendor/ckeditor/lang/en.js") }}
+  {{ assetBag.add("/nucleus/asset/dashboard/vendor/ckeditor/adapters/jquery.js") }}
   {{ assetBag.add("/nucleus/asset/dashboard/app.js") }}
   <script type="text/javascript">
     $(function() {
@@ -31,7 +37,7 @@
     </div>
   </div>
 
-  <div id="submenu"></div>
+  <div id="submenu" data-spy="affix"></div>
 
   <div id="main"></div>
 
@@ -48,13 +54,13 @@
   <script type="text/template" id="tabs-tpl">
     <div class="tabbable tabs-right">
       <ul class="nav nav-tabs">
-        <% _.each(tabs, function(title, id) { %>
-          <li><a href="#tab-<%= id %>" <% if (id > 0) print('data-related="' + title + '"'); %> data-toggle="tab"><%= title %></a></li>
+        <% _.each(tabs, function(item) { %>
+          <li><a href="#tab-<%= item[0] %>" <% if (item[0] != 'default') print('data-related="' + item[0] + '"'); %> data-toggle="tab"><%= item[1] %></a></li>
         <% }) %>
       </ul>
       <div class="tab-content">
-        <% _.each(tabs, function(title, id) { %>
-          <div class="tab-pane active" id="tab-<%= id %>"></div>
+        <% _.each(tabs, function(item) { %>
+          <div class="tab-pane active" id="tab-<%= item[0] %>"></div>
         <% }) %>
       </div>
     </div>

@@ -308,7 +308,7 @@ class DefinitionBuilder
             $action->setReturnType($annotation->out);
         }
 
-        if ($action->getReturnType() !== ActionDefinition::RETURN_NONE) {
+        if (!in_array($action->getReturnType(), array(ActionDefinition::RETURN_NONE, ActionDefinition::RETURN_REDIRECT))) {
             if ((!$annotation || $annotation->model === null) && !$returnTag) {
                 throw new DefinitionBuilderException("Action '{$action->getName()}' returns something but has no model attached");
             }

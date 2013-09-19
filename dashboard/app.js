@@ -135,33 +135,33 @@ $(function() {
                 return;
             }
 
-            var v = this.value || '';
+            var v = $this.val() || '';
             var t = $this.data('type') || 'string';
-            var is_array = false;
             var localized = $this.hasClass('localized');
+
+            var is_array = false;
+            if (t.indexOf('[]') > -1) {
+                t = t.substr(0, t.length - 2);
+                is_array = true;
+            }
 
             if ($this.hasClass('serialized-in-data')) {
                 v = $this.data('serialized');
+            } else if (localized) {
+                v = $this.data('localized');
             }
 
             if (!v && ignoreEmptyValues) {
                 return done();
             }
 
-            if (localized) {
-                v = $this.data('localized');
-            } else if (is_array) {
+            if (is_array) {
                 v = v.split(',');
             } else if (this.type == 'checkbox' && (t == 'bool' || t == 'boolean')) {
                 if (!this.checked && ignoreEmptyValues) {
                     return done();
                 }
                 v = this.checked;
-            }
-
-            if (t.indexOf('[]') > -1) {
-                t = t.substr(0, t.length - 2);
-                is_array = true;
             }
 
             var cast = map[t] !== undefined ? map[t] : function(v) { return v; };
@@ -224,7 +224,7 @@ $(function() {
         mainloop:
         for (var i = 0; i < values.length; i++) {
             for (var k in id) {
-                if (values[i][k] != id[k]) {
+                if (!values[i] || values[i][k] != id[k]) {
                     continue mainloop;
                 }
             }
@@ -259,7 +259,7 @@ $(function() {
 
             _.each(vfields, function(f) {
                 tbody += '<td>';
-                if (with_value_controller && f.value_controller) {
+                if (f.value_controller) {
                     var url = Dashboard.config.base_url + "/" + f.value_controller.controller + "/edit?" + f.value_controller.remote_id + '=' + row[f.name];
                     tbody += '<a href="' + url + '" class="related" data-model="' + f.related_model.name + '" data-controller="' + f.value_controller.controller + '" ' +
                              'data-action="edit" data-params=\'{"' + f.value_controller.remote_id + '": "' + row[f.name] + '"}\'>' + 
@@ -278,6 +278,34 @@ $(function() {
             $(this).find('input[type="radio"]')[0].checked = true;
         });
 
+        var popoverTimeout;
+        table.find('a.related')
+            .on('click', function(e) {
+                Dashboard.app.runAction($(this).data('controller'), $(this).data('action'), $(this).data('params'));
+                e.preventDefault();
+            })
+            .on('mouseenter', function() {
+                var a = $(this);
+                popoverTimeout = setTimeout(function() {
+                    Dashboard.api.call('get', Dashboard.config.base_url + '/' + a.data('controller') + '/view', a.data('params'), function(resp) {
+                        var p = a.data('popover');
+                        p.options.content = render_template('#related-popover-tpl', { data: resp });
+                        p.setContent();
+                    });
+                    a.popover({
+                        trigger: 'manual',
+                        html: true,
+                        content: '<em>Loading...</em>',
+                        title: a.data('model'),
+                        placement: 'bottom'
+                    }).popover('show');
+                }, 500);
+            })
+            .on('mouseleave', function() {
+                clearTimeout(popoverTimeout);
+                $(this).popover('hide');
+            });
+
         return table;
     };
 
@@ -294,6 +322,13 @@ $(function() {
         var modal = $(render_template('#modal-tpl', { title: title })).appendTo('body');
         modal.find('.modal-body').append(view.el);
         modal.modal({ show: false });
+        modal.on('show', function() {
+            $(this).find('.modal-body').css({
+                width: 'auto',
+                height: 'auto', 
+               'max-height': '100%'
+            });
+        });
         return modal;
     };
 
@@ -301,7 +336,7 @@ $(function() {
         action.on('response', function() {
             view.unfreeze();
         });
-        action.on('error', view.showError);
+        action.on('error', _.bind(view.showError, view));
         view.on('submit', function(data) {
             view.freeze();
             action.execute(data);
@@ -361,7 +396,7 @@ $(function() {
             "submit": "handleFormSubmited"
         },
         options: {
-            doneOnEmptyData: true,
+            done_on_empty_data: true,
             refreshable: true
         },
         initialize: function() {
@@ -377,7 +412,7 @@ $(function() {
             this.parent.action._call(
                 _.extend({}, this.parent.action.data, this.overrideRequestData), 
                 _.bind(function(resp) {
-                    if (!resp && this.options.doneOnEmptyData) {
+                    if (!resp && this.options.done_on_empty_data) {
                         this.trigger('done');
                         return;
                     }
@@ -440,10 +475,12 @@ $(function() {
             e.preventDefault();
         },
         freeze: function() {
+            Dashboard.app.showOverlay(this.$el);
             this.$(':input').attr('disabled', 'disabled');
         },
         unfreeze: function() {
             this.$(':input').removeAttr('disabled');
+            Dashboard.app.hideOverlay();
         },
         showError: function(message) {
             this.unfreeze();
@@ -495,7 +532,7 @@ $(function() {
                 return !this.value_controller || f.name != this.value_controller.remote_id; }, this)), data);
 
             var buttons = [];
-            if (!this.model.controller || _.contains(this.model.actions, 'remove')) {
+            if (_.contains(this.model.actions, 'remove')) {
                 buttons.push({
                     name: 'remove', 
                     controller: '',
@@ -504,7 +541,7 @@ $(function() {
                     disabled: true
                 });
             }
-            if (!this.model.controller || _.contains(this.model.actions, 'edit')) {
+            if (_.contains(this.model.actions, 'edit')) {
                 buttons.push({
                     name: 'edit', 
                     controller: '',
@@ -513,7 +550,7 @@ $(function() {
                     disabled: true
                 });
             }
-            if (!this.model.controller || _.contains(this.model.actions, 'create')) {
+            if (_.contains(this.model.actions, 'create')) {
                 buttons.push({
                     name: 'create',
                     controller: '',
@@ -583,7 +620,8 @@ $(function() {
 
             var create_form = _.bind(function(data) {
                 view = this.createModelForm(data);
-                modal = create_modal(view.computeTitle(), view.render());
+                modal = create_modal(view.computeTitle(), view);
+                view.render();
                 return view;
             }, this);
 
@@ -595,7 +633,9 @@ $(function() {
                     var action = new Dashboard.Action(this.model.controller, 'save', null, false);
                     connect_action_to_view(action, view);
                     this.listenTo(action, 'response', function() {
-                        modal.modal('hide').remove();
+                        modal.modal('hide').detach();
+                        view = null;
+                        modal = null;
                         this.refresh();
                     });
                     modal.modal('show');
@@ -605,7 +645,9 @@ $(function() {
                 var index = find_indexes_matching_pk(this.data, id)[0];
                 create_form(this.data[index]);
                 this.listenTo(view, 'submit', function(data) {
-                    modal.modal('hide').remove();
+                    modal.modal('hide').detach();
+                    view = null;
+                    modal = null;
                     this.data[index] = data;
                     this.updateData();
                     this.refresh();
@@ -617,7 +659,8 @@ $(function() {
             var view = this.createModelForm(this.data, {
                 fields: this.model.fields
             });
-            var modal = create_modal(view.computeTitle(), view.render());
+            var modal = create_modal(view.computeTitle(), view);
+            view.render();
 
             if (this.value_controller) {
                 var action = new Dashboard.Action(this.model.controller, 'add', null, false);
@@ -628,12 +671,16 @@ $(function() {
                 });
                 this.listenTo(action, 'response', function(data) {
                     view.unfreeze();
-                    modal.modal('hide').remove();
+                    modal.modal('hide').detach();
+                    view = null;
+                    modal = null;
                     this.refresh();
                 });
             } else {
                 this.listenTo(view, 'submit', function(data) {
-                    modal.modal('hide').remove();
+                    modal.modal('hide').detach();
+                    view = null;
+                    modal = null;
                     this.data.push(data);
                     this.updateData();
                     this.refresh();
@@ -672,7 +719,8 @@ $(function() {
                 fields: _.filter(this.model.fields, _.bind(function(f) {
                     return f.name == this.value_controller.local_id; }, this))
             });
-            var modal = create_modal(view.computeTitle(), view.render());
+            var modal = create_modal(view.computeTitle(), view);
+            view.render();
 
             connect_action_to_view(viewAction, view);
             addAction.on('error', view.showError);
@@ -682,7 +730,9 @@ $(function() {
             });
 
             this.listenTo(addAction, 'response', function(data) {
-                modal.modal('hide').remove();
+                modal.modal('hide').detach();
+                view = null;
+                modal = null;
                 this.refresh();
             });
             
@@ -698,15 +748,105 @@ $(function() {
     /*
      * Represents an action to show a form
      */
-    Dashboard.FormWidgetView = Dashboard.BaseWidgetView.extend({
+    Dashboard.ObjectWidgetView = Dashboard.BaseWidgetView.extend({
+        className: 'object-action-view',
+        options: {
+            tabs_for_related_models: true
+        },
+        render: function() {
+            this.$el.empty();
+            this.renderTitleWithIdentifier(this.options.model_name).renderToolbar();
+
+            var tabs = this.buildTabList();
+
+            if (tabs.length > 1) {
+                this.$el.append(render_template('#tabs-tpl', { tabs: tabs }));
+                this.renderObject(this.$('.tab-pane[id="tab-default"]'));
+                this.$('.nav-tabs a[href="#tab-default"]').parent().addClass('active');
+                this.renderTabs();
+            } else {
+                this.renderObject(this.$el);
+            }
+
+            this.unfreeze();
+            return this;
+        },
+        renderObject: function(parent) {
+            parent.append(render_template('#object-action-tpl', { 
+                fields: filter_visible_fields(this.options.fields, 'view'), 
+                model: this.model 
+            }));
+        },
+        buildTabList: function() {
+            var tabs = [];
+            if (this.options.tabs_for_related_models) {
+                tabs.push(['default', this.options.model_name]);
+                for (var i = 0; i < this.options.fields.length; i++) {
+                    if (this.options.fields[i].related_model && this.options.fields[i].is_array) {
+                        tabs.push([this.options.fields[i].name, this.options.fields[i].title]);
+                    }
+                }
+            }
+            return tabs;
+        },
+        renderTabs: function() {
+            var self = this;
+            this.$('.nav-tabs a[data-related]').on('click', function() {
+                var $this = $(this);
+                var pan = self.$('div.tab-pane[id="' + $this.attr('href').substr(1) + '"]');
+
+                if (!pan.hasClass('loaded')) {
+                    self.renderRelatedTab($this.data('related'), pan);
+                    pan.addClass('loaded');
+                }
+            });
+        },
+        renderRelatedTab: function(fieldName, pan) {
+            var self = this;
+            var field = get_field(this.options.fields, fieldName);
+            var data = {};
+
+            if (field.value_controller) {
+                if (typeof(this.model[field.value_controller.remote_id]) != 'undefined') {
+                    data[field.value_controller.remote_id] = this.model[field.value_controller.remote_id];
+                } else {
+                    data[field.value_controller.remote_id] = this.model[get_identifiers(this.options.fields)[0].name];
+                }
+            } else {
+                data = this.model[fieldName];
+            }
+
+            var view = new Dashboard.RelatedModelsView({
+                controller: this.parent.action.controller,
+                field: field,
+                data: data
+            });
+
+            this.listenTo(view, 'submit', function(data) {
+                _.each(get_identifiers(this.options.fields), function(f) {
+                    data[f.name] = self.model[f.name];
+                });
+                this.trigger('submit', data, false);
+            });
+
+            pan.empty().append(view.el);
+            view.render();
+        }
+    });
+
+    /*
+     * Represents an action to show a form
+     */
+    Dashboard.FormWidgetView = Dashboard.ObjectWidgetView.extend({
         className: 'form-action-view form-horizontal',
         options: {
             title: null,
             show_title: true,
-            tabs_for_related_models: true,
+            title_with_id: true,
             field_visibility: ['edit', 'view'],
             hidden_fields: [],
-            force_edit: false
+            force_edit: false,
+            tabs_for_related_models: true
         },
         computeTitle: function() {
             var title = '';
@@ -715,36 +855,35 @@ $(function() {
             } else if (this.parent && this.parent.action) {
                 title = this.parent.action.schema.title + ' ';
             }
-            title += this.options.model_name;
+            if (this.options.model_name) {
+                title += this.options.model_name;
+            }
             return title;
         },
         render: function() {
-            var tabs = [];
-
             this.$el.empty();
             if (this.options.show_title) {
-                this.renderTitleWithIdentifier(this.options.title || this.computeTitle());
+                var title = this.options.title || this.computeTitle();
+                if (this.options.title_with_id) {
+                    this.renderTitleWithIdentifier(title);
+                } else {
+                    this.renderTitle(title);
+                }
             }
             this.renderToolbar();
 
-            if (this.options.tabs_for_related_models) {
-                tabs.push(this.options.model_name);
-                for (var i = 0; i < this.options.fields.length; i++) {
-                    if (this.options.fields[i].related_model && this.options.fields[i].is_array) {
-                        tabs.push(this.options.fields[i].name);
-                    }
-                }
-            }
+            var tabs = this.buildTabList();
 
             if (tabs.length > 1) {
                 this.$el.append(render_template('#tabs-tpl', { tabs: tabs }));
-                this.renderForm(this.$('.tab-pane[id="tab-0"]'));
-                this.$('.nav-tabs a[href="#tab-0"]').parent().addClass('active');
+                this.renderForm(this.$('.tab-pane[id="tab-default"]'));
+                this.$('.nav-tabs a[href="#tab-default"]').parent().addClass('active');
                 this.renderTabs();
             } else {
                 this.renderForm(this.$el);
             }
 
+            this.unfreeze();
             return this;
         },
         renderForm: function(parent) {
@@ -761,6 +900,7 @@ $(function() {
         },
         renderFields: function(form, fields, model) {
             var self = this;
+            this.delayedFieldInit = [];
             _.each(fields, function(field) {
                 var value = typeof(model[field.name]) == 'undefined' ? field.defaultValue : model[field.name];
                 if (!_.contains(self.options.hidden_fields, field.name)) {
@@ -769,6 +909,7 @@ $(function() {
                     form.append(self.renderHiddenField(field, value));
                 }
             });
+            _.each(this.delayedFieldInit, function(cb) { cb(); });
         },
         renderField: function(field, value) {
             if (!this.options.force_edit && !_.contains(field.visibility, 'edit')) {
@@ -797,7 +938,7 @@ $(function() {
             return this.wrapInBootstrapControlGroup(field.title, inputs);
         },
         renderHiddenField: function(field, value) {
-            return $('<input />').attr({ type: 'hidden', name: field.name }).val(value);
+            return this.createInputWithAttrs('input', field).attr('type', 'hidden').val(value);
         },
         renderValueControllerSelectBox: function(field, value) {
             var select = this.createInputWithAttrs('select', field).addClass('related');
@@ -831,16 +972,21 @@ $(function() {
             return input;
         },
         renderInputField: function(field, value) {
-            var tagName = field.field_type == 'textarea' ? 'textarea' : 'input';
+            var tagName = _.contains(['textarea', 'richtext'], field.field_type) ? 'textarea' : 'input';
             var input = this.createInputWithAttrs(tagName, field).val(value);
             var knownTypes = ['text', 'password', 'file'];
-            if (field.field_type != 'textarea') {
+            if (tagName != 'textarea') {
                 if (!_.contains(knownTypes, field.field_type)) {
                     input.attr('type', 'text');
-                    input[field.field_type](field.field_options);
+                    input[field.field_type](field.field_options || {});
                 } else {
                     input.attr('type', field.field_type);
                 }
+            } else if (field.field_type == 'richtext') {
+                input.addClass('richtext');
+                this.delayedFieldInit.push(function() {
+                    $('.richtext').ckeditor();
+                });
             }
             return input;
         },
@@ -893,68 +1039,6 @@ $(function() {
             var controls = $('<div class="controls" />').appendTo(ctrlgrp);
             _.each(items, function(item) { controls.append(item); });
             return ctrlgrp;
-        },
-        renderTabs: function() {
-            var self = this;
-            this.$('.nav-tabs a[data-related]').on('click', function() {
-                var $this = $(this);
-                var pan = self.$('div.tab-pane[id="' + $this.attr('href').substr(1) + '"]');
-
-                if (!pan.hasClass('loaded')) {
-                    self.renderRelatedTab($this.data('related'), pan);
-                    pan.addClass('loaded');
-                }
-            });
-        },
-        renderRelatedTab: function(fieldName, pan) {
-            var self = this;
-            var field = get_field(this.options.fields, fieldName);
-            var data = {};
-
-            if (field.value_controller) {
-                if (typeof(this.model[field.value_controller.remote_id]) != 'undefined') {
-                    data[field.value_controller.remote_id] = this.model[field.value_controller.remote_id];
-                } else {
-                    data[field.value_controller.remote_id] = this.model[get_identifiers(this.options.fields)[0].name];
-                }
-            } else {
-                data = this.model[fieldName];
-            }
-
-            var view = new Dashboard.RelatedModelsView({
-                controller: this.parent.action.controller,
-                field: field,
-                data: data
-            });
-
-            this.listenTo(view, 'submit', function(data) {
-                _.each(get_identifiers(this.options.fields), function(f) {
-                    data[f.name] = self.model[f.name];
-                });
-                this.trigger('submit', data, false);
-            });
-
-            pan.empty().append(view.render().el);
-        }
-    });
-
-    /*
-     * Represents an action to show a form
-     */
-    Dashboard.ObjectWidgetView = Dashboard.BaseWidgetView.extend({
-        className: 'object-action-view',
-        render: function() {
-            var values = this.model || {};
-
-            this.$el.empty();
-            this.renderTitleWithIdentifier(this.options.model_name)
-                .renderToolbar()
-                .append(render_template('#object-action-tpl', { 
-                    fields: filter_visible_fields(this.options.fields, 'view'), 
-                    model: this.model 
-                }));
-
-            return this;
         }
     });
 
@@ -988,6 +1072,7 @@ $(function() {
                 this.makeSortable();
             }
 
+            this.unfreeze();
             return this;
         },
         refresh: function(reloadPagination) {
@@ -1030,34 +1115,6 @@ $(function() {
                     self.refresh(true);
                 });
             }
-
-            var popoverTimeout;
-            table.find('a.related')
-                .on('click', function(e) {
-                    Dashboard.app.runAction($(this).data('controller'), $(this).data('action'), $(this).data('params'));
-                    e.preventDefault();
-                })
-                .on('mouseenter', function() {
-                    var a = $(this);
-                    popoverTimeout = setTimeout(function() {
-                        Dashboard.api.call('get', Dashboard.config.base_url + '/' + a.data('controller') + '/view', a.data('params'), function(resp) {
-                            var p = a.data('popover');
-                            p.options.content = render_template('#related-popover-tpl', { data: resp });
-                            p.setContent();
-                        });
-                        a.popover({
-                            trigger: 'manual',
-                            html: true,
-                            content: '<em>Loading...</em>',
-                            title: a.data('model'),
-                            placement: 'bottom'
-                        }).popover('show');
-                    }, 500);
-                })
-                .on('mouseleave', function() {
-                    clearTimeout(popoverTimeout);
-                    $(this).popover('hide');
-                });
 
             table.find('tbody tr').on('click', function() {
                 self.$toolbar.enable();
@@ -1162,12 +1219,6 @@ $(function() {
         },
         serialize: function(callback) {
             callback(serialize_table(this.$table));
-        },
-        freeze: function() {
-            Dashboard.app.showOverlay(this.$el);
-        },
-        unfreeze: function() {
-            Dashboard.app.hideOverlay();
         }
     });
 
@@ -1190,12 +1241,14 @@ $(function() {
             this.updateUrl();
             this.view = new Dashboard.FormWidgetView(_.extend({
                 field_visibility: ['edit'],
-                tabs_for_related_models: false
+                tabs_for_related_models: false,
+                title_with_id: false
             }, this.action.schema.input));
             this.view.options.refreshable = false;
             this.view.parent = this;
             this.listenTo(this.view, 'submit', this.execute);
-            this.$el.empty().append(this.view.render().el);
+            this.$el.empty().append(this.view.el);
+            this.view.render();
             this.trigger('render', this);
         },
         renderResponse: function(data) {
@@ -1234,7 +1287,8 @@ $(function() {
             this.listenTo(view, 'submit', this.pipe);
 
             this.view = view;
-            this.$el.empty().append(view.render().el);
+            this.$el.empty().append(view.el);
+            view.render();
             this.trigger('render', this);
         },
         renderError: function(message) {
@@ -1258,8 +1312,10 @@ $(function() {
             Dashboard.router.navigate(url);
         },
         pipe: function(data) {
-            this.view && this.view.freeze();
             var link_events = arguments.length > 1 ? arguments[1] : true;
+            if (link_events && this.view) {
+                this.view.freeze();
+            }
             var pipe = this.action.pipe(data, link_events);
         },
         _redirectHandler: function(controller, action, data) { 
@@ -1332,12 +1388,18 @@ $(function() {
         },
         handleResponse: function(data) {
             if (this.allow_flow && this.schema.output.flow.indexOf('redirect') === 0) {
-                if (this.schema.output.flow == 'redirect') {
+                var next_controller = this.controller;
+                var next_action = this.schema.output.next_action;
+                if (this.schema.output.type == 'redirect') {
+                    next_controller = data['controller'] || next_controller;
+                    next_action = data['action'];
+                    data = data['data'];
+                } else if (this.schema.output.flow == 'redirect') {
                     data = null;
                 } else if (this.schema.output.flow == 'redirect_with_id') {
                     data = build_pk(this.schema.output.fields, data);
                 }
-                this.trigger('redirect', this.controller, this.schema.output.next_action, data);
+                this.trigger('redirect', next_controller, next_action, data);
                 return;
             }
             this.trigger('response', data);
@@ -1559,7 +1621,7 @@ $(function() {
             view.render();
         },
         switchActionView: function(actionView) {
-            if (this.currentActionView) {
+            if (this.currentActionView && actionView != this.currentActionView) {
                 this.currentActionView.unfreeze();
                 this.currentActionView.$el.remove();
             }
