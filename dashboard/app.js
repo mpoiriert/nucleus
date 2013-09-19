@@ -748,16 +748,105 @@ $(function() {
     /*
      * Represents an action to show a form
      */
-    Dashboard.FormWidgetView = Dashboard.BaseWidgetView.extend({
+    Dashboard.ObjectWidgetView = Dashboard.BaseWidgetView.extend({
+        className: 'object-action-view',
+        options: {
+            tabs_for_related_models: true
+        },
+        render: function() {
+            this.$el.empty();
+            this.renderTitleWithIdentifier(this.options.model_name).renderToolbar();
+
+            var tabs = this.buildTabList();
+
+            if (tabs.length > 1) {
+                this.$el.append(render_template('#tabs-tpl', { tabs: tabs }));
+                this.renderObject(this.$('.tab-pane[id="tab-default"]'));
+                this.$('.nav-tabs a[href="#tab-default"]').parent().addClass('active');
+                this.renderTabs();
+            } else {
+                this.renderObject(this.$el);
+            }
+
+            this.unfreeze();
+            return this;
+        },
+        renderObject: function(parent) {
+            parent.append(render_template('#object-action-tpl', { 
+                fields: filter_visible_fields(this.options.fields, 'view'), 
+                model: this.model 
+            }));
+        },
+        buildTabList: function() {
+            var tabs = [];
+            if (this.options.tabs_for_related_models) {
+                tabs.push(['default', this.options.model_name]);
+                for (var i = 0; i < this.options.fields.length; i++) {
+                    if (this.options.fields[i].related_model && this.options.fields[i].is_array) {
+                        tabs.push([this.options.fields[i].name, this.options.fields[i].title]);
+                    }
+                }
+            }
+            return tabs;
+        },
+        renderTabs: function() {
+            var self = this;
+            this.$('.nav-tabs a[data-related]').on('click', function() {
+                var $this = $(this);
+                var pan = self.$('div.tab-pane[id="' + $this.attr('href').substr(1) + '"]');
+
+                if (!pan.hasClass('loaded')) {
+                    self.renderRelatedTab($this.data('related'), pan);
+                    pan.addClass('loaded');
+                }
+            });
+        },
+        renderRelatedTab: function(fieldName, pan) {
+            var self = this;
+            var field = get_field(this.options.fields, fieldName);
+            var data = {};
+
+            if (field.value_controller) {
+                if (typeof(this.model[field.value_controller.remote_id]) != 'undefined') {
+                    data[field.value_controller.remote_id] = this.model[field.value_controller.remote_id];
+                } else {
+                    data[field.value_controller.remote_id] = this.model[get_identifiers(this.options.fields)[0].name];
+                }
+            } else {
+                data = this.model[fieldName];
+            }
+
+            var view = new Dashboard.RelatedModelsView({
+                controller: this.parent.action.controller,
+                field: field,
+                data: data
+            });
+
+            this.listenTo(view, 'submit', function(data) {
+                _.each(get_identifiers(this.options.fields), function(f) {
+                    data[f.name] = self.model[f.name];
+                });
+                this.trigger('submit', data, false);
+            });
+
+            pan.empty().append(view.el);
+            view.render();
+        }
+    });
+
+    /*
+     * Represents an action to show a form
+     */
+    Dashboard.FormWidgetView = Dashboard.ObjectWidgetView.extend({
         className: 'form-action-view form-horizontal',
         options: {
             title: null,
             show_title: true,
             title_with_id: true,
-            tabs_for_related_models: true,
             field_visibility: ['edit', 'view'],
             hidden_fields: [],
-            force_edit: false
+            force_edit: false,
+            tabs_for_related_models: true
         },
         computeTitle: function() {
             var title = '';
@@ -772,8 +861,6 @@ $(function() {
             return title;
         },
         render: function() {
-            var tabs = [];
-
             this.$el.empty();
             if (this.options.show_title) {
                 var title = this.options.title || this.computeTitle();
@@ -785,14 +872,7 @@ $(function() {
             }
             this.renderToolbar();
 
-            if (this.options.tabs_for_related_models) {
-                tabs.push(['default', this.options.model_name]);
-                for (var i = 0; i < this.options.fields.length; i++) {
-                    if (this.options.fields[i].related_model && this.options.fields[i].is_array) {
-                        tabs.push([this.options.fields[i].name, this.options.fields[i].title]);
-                    }
-                }
-            }
+            var tabs = this.buildTabList();
 
             if (tabs.length > 1) {
                 this.$el.append(render_template('#tabs-tpl', { tabs: tabs }));
@@ -959,69 +1039,6 @@ $(function() {
             var controls = $('<div class="controls" />').appendTo(ctrlgrp);
             _.each(items, function(item) { controls.append(item); });
             return ctrlgrp;
-        },
-        renderTabs: function() {
-            var self = this;
-            this.$('.nav-tabs a[data-related]').on('click', function() {
-                var $this = $(this);
-                var pan = self.$('div.tab-pane[id="' + $this.attr('href').substr(1) + '"]');
-
-                if (!pan.hasClass('loaded')) {
-                    self.renderRelatedTab($this.data('related'), pan);
-                    pan.addClass('loaded');
-                }
-            });
-        },
-        renderRelatedTab: function(fieldName, pan) {
-            var self = this;
-            var field = get_field(this.options.fields, fieldName);
-            var data = {};
-
-            if (field.value_controller) {
-                if (typeof(this.model[field.value_controller.remote_id]) != 'undefined') {
-                    data[field.value_controller.remote_id] = this.model[field.value_controller.remote_id];
-                } else {
-                    data[field.value_controller.remote_id] = this.model[get_identifiers(this.options.fields)[0].name];
-                }
-            } else {
-                data = this.model[fieldName];
-            }
-
-            var view = new Dashboard.RelatedModelsView({
-                controller: this.parent.action.controller,
-                field: field,
-                data: data
-            });
-
-            this.listenTo(view, 'submit', function(data) {
-                _.each(get_identifiers(this.options.fields), function(f) {
-                    data[f.name] = self.model[f.name];
-                });
-                this.trigger('submit', data, false);
-            });
-
-            pan.empty().append(view.el);
-            view.render();
-        }
-    });
-
-    /*
-     * Represents an action to show a form
-     */
-    Dashboard.ObjectWidgetView = Dashboard.BaseWidgetView.extend({
-        className: 'object-action-view',
-        render: function() {
-            var values = this.model || {};
-
-            this.$el.empty();
-            this.renderTitleWithIdentifier(this.options.model_name)
-                .renderToolbar()
-                .append(render_template('#object-action-tpl', { 
-                    fields: filter_visible_fields(this.options.fields, 'view'), 
-                    model: this.model 
-                }));
-
-            return this;
         }
     });
 
@@ -1055,6 +1072,7 @@ $(function() {
                 this.makeSortable();
             }
 
+            this.unfreeze();
             return this;
         },
         refresh: function(reloadPagination) {
