@@ -9,8 +9,8 @@ class DashboardModelBehavior extends Behavior
     protected $name = 'dashboard_model';
     
     protected $parameters = array(
-        'include' => null,
-        'exclude' => null,
+        'include' => '',
+        'exclude' => '',
         'delete_action' => 'true',
         'namealiases' => '',
         'htmlfields' => '',
@@ -62,31 +62,48 @@ class DashboardModelBehavior extends Behavior
         return $fks;
     }
 
-    public function addGetModelDefinitionMethod($builder)
+    public function getParentTable()
+    {
+        $table = $this->getTable();
+        if ($b = $table->getBehavior('concrete_inheritance')) {
+            return $table->getDatabase()->getTable($b->getParameter('extends'));
+        }
+        return null;
+    }
+
+    protected function addGetModelDefinitionMethod($builder)
     {
         $table = $this->getTable();
 
-        $excludedFields = array();
-        if ($this->getParameter('include') !== null) {
-            $includedFields = $this->getListParameter('include');
-        } else if ($this->getParameter('exclude') !== null) {
-            $excludedFields = $this->getListParameter('exclude');
+        $script = "public static function getDashboardModelDefinition() {\n"
+                . "if (self::\$dashboardModelDefinition !== null) {\nreturn self::\$dashboardModelDefinition;\n}\n";
+
+        if ($parent = $this->getParentTable()) {
+            $parentClass = $parent->getNamespace() . '\\' . $parent->getPhpName();
+            $script .= "self::\$dashboardModelDefinition = \$model = clone \\{$parentClass}::getDashboardModelDefinition();\n\n";
         } else {
-            $excludedFields = array();
+            $script .= "self::\$dashboardModelDefinition = \$model = ModelDefinition::create();\n\n";
         }
 
-        if ($inherited = $table->hasBehavior('concrete_inheritance')) {
-            $parent = $table->getDatabase()->getTable($table->getBehavior('concrete_inheritance')->getParameter('extends'));
-            foreach ($parent->getColumns() as $column) {
-                $excludedFields[] = $column->getName();
-            }
-            if ($parent->hasBehavior('i18n_dictionary')) {
-                $excludedFields = array_merge($excludedFields, 
-                    array_map('trim', explode(',', $parent->getBehavior('i18n_dictionary')->getParameter('entries'))));
-            }
-        } else if ($isParent = $table->hasBehavior('concrete_inheritance_parent')) {
-            $excludedFields[] = $table->getBehavior('concrete_inheritance_parent')->getParameter('descendant_column');
-        }
+        $script .= $this->addModelAttributes($builder)
+                 . $this->addModelFields()
+                 . $this->addModelActions();
+
+        $script .= "return \$model;\n}";
+        return $script;
+    }
+
+    protected function addModelAttributes($builder)
+    {
+        return "\$model->setClassName('" . $builder->getStubObjectBuilder()->getFullyQualifiedClassname() . "')\n"
+             . "->setLoader(function(\$pk) { return \\" . $builder->getStubQueryBuilder()->getFullyQualifiedClassname() . "::create()->findPK(\$pk); })\n"
+             . "->setValidationMethod(ModelDefinition::VALIDATE_WITH_METHOD);\n\n";
+    }
+
+    protected function addModelFields()
+    {
+        $script = '';
+        $table = $this->getTable();
 
         $indexColumns = array();
         foreach (array_merge($table->getIndices(), $table->getUnices()) as $index) {
@@ -94,73 +111,74 @@ class DashboardModelBehavior extends Behavior
                 $indexColumns[] = $c;
             }
         }
+
         $indexColumns = array_unique($indexColumns);
-
-        if ($table->hasBehavior('sortable')) {
-            $excludedFields[] = $table->getBehavior('sortable')->getParameter('rank_column');
-        }
-        if ($table->hasBehavior('versionable')) {
-            $excludedFields[] = $table->getBehavior('versionable')->getParameter('version_column');
-        }
-
-        $script = "public static function getDashboardModelDefinition() {\n"
-                . "if (self::\$dashboardModelDefinition !== null) {\nreturn self::\$dashboardModelDefinition;\n}\n";
-
-        if ($inherited) {
-            $parentClass = $parent->getNamespace() . '\\' . $parent->getPhpName();
-            $script .= "self::\$dashboardModelDefinition = \$model = clone \\{$parentClass}::getDashboardModelDefinition();\n\n";
-        } else {
-            $script .= "self::\$dashboardModelDefinition = \$model = ModelDefinition::create();\n\n";
-        }
-
-        $script .= "\$model->setClassName('" . $builder->getStubObjectBuilder()->getFullyQualifiedClassname() . "')\n"
-                 . "->setLoader(function(\$pk) { return \\" . $builder->getStubQueryBuilder()->getFullyQualifiedClassname() . "::create()->findPK(\$pk); })\n"
-                 . "->setValidationMethod(ModelDefinition::VALIDATE_WITH_METHOD);\n\n";
+        $includedColumns = $this->getIncludedColumns();
+        $excludedColumns = $this->getExcludedColumns();
 
         foreach ($table->getColumns() as $column) {
-            if ($includedFields !== null && !in_array($column->getName(), $includedFields)) {
+            if (!empty($includedColumns) && !in_array($column->getName(), $includedColumns)) {
                 continue;
             }
-            if (in_array($column->getName(), $excludedFields)) {
+            if (in_array($column->getName(), $excludedColumns)) {
                 continue;
             }
             $queryable = $column->isPrimaryKey() || in_array($column->getName(), $indexColumns);
             $script .= "\$model->addField(" . $this->addFieldDefinition($column, $queryable) . ");\n\n";
         }
 
-        if ($table->hasBehavior('i18n_dictionary')) {
-            $entries = array_map('trim', explode(',', $table->getBehavior('i18n_dictionary')->getParameter('entries')));
-            foreach ($entries as $name) {
-                if ($includedFields !== null && !in_array($name, $includedFields)) {
-                    continue;
-                }
-                if (in_array($name, $excludedFields)) {
-                    continue;
-                }
-                $script .= "\$model->addField(" . $this->addI18nFieldDefinition($name) . ");\n\n";
-            }
-        }
-
         foreach ($this->getChildrenFKs() as $fk) {
             $script .= "\$model->addField(" . $this->addChildFieldDefinition($fk) . ");\n\n";
         }
 
-        if ($table->hasBehavior('file_bag')) {
-            $script .= $this->addFileBagFields();
-        }
-
-        if (!$isParent && $this->getParameter('delete_action') == 'true') {
-            $script .= "\$model->addAction(ActionDefinition::create()\n"
-                     . "->setName('delete')\n"
-                     . "->setTitle('Delete')\n"
-                     . "->setIcon('trash'));\n\n";
-        }
-
-        $script .= "return \$model;\n}";
         return $script;
     }
 
-    public function addFieldDefinition($column, $queryable = false)
+    protected function getIncludedColumns()
+    {
+        return $this->getListParameter('include');
+    }
+
+    protected function getExcludedColumns()
+    {
+        $cols = $this->getListParameter('exclude');
+        $table = $this->getTable();
+
+        if ($parent = $this->getParentTable()) {
+            foreach ($parent->getColumns() as $column) {
+                $cols[] = $column->getName();
+            }
+        } else if ($table->hasBehavior('concrete_inheritance_parent')) {
+            $cols[] = $table->getBehavior('concrete_inheritance_parent')->getParameter('descendant_column');
+        }
+
+        if ($table->hasBehavior('sortable')) {
+            $cols[] = $table->getBehavior('sortable')->getParameter('rank_column');
+        }
+
+        if ($table->hasBehavior('versionable')) {
+            $cols[] = $table->getBehavior('versionable')->getParameter('version_column');
+        }
+
+        return $cols;
+    }
+
+    protected function addModelActions()
+    {
+        $script = '';
+        $table = $this->getTable();
+
+        if (!$table->hasBehavior('concrete_inheritance_parent') && $this->getParameter('delete_action') == 'true') {
+            $script = "\$model->addAction(ActionDefinition::create()\n"
+                    . "->setName('delete')\n"
+                    . "->setTitle('Delete')\n"
+                    . "->setIcon('trash'));\n\n";
+        }
+
+        return $script;
+    }
+
+    protected function addFieldDefinition($column, $queryable = false)
     {
         $isIdentifier = $column->isPrimaryKey();
         $visibility = array('list', 'view');
@@ -255,24 +273,6 @@ class DashboardModelBehavior extends Behavior
         return $script;
     }
 
-    protected function addI18nFieldDefinition($name)
-    {
-        $script = "FieldDefinition::create()\n"
-                . "->setProperty('" . ucfirst($name) . "')\n"
-                . "->setAccessMethod(FieldDefinition::ACCESS_GETTER_SETTER)\n"
-                . "->setName('" . $name . "')\n"
-                . "->setType('string')\n"
-                . "->setOptional(true)\n"
-                . "->setVisibility(array('" . implode("', '", $this->getVisibility($name, array('list', 'view', 'edit'))) . "'))\n"
-                . "->setI18n(array('fr', 'en'))";
-
-        if ($t = $this->getFormFieldType($name)) {
-            $script .= "\n->setFormFieldType('$t')";
-        }
-
-        return $script;
-    }
-
     protected function addChildFieldDefinition($fk)
     {
         $table = $fk->getTable();
@@ -304,25 +304,6 @@ class DashboardModelBehavior extends Behavior
                 . "->setVisibility(array('view', 'edit'))\n"
                 . "->setRelatedModel(\\$fqdn::getDashboardModelDefinition(), '$controllerFqdn', array('" . implode("', '", $actions) . "'))\n"
                 . "->setValueController('" . $this->getTable()->getPhpName() . "DashboardController', '" . $lcol->getPhpName() . "', '" . $fcol->getPhpName() . "')";
-
-        return $script;
-    }
-
-    protected function addFileBagFields()
-    {
-        $script = "\$model->addField(FieldDefinition::create()\n"
-                . "->setProperty('FileBagName')\n"
-                . "->setAccessMethod(FieldDefinition::ACCESS_GETTER_SETTER)\n"
-                . "->setVisibility(array()));\n\n";
-
-        $script .= "\$model->addField(FieldDefinition::create()\n"
-                . "->setProperty('Files')\n"
-                . "->setAccessMethod(FieldDefinition::ACCESS_GETTER_SETTER)\n"
-                . "->setName('Files')\n"
-                . "->setType('object[]')\n"
-                . "->setVisibility(array('view', 'edit'))\n"
-                . "->setRelatedModel(\\UgroupMedia\\Pnp\\File\\File::getDashboardModelDefinition(), 'FileDashboardController', array('create', 'edit', 'remove'))\n"
-                . "->setValueController('FileDashboardController', 'FileBagName', 'Id'));\n\n";
 
         return $script;
     }
