@@ -39,6 +39,17 @@ class DashboardBaseControllerBehaviorBuilder extends OMBuilder
         return $this->getStubObjectBuilder()->getNamespace() . '\om';
     }
 
+    protected function getDefaultActionAnnotations()
+    {
+        $annotations = array();
+
+        if ($creds = $this->getParameter('credentials')) {
+            $annotations[] = '@\Nucleus\IService\Security\Secure(permissions="' . $creds . '")';
+        }
+
+        return $annotations;
+    }
+
     protected function addClassOpen(&$script)
     {
         $script .= "
@@ -66,14 +77,11 @@ abstract class " . $this->getClassname() . "
                 $script .= $this->addChildActions($fk);
             }
         }
-
-        if ($this->getTable()->hasBehavior('file_bag')) {
-            $script .= $this->addFileBagActions();
-        }
     }
 
     protected function addListAction()
     {
+        $annotations = $this->getDefaultActionAnnotations();
         $objectClassname = $this->getStubObjectBuilder()->getFullyQualifiedClassname();
         $queryClassname = $this->getStubQueryBuilder()->getFullyQualifiedClassname();
         $perPage = $this->getParameter('items_per_page');
@@ -81,22 +89,20 @@ abstract class " . $this->getClassname() . "
         $pk = $this->getTable()->getPrimaryKey();
         $orderBy = $pk[0]->getPhpName();
 
-        $additionalAnnotations = array();
-        if ($secureAnnotation = $this->getSecureAnnotation()) {
-            $additionalAnnotations[] = $secureAnnotation;
-        }
+        $annotations[] = "@\Nucleus\IService\Dashboard\Action(title=\"List\", icon=\"list\", default=true)";
+        $annotations[] = "@\Nucleus\IService\Dashboard\Paginate(per_page={$perPage}, offset_param=\"offset\")";
+        $annotations[] = "@\Nucleus\IService\Dashboard\Orderable(param=\"order_by\", order_param=\"order_by_direction\")";
+        $annotations[] = "@\Nucleus\IService\Dashboard\Filterable(param=\"filters\")";
+
         if ($this->getTable()->hasBehavior('sortable')) {
-            $additionalAnnotations[] = '@\Nucleus\IService\Dashboard\ActionBehavior(class="Nucleus\Dashboard\Bridge\Propel\SortableActionBehavior")';
+            $annotations[] = '@\Nucleus\IService\Dashboard\ActionBehavior(class="Nucleus\Dashboard\Bridge\Propel\SortableActionBehavior")';
             $orderBy = $this->getTable()->getBehavior('sortable')->getParameter('rank_column');
         }
 
         return "
     /**
-     * @\Nucleus\IService\Dashboard\Action(title=\"List\", icon=\"list\", default=true)
-     * @\Nucleus\IService\Dashboard\Paginate(per_page={$perPage}, offset_param=\"offset\")
-     * @\Nucleus\IService\Dashboard\Orderable(param=\"order_by\", order_param=\"order_by_direction\")
-     * @\Nucleus\IService\Dashboard\Filterable(param=\"filters\")
-     * " . implode("\n     * ", $additionalAnnotations) . "
+    " . $this->renderAnnotations($annotations) . "
+     *
      * @return \\{$objectClassname}[]
      */
     public function listAll(array \$filters = array(), \$offset = 0, \$order_by= '{$orderBy}', \$order_by_direction = 'asc')
@@ -118,13 +124,16 @@ abstract class " . $this->getClassname() . "
 
     protected function addAddAction()
     {
+        $annotations = $this->getDefaultActionAnnotations();
         $objectClassname = $this->getStubObjectBuilder()->getFullyQualifiedClassname();
         $queryClassname = $this->getStubQueryBuilder()->getFullyQualifiedClassname();
-        $secureAnnotation = $this->getSecureAnnotation();
+
+        $annotations[] = "@\Nucleus\IService\Dashboard\Action(title=\"Add\", icon=\"plus\", redirect_with_id=\"edit\")";
+
         return "
     /**
-     * @\Nucleus\IService\Dashboard\Action(title=\"Add\", icon=\"plus\", redirect_with_id=\"edit\")
-     * {$secureAnnotation}
+    " . $this->renderAnnotations($annotations) . "
+     *
      * @return \\{$objectClassname}
      */
     public function add(\\{$objectClassname} \$obj)
@@ -137,9 +146,9 @@ abstract class " . $this->getClassname() . "
 
     protected function addViewAction($onModel = false)
     {
+        $annotations = $this->getDefaultActionAnnotations();
         $objectClassname = $this->getStubObjectBuilder()->getFullyQualifiedClassname();
         $queryClassname = $this->getStubQueryBuilder()->getFullyQualifiedClassname();
-        $secureAnnotation = $this->getSecureAnnotation();
         list($funcargs, $callargs) = $this->getPrimaryKeyAsArgs();
 
         $params = '';
@@ -147,10 +156,12 @@ abstract class " . $this->getClassname() . "
             $params = ', on_model="' . $objectClassname . '"';
         }
 
+        $annotations[] = "@\Nucleus\IService\Dashboard\Action(title=\"View\", icon=\"eye-open\", in=\"call\", menu=false $params)";
+
         return "
     /**
-     * @\Nucleus\IService\Dashboard\Action(title=\"View\", icon=\"eye-open\", in=\"call\", menu=false $params)
-     * {$secureAnnotation}
+    " . $this->renderAnnotations($annotations) . "
+     *
      * @return \\{$objectClassname}
      */
     public function view({$funcargs})
@@ -162,15 +173,17 @@ abstract class " . $this->getClassname() . "
 
     protected function addConcreteInheritanceViewAction()
     {
+        $annotations = $this->getDefaultActionAnnotations();
         $objectClassname = $this->getStubObjectBuilder()->getFullyQualifiedClassname();
         $queryClassname = $this->getStubQueryBuilder()->getFullyQualifiedClassname();
-        $secureAnnotation = $this->getSecureAnnotation();
         list($funcargs, $callargs) = $this->getPrimaryKeyAsArgs();
+
+        $annotations[] = "@\Nucleus\IService\Dashboard\Action(title=\"View\", menu=false)";
 
         return "
     /**
-     * @\Nucleus\IService\Dashboard\Action(title=\"View\", menu=false)
-     * {$secureAnnotation}
+    " . $this->renderAnnotations($annotations) . "
+     *
      * @return \\{$objectClassname}
      */
     public function view({$funcargs})
@@ -183,15 +196,16 @@ abstract class " . $this->getClassname() . "
 
     protected function addEditAction()
     {
+        $annotations = $this->getDefaultActionAnnotations();
         $objectClassname = $this->getStubObjectBuilder()->getFullyQualifiedClassname();
         $queryClassname = $this->getStubQueryBuilder()->getFullyQualifiedClassname();
-        $secureAnnotation = $this->getSecureAnnotation();
         list($funcargs, $callargs) = $this->getPrimaryKeyAsArgs();
 
         return "
     /**
      * @\Nucleus\IService\Dashboard\Action(title=\"Edit\", icon=\"edit\", in=\"call\", on_model=\"{$objectClassname}\", pipe=\"save\")
-     * {$secureAnnotation}
+    " . $this->renderAnnotations($annotations) . "
+     *
      * @return \\{$objectClassname}
      */
     public function edit({$funcargs})
@@ -201,7 +215,8 @@ abstract class " . $this->getClassname() . "
 
     /**
      * @\Nucleus\IService\Dashboard\Action(menu=false, load_model=true)
-     * {$secureAnnotation}
+    " . $this->renderAnnotations($annotations) . "
+     *
      * @return \\{$objectClassname}
      */
     public function save(\\{$objectClassname} \$obj)
@@ -214,6 +229,7 @@ abstract class " . $this->getClassname() . "
 
     protected function addChildActions($fk)
     {
+        $annotations = $this->getDefaultActionAnnotations();
         $table = $fk->getTable();
         $name = $table->getPhpName();
         $pname = $name . "s";
@@ -227,13 +243,12 @@ abstract class " . $this->getClassname() . "
         $childObjectClassname = $this->getNewStubObjectBuilder($table)->getFullyQualifiedClassname();
         $childQueryClassname = $this->getNewStubQueryBuilder($table)->getFullyQualifiedClassname();
 
-        $secureAnnotation = $this->getSecureAnnotation();
-        
         return "
 
     /**
      * @\Nucleus\IService\Dashboard\Action(menu=false)
-     * {$secureAnnotation}
+    " . $this->renderAnnotations($annotations) . "
+     *
      * @return \\{$childObjectClassname}[]
      */
     public function list{$pname}(\${$localId})
@@ -244,7 +259,7 @@ abstract class " . $this->getClassname() . "
 
     /**
      * @\Nucleus\IService\Dashboard\Action(menu=false)
-     * {$secureAnnotation}
+    " . $this->renderAnnotations($annotations) . "
      */
     public function add{$pname}(\${$localId}, \${$remoteId})
     {
@@ -256,7 +271,7 @@ abstract class " . $this->getClassname() . "
 
     /**
      * @\Nucleus\IService\Dashboard\Action(menu=false)
-     * {$secureAnnotation}
+    " . $this->renderAnnotations($annotations) . "
      */
     public function remove{$pname}(\${$localId}, \${$remoteId})
     {
@@ -268,48 +283,9 @@ abstract class " . $this->getClassname() . "
 ";
     }
 
-    protected function addFileBagActions()
+    protected function renderAnnotations(array $annotations)
     {
-        $localId = $this->getStubObjectBuilder()->getClassname() . 'Id';
-        $queryClassname = $this->getStubQueryBuilder()->getFullyQualifiedClassname();
-        list($funcargs, $callargs) = $this->getPrimaryKeyAsArgs();
-        $secureAnnotation = $this->getSecureAnnotation();
-
-        return "
-
-    /**
-     * @\Nucleus\IService\Dashboard\Action(menu=false)
-     * {$secureAnnotation}
-     * @return \\UgroupMedia\\Pnp\\File\\File[]
-     */
-    public function listFiles(\${$localId})
-    {
-        \$obj = \\{$queryClassname}::create()->findPK(\${$localId});
-        return \$obj->getFiles();
-    }
-
-    /**
-     * @\Nucleus\IService\Dashboard\Action(menu=false)
-     * {$secureAnnotation}
-     */
-    public function addFiles(\${$localId}, \$Id)
-    {
-        \$obj = \\{$queryClassname}::create()->findPK(\${$localId});
-        \$file = \\UgroupMedia\\Pnp\\File\\FileQuery::create()->findPK(\$Id);
-        \$obj->addFile(\$file);
-    }
-
-    /**
-     * @\Nucleus\IService\Dashboard\Action(menu=false)
-     * {$secureAnnotation}
-     */
-    public function removeFiles(\${$localId}, \$Id)
-    {
-        \$obj = \\{$queryClassname}::create()->findPK(\${$localId});
-        \$file = \\UgroupMedia\\Pnp\\File\\FileQuery::create()->findPK(\$Id);
-        \$obj->removeFile(\$file);
-    }
-";
+        return " * " . implode("\n     * ", $annotations);
     }
 
     protected function getPrimaryKeyAsArgs()
@@ -328,14 +304,6 @@ abstract class " . $this->getClassname() . "
         }
 
         return array($funcargs, $callargs);
-    }
-
-    protected function getSecureAnnotation()
-    {
-        if ($creds = $this->getParameter('credentials')) {
-            return '@\Nucleus\IService\Security\Secure(permissions="' . $creds . '")';
-        }
-        return '';
     }
 
     protected function addClassClose(&$script)
