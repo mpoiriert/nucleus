@@ -12,6 +12,8 @@ use Nucleus\IService\Cache\EntryNotFoundException;
  */
 class Caching extends BaseAspect 
 {
+    private $clearNamespaceProcessed = array();
+    
     /**
      * @return ICacheService
      */
@@ -75,12 +77,46 @@ class Caching extends BaseAspect
     }
     
     /**
+     * Invalidate methods
+     *
+     * @param MethodInvocation $invocation Invocation
+     *
+     * @Go\Lang\Annotation\After("@annotation(Nucleus\IService\Cache\ClearNamespace)")
+     */
+    public function afterClearNamespace(MethodInvocation $invocation)
+    {
+        $objectKey = spl_object_hash($invocation);
+        if(in_array($objectKey, $this->clearNamespaceProcessed)) {
+            return;
+        }
+        $cacheService = $this->getCacheService();
+         
+        foreach($this->getClearNamespaceAnnotations($invocation) as $annotation) {
+            if(!$annotation->namespace) {
+                continue;
+            }
+            $cacheService->clearNamespace($annotation->namespace);
+        }
+        
+        $this->clearNamespaceProcessed[] = $objectKey;
+    }
+    
+    /**
      * @param MethodInvocation $invocation
      * @return \Nucleus\IService\Cache\Cacheable
      */
     private function getCacheableAnnotation(MethodInvocation $invocation)
     {
         return $this->getAnnotation($invocation, 'Nucleus\IService\Cache\Cacheable');
+    }
+    
+    /**
+     * @param MethodInvocation $invocation
+     * @return \Nucleus\IService\Cache\ClearNamespace[]
+     */
+    private function getClearNamespaceAnnotations(MethodInvocation $invocation)
+    {
+        return $this->getAnnotations($invocation, 'Nucleus\IService\Cache\ClearNamespace');
     }
     
     /**
