@@ -77,6 +77,8 @@ class FieldDefinition
 
     protected $valueControllerLocalId;
 
+    protected $valueControllerEmbed;
+
     protected $i18n;
 
     protected $isInternal = false;
@@ -345,11 +347,12 @@ class FieldDefinition
         return $this->constraints;
     }
 
-    public function setValueController($controllerName, $remoteId = 'id', $localId = null)
+    public function setValueController($controllerName, $remoteId = 'id', $localId = null, $embed = true)
     {
         $this->valueController = $controllerName;
         $this->valueControllerRemoteId = $remoteId;
         $this->valueControllerLocalId = $localId;
+        $this->valueControllerEmbed = $embed;
         return $this;
     }
 
@@ -371,6 +374,11 @@ class FieldDefinition
     public function getValueControllerLocalId()
     {
         return $this->valueControllerLocalId;
+    }
+
+    public function isValueControllerEmbeded()
+    {
+        return $this->valueControllerEmbed;
     }
 
     public function setI18n(array $locales)

@@ -14,6 +14,7 @@ class ActionDefinition
     const RETURN_OBJECT= 'object';
     const RETURN_FORM = 'form';
     const RETURN_REDIRECT = 'redirect';
+    const RETURN_FILE = 'file';
 
     const FLOW_NONE = 'none';
     const FLOW_DELEGATE = 'delegate';
