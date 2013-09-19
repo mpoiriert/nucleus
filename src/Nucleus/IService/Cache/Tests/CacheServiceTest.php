@@ -131,5 +131,13 @@ abstract class CacheServiceTest extends PHPUnit_Framework_TestCase
         $class->delete('toto');
         
         $this->assertEquals($value2, $class->get('toto', $value2));
+        
+        //Value key is not taken in consideration so the value set before
+        //should be return
+        $this->assertEquals($value2, $class->get('toto', $value1));
+        
+        $class->clearNamespace();
+        
+        $this->assertEquals($value1, $class->get('toto', $value1));
     }
 }

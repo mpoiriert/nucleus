@@ -34,4 +34,14 @@ class ClassWithCache
     {
         
     }
+    
+    /**
+     * @param string $name
+     * 
+     * @\Nucleus\IService\Cache\ClearNamespace(namespace="test")
+     */
+    public function clearNamespace()
+    {
+        
+    }
 }
