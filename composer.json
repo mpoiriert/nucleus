@@ -13,6 +13,7 @@
     ],
     "require": {
         "php": ">=5.3",
+        "doctrine/common": "2.3.*",
         "doctrine/annotations": "1.*",
         "symfony/event-dispatcher": "2.*",
         "symfony/property-access": "2.*",
