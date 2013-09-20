@@ -10,6 +10,11 @@ use Nucleus\View\FileSystemLoader;
 class TwigEnvironment extends Twig_Environment
 {
     /**
+     * @var FileSystemLoader
+     */
+    private $fileSystemLoader = null;
+    
+    /**
      * @\Nucleus\IService\DependencyInjection\Inject(options="$")
      */
     public function __construct(Twig_LoaderInterface $twigLoader = null, $options = array())
@@ -50,11 +55,32 @@ class TwigEnvironment extends Twig_Environment
      */
     public function importNucleusFileSystemLoader(FileSystemLoader $templateFileLoader)
     {
+        $this->fileSystemLoader = $templateFileLoader;
         $this->loader->addLoader($templateFileLoader);
     }
 
     public function getArrayLoader()
     {
         return $this->arrayLoader;
+    }
+    
+    /**
+     * @\Nucleus\IService\EventDispatcher\Listen("ServiceContainer.warmUp")
+     */
+    public function warmUp()
+    {
+        $finder = new \Symfony\Component\Finder\Finder();
+        $finder->files()->name('*.twig')->in($this->fileSystemLoader->getPaths());
+        foreach($finder as $file) {
+            $fileName = $file->getRelativePathname();
+            $cache = $this->getCacheFilename($fileName);
+            if(!$cache) {
+                continue;
+            } 
+            
+            if (!is_file($cache) || ($this->isAutoReload() && !$this->isTemplateFresh($fileName, filemtime($cache)))) {
+                $this->writeCacheFile($cache, $this->compileSource($this->getLoader()->getSource($fileName), $fileName));
+            } 
+        }
     }
 }
