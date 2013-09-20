@@ -37,6 +37,8 @@ class Dashboard
     
     protected $configuration;
 
+    protected $throwExceptions = true;
+
     /**
      * @param \Nucleus\Routing\Router $routing
      * 
@@ -69,45 +71,33 @@ class Dashboard
         $this->controllers[$controller->getName()] = $controller;
     }
 
-    public function addLazyLoadedController($className)
-    {
-        $base = $this->builder->buildBaseController($className);
-        $this->lazyControllers[$base[0]->getName()] = $base;
-    }
-
-    public function addServiceAsController($serviceName, $lazy = true)
+    public function addServiceAsController($serviceName)
     {
         if ($this->serviceContainer === null) {
             $this->initializeServices[] = $serviceName;
             return;
         }
-        $service = $this->serviceContainer->get($serviceName);
-        $base = $this->builder->buildBaseController($service);
-        $base[0]->setServiceName($serviceName);
+        $this->addController($this->buildControllerDefinitionFromService($serviceName));
+    }
 
-        if ($lazy) {
-            $this->lazyControllers[$base[0]->getName()] = $base;
-        } else {
-            $controller = $this->builder->buildController($base);
-            $this->controllers[$controller->getName()] = $controller;
-        }
+    /**
+     * @\Nucleus\IService\Cache\Cacheable(keyName="services.$name", namespace="dashboard")
+     */
+    protected function buildControllerDefinitionFromService($name)
+    {
+        $service = $this->serviceContainer->get($name);
+        $controller = $this->builder->buildController($service);
+        $controller->setServiceName($name);
+        return $controller;
     }
 
     public function getController($name)
     {
-        if (isset($this->lazyControllers[$name])) {
-            $this->controllers[$name] = $this->builder->buildController($this->lazyControllers[$name]);
-            unset($this->lazyControllers[$name]);
-        }
         return $this->controllers[$name];
     }
 
     public function getControllers()
     {
-        // initialize lazy controllers
-        foreach (array_keys($this->lazyControllers) as $name) {
-            $this->getController($name);
-        }
         return $this->controllers;
     }
     
@@ -422,6 +412,9 @@ class Dashboard
             return $this->formatInvokedResponse($request, $response, $action, $result);
 
         } catch (\Exception $e) {
+            if ($this->throwExceptions) {
+                throw $e;
+            }
             return $this->formatErrorResponse($e->getMessage());
         }
     }
@@ -458,6 +451,9 @@ class Dashboard
             return $this->formatInvokedResponse($request, $response, $modelAction, $result, $object);
 
         } catch (\Exception $e) {
+            if ($this->throwExceptions) {
+                throw $e;
+            }
             return $this->formatErrorResponse($e->getMessage());
         }
     }
@@ -480,6 +476,9 @@ class Dashboard
             return $this->formatResponse($result);
 
         } catch (\Exception $e) {
+            if ($this->throwExceptions) {
+                throw $e;
+            }
             return $this->formatErrorResponse($e->getMessage());
         }
     }
