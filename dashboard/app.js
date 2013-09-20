@@ -922,7 +922,7 @@ $(function() {
         },
         renderEditableField: function(field, value) {
             var input;
-            if (field.value_controller && !field.is_array) {
+            if (field.value_controller && field.value_controller.embed && !field.is_array) {
                 input = this.renderValueControllerSelectBox(field, value);
             } else if (field.field_type == 'checkbox' || field.field_type == 'radio') {
                 input = this.renderBooleanField(field, value);
@@ -1080,6 +1080,7 @@ $(function() {
             this.parent.action._call(_.extend({}, this.parent.action.data, this.overrideRequestData), 
                 _.bind(function(resp) {
                     this.unfreeze();
+                    this.$toolbar.disable();
                     if (this.options.behaviors.paginated) {
                         this.renderTable(resp.data);
                     } else {
@@ -1237,12 +1238,13 @@ $(function() {
             this.action.execute();
             return this;
         },
-        renderInput: function() {
+        renderInput: function(data) {
             this.updateUrl();
             this.view = new Dashboard.FormWidgetView(_.extend({
                 field_visibility: ['edit'],
                 tabs_for_related_models: false,
-                title_with_id: false
+                title_with_id: false,
+                model: data
             }, this.action.schema.input));
             this.view.options.refreshable = false;
             this.view.parent = this;
@@ -1271,7 +1273,8 @@ $(function() {
                 this.freeze();
                 var action = new Dashboard.Action(controller, action);
                 action.getSchema(_.bind(function(schema) {
-                    if (schema.input.type == 'form' || schema.output.type != 'none') {
+                    this.unfreeze();
+                    if (schema.output.type != 'file' && (schema.input.type == 'form' || schema.output.type != 'none')) {
                         this._redirectHandler(action.controller, action.name, data);
                     } else {
                         this.listenTo(action, 'response', function() {
@@ -1364,10 +1367,10 @@ $(function() {
         execute: function(data) {
             data = data || this.data;
             this.getSchema(_.bind(function(schema) {
-                if (!$.isEmptyObject(data) || schema.input.type != 'form') {
+                if (schema.input.type != 'form' || (!$.isEmptyObject(data) && _.size(data) == schema.input.fields.length)) {
                     this.doExecute(data);
                 } else {
-                    this.trigger('input');
+                    this.trigger('input', data);
                 }
             }, this));
             return this;
@@ -1379,12 +1382,22 @@ $(function() {
         doExecute: function(data) {
             this.trigger('before_execute', data);
             this.lastRequest = data;
-            this._call(data,
-                _.bind(this.handleResponse, this),
-                _.bind(this.handleError, this),
-                this.override_url,
-                this.override_method
-            );
+
+            if (this.schema.output.type == 'file') {
+                this._callInIframe(
+                    data, 
+                    _.bind(this.handleResponse, this), 
+                    this.override_url, 
+                    this.override_method
+                );
+            } else {
+                this._call(data,
+                    _.bind(this.handleResponse, this),
+                    _.bind(this.handleError, this),
+                    this.override_url,
+                    this.override_method
+                );
+            }
         },
         handleResponse: function(data) {
             if (this.allow_flow && this.schema.output.flow.indexOf('redirect') === 0) {
@@ -1422,16 +1435,38 @@ $(function() {
         },
         _call: function(data, callback, err_callback, url, method) {
             data = data || {};
-
             if (!method) {
                 method = this.schema.input.type == 'form' ? 'post' : 'get';
             }
-
             if (!url) {
                 url = this.schema.input.delegate || this.schema.input.url;
             }
 
             Dashboard.api.call(method, url, data, callback, err_callback);
+        },
+        _callInIframe: function(data, callback, url, method) {
+            data = data || {};
+            if (!method) {
+                method = this.schema.input.type == 'form' ? 'post' : 'get';
+            }
+            if (!url) {
+                url = this.schema.input.delegate || this.schema.input.url;
+            }
+
+            var id = Date.now();
+            var iframe = $('<iframe name="action-execute-iframe-' + id + '" style="display: none" />').appendTo('body');
+            var form = $('<form style="display: none" />').appendTo('body').attr({
+                method: method,
+                action: url,
+                target: 'action-execute-iframe-' + id
+            });
+
+            for (var k in data) {
+                form.append($('<input type="text" name="' + k + '" />').val(data[k]));
+            }
+
+            form.submit().remove();
+            callback(null);
         }
     });
 
