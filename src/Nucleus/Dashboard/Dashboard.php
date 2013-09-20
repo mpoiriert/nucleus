@@ -92,7 +92,7 @@ class Dashboard
         $service = $this->serviceContainer->get($name);
         $base = $this->builder->buildBaseController($service);
         $base[0]->setServiceName($name);
-        return $controller;
+        return $base;
     }
 
     public function getController($name)
