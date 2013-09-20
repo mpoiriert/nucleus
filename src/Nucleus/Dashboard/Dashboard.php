@@ -73,18 +73,18 @@ class Dashboard
 
     public function addServiceAsController($serviceName, $name = null)
     {
-        if ($this->serviceContainer === null) {
-            $this->initializeServices[] = $serviceName;
-            return;
-        }
-
         if ($name) {
             $this->lazyServiceControllers[$name] = $serviceName;
             return;
         }
 
+        if ($this->serviceContainer === null) {
+            $this->initializeServices[] = $serviceName;
+            return;
+        }
+
         $base = $this->buildBaseControllerDefinitionFromService($serviceName);
-        $this->lazyServiceControllers[$name] = $base;
+        $this->lazyServiceControllers[$base[0]->getName()] = $base;
     }
 
     protected function buildBaseControllerDefinitionFromService($name)
