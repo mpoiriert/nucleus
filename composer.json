@@ -22,7 +22,7 @@
         "twig/twig": "1.*",
         "kriswallsmith/assetic": "1.1.*",
         "leafo/scssphp": "0.0.*",
-        "leafo/lessphp": "0.3.*",
+        "leafo/lessphp": "0.4.*",
         "symfony/yaml": "2.2.*",
         "symfony/filesystem": "2.3.*",
         "symfony/dependency-injection": "2.3.*",
