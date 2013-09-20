@@ -156,6 +156,9 @@ class FrontController
         
         $finalResponse = $this->completeResponse($executionResult, $request, $response);
         $finalResponse->prepare($request);
+
+        $this->eventDispatcher->dispatch("Response.beforeSend", $finalResponse);
+
         return $finalResponse;
     }
 
@@ -167,7 +170,7 @@ class FrontController
      */
     private function completeResponse($executionResult, Request $request, Response $response)
     {
-        if($executionResult instanceof RedirectResponse){
+        if($executionResult instanceof Response){
             return $executionResult;
         }
         

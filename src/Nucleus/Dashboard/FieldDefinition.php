@@ -23,6 +23,8 @@ class FieldDefinition
 
     protected $isArray = false;
 
+    protected $isHash = false;
+
     protected $relatedModel;
 
     protected $relatedModelController;
@@ -118,6 +120,12 @@ class FieldDefinition
         if (strpos($type, '[]') !== false) {
             $this->isArray = true;
             $type = rtrim($type, '[]');
+        } else if ($type == 'array') {
+            $this->isArray = true;
+            $type = 'string';
+        } else if ($type == 'hash') {
+            $this->isHash = true;
+            $type = 'string';
         }
 
         $this->type = $type;
@@ -140,7 +148,13 @@ class FieldDefinition
 
     public function getFormatedType()
     {
-        return $this->type . ($this->isArray ? '[]' : '');
+        $suffix = '';
+        if ($this->isHash) {
+            $suffix = '{}';
+        } else if ($this->isArray) {
+            $suffix = '[]';
+        }
+        return $this->type . $suffix;
     }
 
     public function setRelatedModel(ModelDefinition $model, $modelController = null, $actions = null)
@@ -173,7 +187,7 @@ class FieldDefinition
         return $this->relatedModelActions;
     }
 
-    public function setIsArray($isArray = trye)
+    public function setIsArray($isArray = true)
     {
         $this->isArray = $isArray;
         return $this;
@@ -182,6 +196,17 @@ class FieldDefinition
     public function isArray()
     {
         return $this->isArray;
+    }
+
+    public function setIsHash($isHash = true)
+    {
+        $this->isHash = $isHash;
+        return $this;
+    }
+
+    public function isHash()
+    {
+        return $this->isHash;
     }
 
     public function setName($name)

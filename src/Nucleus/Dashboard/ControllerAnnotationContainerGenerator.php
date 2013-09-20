@@ -16,10 +16,16 @@ class ControllerAnnotationContainerGenerator extends BaseAnnotationContainerGene
     {
         $serviceName = $context->getServiceName();
         $dashboard = $context->getContainerBuilder()->getDefinition('dashboard');
+
+        if (!($name = $annotation->name)) {
+            $def = $context->getContainerBuilder()->getDefinition($serviceName);
+            $classname = $def->getClass();
+            $name = substr($classname, strrpos($classname, '\\') + 1);
+        }
         
         $dashboard->addMethodCall(
             'addServiceAsController',
-            array($serviceName)
+            array($serviceName, $name)
         );
     }
 }
