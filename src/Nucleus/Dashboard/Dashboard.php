@@ -31,7 +31,7 @@ class Dashboard
 
     protected $controllers = array();
 
-    protected $lazyControllers = array();
+    protected $lazyServiceControllers = array();
 
     protected $builder;
     
@@ -71,33 +71,49 @@ class Dashboard
         $this->controllers[$controller->getName()] = $controller;
     }
 
-    public function addServiceAsController($serviceName)
+    public function addServiceAsController($serviceName, $name = null)
     {
         if ($this->serviceContainer === null) {
             $this->initializeServices[] = $serviceName;
             return;
         }
-        $this->addController($this->buildControllerDefinitionFromService($serviceName));
+
+        if ($name) {
+            $this->lazyServiceControllers[$name] = $serviceName;
+            return;
+        }
+
+        $base = $this->buildBaseControllerDefinitionFromService($serviceName);
+        $this->lazyServiceControllers[$name] = $base;
     }
 
-    /**
-     * @\Nucleus\IService\Cache\Cacheable(keyName="services.$name", namespace="dashboard")
-     */
-    protected function buildControllerDefinitionFromService($name)
+    protected function buildBaseControllerDefinitionFromService($name)
     {
         $service = $this->serviceContainer->get($name);
-        $controller = $this->builder->buildController($service);
-        $controller->setServiceName($name);
+        $base = $this->builder->buildBaseController($service);
+        $base[0]->setServiceName($name);
         return $controller;
     }
 
     public function getController($name)
     {
+        if (isset($this->lazyServiceControllers[$name])) {
+            $base = $this->lazyServiceControllers[$name];
+            if (is_string($base)) {
+                $base = $this->buildBaseControllerDefinitionFromService($base);
+            }
+            $this->addController($this->builder->buildController($base));
+        }
         return $this->controllers[$name];
     }
 
     public function getControllers()
     {
+        if (!empty($this->lazyServiceControllers)) {
+            foreach (array_keys($this->lazyServiceControllers) as $name) {
+                $this->getController($name);
+            }
+        }
         return $this->controllers;
     }
     
