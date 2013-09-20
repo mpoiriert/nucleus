@@ -21,19 +21,21 @@ class Dashboard
      */
     public $routing;
 
-    private $serviceContainer;
+    protected $serviceContainer;
 
-    private $initializeServices = array();
+    protected $initializeServices = array();
 
-    private $invoker;
+    protected $invoker;
 
     public $accessControl;
 
-    private $controllers = array();
+    protected $controllers = array();
 
-    private $builder;
+    protected $lazyControllers = array();
+
+    protected $builder;
     
-    private $configuration;
+    protected $configuration;
 
     /**
      * @param \Nucleus\Routing\Router $routing
@@ -67,24 +69,45 @@ class Dashboard
         $this->controllers[$controller->getName()] = $controller;
     }
 
-    public function addServiceAsController($serviceName)
+    public function addLazyLoadedController($className)
+    {
+        $base = $this->builder->buildBaseController($className);
+        $this->lazyControllers[$base[0]->getName()] = $base;
+    }
+
+    public function addServiceAsController($serviceName, $lazy = true)
     {
         if ($this->serviceContainer === null) {
             $this->initializeServices[] = $serviceName;
             return;
         }
         $service = $this->serviceContainer->get($serviceName);
-        $controller = $this->builder->buildController($service)->setServiceName($serviceName);
-        $this->addController($controller);
+        $base = $this->builder->buildBaseController($service);
+        $base[0]->setServiceName($serviceName);
+
+        if ($lazy) {
+            $this->lazyControllers[$base[0]->getName()] = $base;
+        } else {
+            $controller = $this->builder->buildController($base);
+            $this->controllers[$controller->getName()] = $controller;
+        }
     }
 
     public function getController($name)
     {
+        if (isset($this->lazyControllers[$name])) {
+            $this->controllers[$name] = $this->builder->buildController($this->lazyControllers[$name]);
+            unset($this->lazyControllers[$name]);
+        }
         return $this->controllers[$name];
     }
 
     public function getControllers()
     {
+        // initialize lazy controllers
+        foreach (array_keys($this->lazyControllers) as $name) {
+            $this->getController($name);
+        }
         return $this->controllers;
     }
     
@@ -107,7 +130,7 @@ class Dashboard
     public function getSchema()
     {
         $schema = array();
-        foreach ($this->controllers as $controller) {
+        foreach ($this->getControllers() as $controller) {
             $schema = array_merge($schema, $this->getControllerActionsSchema($controller));
         }
 
@@ -334,6 +357,7 @@ class Dashboard
             return array(
                 'type' => $f->getType(),
                 'is_array' => $f->isArray(),
+                'is_hash' => $f->isHash(),
                 'field_type' => $f->getFormFieldType(),
                 'field_options' => $f->getFormFieldOptions(),
                 'formated_type' => $f->getFormatedType(),
@@ -356,44 +380,50 @@ class Dashboard
      */
     public function invokeAction($controllerName, $actionName, Request $request, Response $response)
     {
-        list($controller, $action) = $this->getAction($controllerName, $actionName);
+        try {
 
-        $service = $this->serviceContainer->get($controller->getServiceName());
-        $model = $action->getInputModel();
-        $data = $this->getInputData($request);
-        $params = array();
+            list($controller, $action) = $this->getAction($controllerName, $actionName);
 
-        if ($model !== null) {
-            try {
-                if ($action->isModelLoaded()) {
-                    $object = $model->loadObject($data);
-                } else {
-                    $object = $model->instanciateObject($data);
+            $service = $this->serviceContainer->get($controller->getServiceName());
+            $model = $action->getInputModel();
+            $data = $this->getInputData($request);
+            $params = array();
+
+            if ($model !== null) {
+                try {
+                    if ($action->isModelLoaded()) {
+                        $object = $model->loadObject($data);
+                    } else {
+                        $object = $model->instanciateObject($data);
+                    }
+
+                    $model->validateObject($object);
+
+                    if ($action->isModelOnlyArgument()) {
+                        $params = array($action->getModelArgumentName() => $object);
+                    } else {
+                        $params = $model->convertObjectToArray($object);
+                    }
+                } catch (ValidationException $e) {
+                    return $this->formatErrorResponse((string) $e->getVioliations());
                 }
-
-                $model->validateObject($object);
-
-                if ($action->isModelOnlyArgument()) {
-                    $params = array($action->getModelArgumentName() => $object);
-                } else {
-                    $params = $model->convertObjectToArray($object);
-                }
-            } catch (ValidationException $e) {
-                return $this->formatErrorResponse((string) $e->getVioliations());
             }
+
+            $action->applyBehaviors('beforeInvoke', array($model, $data, &$params, $request, $response));
+
+            $result = $this->invoker->invoke(
+                array($service, $action->getName()), $params, array($request, $response));
+
+            $action->applyBehaviors('afterInvoke', array($model, &$result, $request, $response));
+
+            if ($result instanceof Response) {
+                return $result;
+            }
+            return $this->formatInvokedResponse($request, $response, $action, $result);
+
+        } catch (\Exception $e) {
+            return $this->formatErrorResponse($e->getMessage());
         }
-
-        $action->applyBehaviors('beforeInvoke', array($model, $data, &$params, $request, $response));
-
-        $result = $this->invoker->invoke(
-            array($service, $action->getName()), $params, array($request, $response));
-
-        $action->applyBehaviors('afterInvoke', array($model, &$result, $request, $response));
-
-        if ($result instanceof Response) {
-            return $result;
-        }
-        return $this->formatInvokedResponse($request, $response, $action, $result);
     }
 
     /**
@@ -401,29 +431,35 @@ class Dashboard
      */
     public function invokeModelAction($controllerName, $actionName, $modelActionName, Request $request, Response $response)
     {
-        list($controller, $action, $modelAction) = $this->getAction($controllerName, $actionName, $modelActionName);
-
-        $data = $this->getInputData($request);
-        $model = $action->getReturnModel();
-        $object = $model->loadObject($data);
-
         try {
-            $model->validateObject($object);
-        } catch (ValidationException $e) {
-            return $this->formatErrorResponse((string) $e->getVioliations());
+
+            list($controller, $action, $modelAction) = $this->getAction($controllerName, $actionName, $modelActionName);
+
+            $data = $this->getInputData($request);
+            $model = $action->getReturnModel();
+            $object = $model->loadObject($data);
+
+            try {
+                $model->validateObject($object);
+            } catch (ValidationException $e) {
+                return $this->formatErrorResponse((string) $e->getVioliations());
+            }
+
+            $action->applyBehaviors('beforeModelInvoke', array($model, $data, $request, $response));
+
+            $result = $this->invoker->invoke(
+                array($object, $modelAction->getName()), array(), array($request, $response));
+
+            $action->applyBehaviors('afterModelInvoke', array($model, &$result, $request, $response));
+
+            if ($result instanceof Response) {
+                return $result;
+            }
+            return $this->formatInvokedResponse($request, $response, $modelAction, $result, $object);
+
+        } catch (\Exception $e) {
+            return $this->formatErrorResponse($e->getMessage());
         }
-
-        $action->applyBehaviors('beforeModelInvoke', array($model, $data, $request, $response));
-
-        $result = $this->invoker->invoke(
-            array($object, $modelAction->getName()), array(), array($request, $response));
-
-        $action->applyBehaviors('afterModelInvoke', array($model, &$result, $request, $response));
-
-        if ($result instanceof Response) {
-            return $result;
-        }
-        return $this->formatInvokedResponse($request, $response, $modelAction, $result, $object);
     }
 
     /**
@@ -431,19 +467,21 @@ class Dashboard
      */
     public function invokeBehavior($controllerName, $actionName, $behaviorName, Request $request, Response $response)
     {
-        list($controller, $action) = $this->getAction($controllerName, $actionName);
-
-        $data = $this->getInputData($request);
-        if (($behavior = $action->getBehavior($behaviorName)) === null) {
-            throw new DashboardException("Behavior '$behaviorName' on '$controllerName/$actionName' not found");
-        }
-
         try {
+
+            list($controller, $action) = $this->getAction($controllerName, $actionName);
+
+            $data = $this->getInputData($request);
+            if (($behavior = $action->getBehavior($behaviorName)) === null) {
+                throw new DashboardException("Behavior '$behaviorName' on '$controllerName/$actionName' not found");
+            }
+
             $result = $behavior->trigger('invoke', array($data, $request, $response));
-        } catch (DashboardException $e) {
+            return $this->formatResponse($result);
+
+        } catch (\Exception $e) {
             return $this->formatErrorResponse($e->getMessage());
         }
-        return $this->formatResponse($result);
     }
 
     /**

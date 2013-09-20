@@ -109,10 +109,14 @@ body {
     font-weight: bold;
 }
 
-.form-action-view .controls .value {
+.form-action-view .controls .valign {
     line-height: 30px;
 }
 
 .form-action-view .nav-tabs {
     width: 250px;
+}
+
+.help-block {
+    color: #aaa;
 }

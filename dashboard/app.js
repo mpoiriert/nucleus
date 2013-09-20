@@ -112,10 +112,14 @@ $(function() {
         };
 
         var done = function() {
-            if (--lock == 0) {
+            if (--lock <= 0) {
                 callback(o);
             }
         };
+
+        if (inputs.length == 0) {
+            return done();
+        }
 
         inputs.each(function() {
             var $this = $(this);
@@ -138,41 +142,47 @@ $(function() {
             var v = $this.val() || '';
             var t = $this.data('type') || 'string';
             var localized = $this.hasClass('localized');
+            var cast = map[t] !== undefined ? map[t] : function(v) { return v; };
 
-            var is_array = false;
-            if (t.indexOf('[]') > -1) {
+            var is_array = t.indexOf('[]') > -1;
+            var is_hash = t.indexOf('{}') > -1;
+            if (is_array || is_hash) {
                 t = t.substr(0, t.length - 2);
-                is_array = true;
             }
 
             if ($this.hasClass('serialized-in-data')) {
                 v = $this.data('serialized');
             } else if (localized) {
                 v = $this.data('localized');
+            } else {
+                v = cast(v);
             }
 
             if (!v && ignoreEmptyValues) {
                 return done();
             }
 
-            if (is_array) {
-                v = v.split(',');
-            } else if (this.type == 'checkbox' && (t == 'bool' || t == 'boolean')) {
+            if (this.type == 'checkbox' && (t == 'bool' || t == 'boolean')) {
                 if (!this.checked && ignoreEmptyValues) {
                     return done();
                 }
                 v = this.checked;
             }
 
-            var cast = map[t] !== undefined ? map[t] : function(v) { return v; };
-
-            if (is_array) {
-                v = _.map(v, cast);
-            } else if (!localized) {
-                v = cast(v);
+            if (is_hash) {
+                var key = $this.data('key').val();
+                if (typeof(o[this.name]) == 'undefined') {
+                    o[this.name] = {};
+                }
+                o[this.name][key] = v;
+            } else if (is_array) {
+                if (typeof(o[this.name]) == 'undefined') {
+                    o[this.name] = [];
+                }
+                o[this.name].push(v);
+            } else {
+                o[this.name] = v;
             }
-
-            o[this.name] = v;
             done();
         });
     };
@@ -260,7 +270,7 @@ $(function() {
             _.each(vfields, function(f) {
                 tbody += '<td>';
                 if (f.value_controller) {
-                    var url = Dashboard.config.base_url + "/" + f.value_controller.controller + "/edit?" + f.value_controller.remote_id + '=' + row[f.name];
+                    var url = Dashboard.config.base_url + "#" + f.value_controller.controller + "/edit?" + f.value_controller.remote_id + '=' + row[f.name];
                     tbody += '<a href="' + url + '" class="related" data-model="' + f.related_model.name + '" data-controller="' + f.value_controller.controller + '" ' +
                              'data-action="edit" data-params=\'{"' + f.value_controller.remote_id + '": "' + row[f.name] + '"}\'>' + 
                              format_value(row[f.name], f) + '</a>';
@@ -281,13 +291,16 @@ $(function() {
         var popoverTimeout;
         table.find('a.related')
             .on('click', function(e) {
-                Dashboard.app.runAction($(this).data('controller'), $(this).data('action'), $(this).data('params'));
-                e.preventDefault();
+                if (e.which != 2 && !e.ctrlKey) {
+                    Dashboard.app.runAction($(this).data('controller'), $(this).data('action'), $(this).data('params'));
+                    e.preventDefault();
+                }
             })
             .on('mouseenter', function() {
                 var a = $(this);
                 popoverTimeout = setTimeout(function() {
-                    Dashboard.api.call('get', Dashboard.config.base_url + '/' + a.data('controller') + '/view', a.data('params'), function(resp) {
+                    var action = new Dashboard.Action(a.data('controller'), 'view', a.data('params'));
+                    action.on('response', function(resp) {
                         var p = a.data('popover');
                         p.options.content = render_template('#related-popover-tpl', { data: resp });
                         p.setContent();
@@ -299,6 +312,7 @@ $(function() {
                         title: a.data('model'),
                         placement: 'bottom'
                     }).popover('show');
+                    action.execute();
                 }, 500);
             })
             .on('mouseleave', function() {
@@ -476,10 +490,10 @@ $(function() {
         },
         freeze: function() {
             Dashboard.app.showOverlay(this.$el);
-            this.$(':input').attr('disabled', 'disabled');
+            this.$('button').prop('disabled', true);
         },
         unfreeze: function() {
-            this.$(':input').removeAttr('disabled');
+            this.$('button').prop('disabled', false);
             Dashboard.app.hideOverlay();
         },
         showError: function(message) {
@@ -913,9 +927,9 @@ $(function() {
         },
         renderField: function(field, value) {
             if (!this.options.force_edit && !_.contains(field.visibility, 'edit')) {
-                return this.wrapInBootstrapControlGroup(field.title, [
+                return this.wrapInBootstrapControlGroup(field, [
                     this.renderHiddenField(field, value), 
-                    $('<span class="value" />').text(value)
+                    $('<span class="valign" />').text(value)
                 ]);
             }
             return this.renderEditableField(field, value);
@@ -924,6 +938,10 @@ $(function() {
             var input;
             if (field.value_controller && field.value_controller.embed && !field.is_array) {
                 input = this.renderValueControllerSelectBox(field, value);
+            } else if (field.is_array) {
+                input = this.renderArrayField(field, value);
+            } else if (field.is_hash) {
+                input = this.renderHashField(field, value);
             } else if (field.field_type == 'checkbox' || field.field_type == 'radio') {
                 input = this.renderBooleanField(field, value);
             } else {
@@ -935,28 +953,28 @@ $(function() {
                 this.makeFieldLocalizable(inputs, input, field, value);
             }
 
-            return this.wrapInBootstrapControlGroup(field.title, inputs);
+            return this.wrapInBootstrapControlGroup(field, inputs);
         },
         renderHiddenField: function(field, value) {
             return this.createInputWithAttrs('input', field).attr('type', 'hidden').val(value);
         },
         renderValueControllerSelectBox: function(field, value) {
             var select = this.createInputWithAttrs('select', field).addClass('related');
-
-            var url = Dashboard.config.base_url + "/" + field.value_controller.controller  + "/listAll?__offset=-1";
             var m = field.related_model;
 
             select.append('<option>Loading...</option>');
-            select[0].disabled = true;
+            select.prop('disabled', true);
 
-            Dashboard.api.call('get',  url, function(resp) {
+            var action = new Dashboard.Action(field.value_controller.controller, 'listAll', {__offset: -1});
+            action.on('response', function(resp) {
                 select.empty();
                 for (var i = 0; i < resp.data.length; i++) {
                     var s = value == resp.data[i][m.identifier[0]] ? 'selected="selected"' : '';
                     select.append('<option value="' + resp.data[i][m.identifier[0]] + '" ' + s + '>' + resp.data[i][m.repr] + '</option>');
                 }
-                select[0].disabled = false;
+                select.prop('disabled', false);
             });
+            action.execute();
 
             return select;
         },
@@ -973,7 +991,7 @@ $(function() {
         },
         renderInputField: function(field, value) {
             var tagName = _.contains(['textarea', 'richtext'], field.field_type) ? 'textarea' : 'input';
-            var input = this.createInputWithAttrs(tagName, field).val(value);
+            var input = this.createInputWithAttrs(tagName, field).val(value || '');
             var knownTypes = ['text', 'password', 'file'];
             if (tagName != 'textarea') {
                 if (!_.contains(knownTypes, field.field_type)) {
@@ -989,6 +1007,43 @@ $(function() {
                 });
             }
             return input;
+        },
+        renderArrayField: function(field, value) {
+            var self = this;
+            var div = $('<div class="array-field" />');
+            var add = $('<a href="javascript:" class="valign">Add</a>').appendTo(div);
+
+            add.on('click', function(e) {
+                var input = self.renderInputField(field);
+                var remove = $('<a href="javascript:">Remove</a>').on('click', function(e) {
+                    $(this).parent().remove();
+                    e.preventDefault();
+                });
+                var p = $('<p />').append(input).append(' ').append(remove);
+                p.insertBefore(add);
+                e.preventDefault();
+            });
+
+            return div;
+        },
+        renderHashField: function(field, value) {
+            var self = this;
+            var div = $('<div class="hash-field" />');
+            var add = $('<a href="javascript:" class="valign">Add</a>').appendTo(div);
+
+            add.on('click', function(e) {
+                var keyinput = $('<input type="text" class="no-serialize" />');
+                var input = self.renderInputField(field).data('key', keyinput).removeClass('input-xxlarge').addClass('input-xlarge');
+                var remove = $('<a href="javascript:">Remove</a>').on('click', function(e) {
+                    $(this).parent().remove();
+                    e.preventDefault();
+                });
+                var p = $('<p />').append(keyinput).append(' ').append(input).append(' ').append(remove);
+                p.insertBefore(add);
+                e.preventDefault();
+            });
+
+            return div;
         },
         makeFieldLocalizable: function(inputs, input, field, values) {
             var select = this.renderLocaleSelectionBox(field);
@@ -1026,18 +1081,21 @@ $(function() {
 
             return select;
         },
-        createInputWithAttrs: function(tagName, field) {
+        createInputWithAttrs: function(tagName, field, override_type) {
             var input = $('<' + tagName + ' />')
                 .attr('name', field.name)
-                .data('type', field.formated_type)
+                .data('type', override_type || field.formated_type)
                 .addClass('input-xxlarge');
             return input;
         },
-        wrapInBootstrapControlGroup: function(label, items) {
+        wrapInBootstrapControlGroup: function(field, items) {
             var ctrlgrp = $('<div class="control-group" />');
-            ctrlgrp.append('<label class="control-label">' + label + '</label>');
+            ctrlgrp.append('<label class="control-label">' + field.title + '</label>');
             var controls = $('<div class="controls" />').appendTo(ctrlgrp);
             _.each(items, function(item) { controls.append(item); });
+            if (field.description) {
+                controls.append('<span class="help-block">' + field.description + '</span>');
+            }
             return ctrlgrp;
         }
     });
@@ -1507,10 +1565,13 @@ $(function() {
                         if (!submenu) {
                             toggle = $('<a href="#" class="btn"><b class="caret"></b></a>');
                             var child = _.toArray(item.items)[0];
+                            a.attr('href', Dashboard.config.base_url + '#' + child.controller + '/' + child.name);
                             a.on('click', function(e) {
-                                Dashboard.app.runAction(child.controller, child.name);
-                                self.trigger('click', child);
-                                e.preventDefault();
+                                if (e.which != 2 && !e.ctrlKey) {
+                                    Dashboard.app.runAction(child.controller, child.name);
+                                    self.trigger('click', child);
+                                    e.preventDefault();
+                                }
                             });
                         }
 
@@ -1541,7 +1602,7 @@ $(function() {
                         });
                     }
                 } else {
-                    a.attr('href', Dashboard.config.base_url + "/" + item.controller + '/' + item.name);
+                    a.attr('href', Dashboard.config.base_url + "#" + item.controller + '/' + item.name);
                     if (self.options.show_icons && item.icon) {
                         a.html('<i class="icon-' + item.icon + '"></i> ' + name);
                     }
@@ -1549,9 +1610,11 @@ $(function() {
                         a.addClass('btn');
                     }
                     a.appendTo(li).on('click', function(e) {
-                        Dashboard.app.runAction(item.controller, item.name);
-                        self.trigger('click', item);
-                        e.preventDefault();
+                        if (e.which != 2 && !e.ctrlKey) {
+                            Dashboard.app.runAction(item.controller, item.name);
+                            self.trigger('click', item);
+                            e.preventDefault();
+                        }
                     });
                 }
 
