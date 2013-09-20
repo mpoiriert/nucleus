@@ -60,6 +60,8 @@ class Router implements IRouterService
      */
     private $sessionDefaultParameters = array();
 
+    private $currentRequest;
+
     /**
      * @param RequestContext $routingRequestContext
      * 
@@ -269,7 +271,13 @@ class Router implements IRouterService
      */
     public function setCurrentRequest(Request $request)
     {
+        $this->currentRequest = $request;
         $this->context->fromRequest($request);
+    }
+
+    public function getCurrentRequest()
+    {
+        return $this->currentRequest;
     }
 
     public function generateI18nRouteFromCurrentRequest($culture, $referenceType = self::ABSOLUTE_PATH, $scheme = null)

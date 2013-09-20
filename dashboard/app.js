@@ -54,7 +54,10 @@ $(function() {
             type: method,
             dataType: 'json',
             crossDomain: true,
-            data: payload
+            data: payload,
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+            }
         }).done(_.bind(function(data) {
             this.cache[options.cache_id] = data.result;
             if (data.result.success) {
