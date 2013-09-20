@@ -21,6 +21,9 @@
         "clock": {
             "class": "Nucleus\\Framework\\Clock",
             "configuration": []
+        },
+        "serviceContainerWarmer": {
+            "class": "Nucleus\\Framework\\ServiceContainerWarmer"
         }
     }
 }

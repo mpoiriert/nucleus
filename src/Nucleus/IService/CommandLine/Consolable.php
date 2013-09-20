@@ -19,7 +19,7 @@ namespace Nucleus\IService\CommandLine;
 class Consolable
 {
     /**
-     * Will be the name from command 
+     * Will be the name for command 
      * @var string  
      */
     public $name;

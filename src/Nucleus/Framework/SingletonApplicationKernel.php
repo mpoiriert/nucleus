@@ -17,7 +17,7 @@ use UnexpectedValueException;
  *
  * @author Martin
  */
-abstract class SingletonApplicationKernel
+abstract class SingletonApplicationKernel implements IApplicationKernel
 {
     /**
      * @var SingletonApplicationKernel 
@@ -76,7 +76,7 @@ abstract class SingletonApplicationKernel
     {
         
     }
-
+    
     /**
      * Get the nucleus application base on the kernel
      * 
