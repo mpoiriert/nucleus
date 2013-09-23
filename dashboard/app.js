@@ -643,11 +643,11 @@ $(function() {
             }, this);
 
             if (this.value_controller) {
-                var viewAction = new Dashboard.Action(this.model.controller, 'view', null, false);
+                var viewAction = new Dashboard.Action(this.model.controller, 'view', null, false, false);
                 this.listenTo(viewAction, 'error', this.showError);
                 this.listenTo(viewAction, 'response', function(data) {
                     create_form(data);
-                    var action = new Dashboard.Action(this.model.controller, 'save', null, false);
+                    var action = new Dashboard.Action(this.model.controller, 'save', null, false, false);
                     connect_action_to_view(action, view);
                     this.listenTo(action, 'response', function() {
                         modal.modal('hide').detach();
@@ -680,7 +680,7 @@ $(function() {
             view.render();
 
             if (this.value_controller) {
-                var action = new Dashboard.Action(this.model.controller, 'add', null, false);
+                var action = new Dashboard.Action(this.model.controller, 'add', null, false, false);
                 this.listenTo(action, 'error', view.showError);
                 this.listenTo(view, 'submit', function(data) {
                     view.freeze();
@@ -725,7 +725,7 @@ $(function() {
             return view;
         },
         renderAdd: function() {
-            var viewAction = new Dashboard.Action(this.model.controller, 'view', null, false);
+            var viewAction = new Dashboard.Action(this.model.controller, 'view', null, false, false);
             var addAction = new Dashboard.Action(this.value_controller.controller, 'add' + this.field.name);
             var view = new Dashboard.FormWidgetView({
                 tabs_for_related_models: false,
@@ -1411,7 +1411,7 @@ $(function() {
         this.name = name;
         this.data = data || {};
         this.force_input = force_input;
-        this.allow_flow = arguments.length > 3 ? arguments[3] : true;
+        this.allow_flow = arguments.length > 4 ? arguments[4] : true;
         this.lastRequest = {};
         this.url = "/" + this.controller + "/" + this.name;
         this.schema_url = Dashboard.config.schema_base_url + this.url + "/_schema";
