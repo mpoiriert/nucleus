@@ -11,6 +11,7 @@ use DebugBar\StandardDebugBar;
 use DebugBar\DataCollector\DataCollectorInterface;
 use Nucleus\Routing\Router;
 use Symfony\Component\HttpFoundation\Response;
+use Nucleus\IService\DependencyInjection\IServiceContainer;
 
 /**
  * Description of NucleusDebugBar
@@ -19,13 +20,16 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class NucleusDebugBar extends StandardDebugBar
 {
+    protected $serviceContainer;
+
     protected $router;
 
     /**
      * @\Nucleus\IService\DependencyInjection\Inject
      */
-    public function initialize(Router $routing)
+    public function initialize(IServiceContainer $serviceContainer, Router $routing)
     {
+        $this->serviceContainer = $serviceContainer;
         $this->router = $routing;
     }
 
@@ -48,9 +52,14 @@ class NucleusDebugBar extends StandardDebugBar
     {
         $request = $this->router->getCurrentRequest();
         if ($request->isXmlHttpRequest()) {
-            $headers = $this->getDataAsHeaders();
-            foreach ($headers as $k => $v) {
-                $response->headers->set($k, $v);
+            if ($this->serviceContainer->has('debugBarOpenHandler')) {
+                $this->getData();
+                $response->headers->set('phpdebugbar-id', $this->getCurrentRequestId());
+            } else {
+                $headers = $this->getDataAsHeaders();
+                foreach ($headers as $k => $v) {
+                    $response->headers->set($k, $v);
+                }
             }
         }
     }

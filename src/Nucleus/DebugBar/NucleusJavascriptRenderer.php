@@ -32,4 +32,9 @@ class NucleusJavascriptRenderer extends JavascriptRenderer
         
         return $this->filterAssetArray($files,$type);
     }
+
+    public function setOpenHandlerController(OpenHandlerController $controller)
+    {
+        $this->setOpenHandlerUrl($controller->getUrl());
+    }
 }
