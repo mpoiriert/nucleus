@@ -1335,7 +1335,9 @@ $(function() {
                 var action = new Dashboard.Action(controller, action);
                 action.getSchema(_.bind(function(schema) {
                     this.unfreeze();
-                    if (schema.output.type != 'file' && (schema.input.type == 'form' || schema.output.type != 'none')) {
+                    if (schema.output.type == 'form') {
+                        this._redirectHandler(action.controller, action.name, data, true);
+                    } else if (schema.output.type != 'file' && schema.output.type != 'none') {
                         this._redirectHandler(action.controller, action.name, data);
                     } else {
                         this.listenTo(action, 'response', function() {
@@ -1382,8 +1384,8 @@ $(function() {
             }
             var pipe = this.action.pipe(data, link_events);
         },
-        _redirectHandler: function(controller, action, data) { 
-            this.trigger('redirect', controller, action, data); 
+        _redirectHandler: function(controller, action, data, force_input) { 
+            this.trigger('redirect', controller, action, data, force_input); 
         },
         refresh: function() {
             if (this.view) {
@@ -1404,10 +1406,11 @@ $(function() {
 
     // ----------------------------------------------------
 
-    Dashboard.Action = function(controller, name, data) {
+    Dashboard.Action = function(controller, name, data, force_input) {
         this.controller = controller;
         this.name = name;
         this.data = data || {};
+        this.force_input = force_input;
         this.allow_flow = arguments.length > 3 ? arguments[3] : true;
         this.lastRequest = {};
         this.url = "/" + this.controller + "/" + this.name;
@@ -1428,7 +1431,7 @@ $(function() {
         execute: function(data) {
             data = data || this.data;
             this.getSchema(_.bind(function(schema) {
-                if (schema.input.type != 'form' || (!$.isEmptyObject(data) && _.size(data) == schema.input.fields.length)) {
+                if (schema.input.type != 'form' || (!$.isEmptyObject(data) && !this.force_input)) {
                     this.doExecute(data);
                 } else {
                     this.trigger('input', data);
@@ -1696,13 +1699,15 @@ $(function() {
                 this.runAction(this.defaultAction[0], this.defaultAction[1]);
             }
         },
-        runAction: function(controller, action, data) {
+        runAction: function(controller, action, data, force_input) {
             if (!this.loaded) {
                 this.runActionOnLoad = [controller, action, data];
                 return;
             }
 
-            var view = new Dashboard.ActionView({ action: new Dashboard.Action(controller, action, data) });
+            var view = new Dashboard.ActionView({ 
+                action: new Dashboard.Action(controller, action, data, force_input) 
+            });
 
             this.listenTo(view, 'render', this.switchActionView);
             this.listenTo(view, 'redirect', this.runAction);
