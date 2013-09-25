@@ -43,6 +43,7 @@
 
   <script type="text/template" id="toolbar-tpl">
     <div class="btn-toolbar">
+    <% _.each(groups, function(buttons) { %>
       <div class="btn-group">
       <% _.each(buttons, function(btn) { %>
         <% if (btn.name != current_action) { %>
@@ -50,6 +51,7 @@
         <% } %>
       <% }); %>
       </div>
+    <% }) %>
     </div>
   </script>
 

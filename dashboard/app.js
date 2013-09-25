@@ -268,10 +268,10 @@ $(function() {
         var tbody = '';
 
         _.each(rows, function(row, index) {
-            tbody += '<tr><td align="center"><input type="radio" name="id" value=\'' + JSON.stringify(build_pk(fields, row)) + '\'></td>';
+            tbody += '<tr><td align="center" class="no-edit"><input type="radio" name="id" class="no-serialize" value=\'' + JSON.stringify(build_pk(fields, row)) + '\'></td>';
 
             _.each(vfields, function(f) {
-                tbody += '<td>';
+                tbody += '<td data-field="' + f.name + '" data-type="' + f.formated_type + '">';
                 if (f.value_controller) {
                     var url = Dashboard.config.base_url + "#" + f.value_controller.controller + "/edit?" + f.value_controller.remote_id + '=' + row[f.name];
                     tbody += '<a href="' + url + '" class="related" data-model="' + f.related_model.name + '" data-controller="' + f.value_controller.controller + '" ' +
@@ -327,7 +327,7 @@ $(function() {
     };
 
     var serialize_table = function(table) {
-        var data = JSON.parse(table.find('tbody input:checked').val());
+        var data = JSON.parse(table.find('tbody td:first-child input:checked').val());
         return data;
     };
 
@@ -376,11 +376,14 @@ $(function() {
         },
         initialize: function() {
             this.base_url = this.options.base_url || '';
+            if (!this.options.groups) {
+                this.options.groups = [this.options.buttons];
+            }
         },
         render: function() {
             this.$el.html(render_template('#toolbar-tpl', { 
                 base_url: this.base_url, 
-                buttons: this.options.buttons,
+                groups: this.options.groups,
                 current_action: this.options.current_action
             }));
             return this;
@@ -549,12 +552,13 @@ $(function() {
             }
         },
         renderTable: function(data) {
+            var self = this;
             var table = render_table(_.filter(this.model.fields, _.bind(function(f) {
                 return !this.value_controller || f.name != this.value_controller.remote_id; }, this)), data);
 
-            var buttons = [];
+            var tb_groups = [[], []];
             if (_.contains(this.model.actions, 'remove')) {
-                buttons.push({
+                tb_groups[0].push({
                     name: 'remove', 
                     controller: '',
                     title: 'Remove',
@@ -563,16 +567,29 @@ $(function() {
                 });
             }
             if (_.contains(this.model.actions, 'edit')) {
-                buttons.push({
+                tb_groups[0].push({
                     name: 'edit', 
                     controller: '',
                     title: 'Edit',
                     icon: 'edit',
                     disabled: true
                 });
+                tb_groups[1].push({
+                    name: 'edit_inline',
+                    controller: '',
+                    title: 'Edit all inline',
+                    icon: 'edit'
+                });
+                tb_groups[1].push({
+                    name: 'save_inline',
+                    controller: '',
+                    title: 'Save',
+                    icon: 'hdd',
+                    disabled: true
+                })
             }
             if (_.contains(this.model.actions, 'create')) {
-                buttons.push({
+                tb_groups[0].push({
                     name: 'create',
                     controller: '',
                     title: 'Add New',
@@ -580,7 +597,7 @@ $(function() {
                 });
             }
             if (this.value_controller && _.contains(this.model.actions, 'add')) {
-                buttons.push({
+                tb_groups[0].push({
                     name: 'add',
                     controller: '',
                     title: 'Add Existing',
@@ -588,7 +605,7 @@ $(function() {
                 });
             }
 
-            var tb = new Dashboard.ToolbarView({ buttons: buttons });
+            var tb = new Dashboard.ToolbarView({ groups: tb_groups });
 
             this.$el.empty().append(table).append(tb.render().el);
             this.unfreeze();
@@ -606,6 +623,52 @@ $(function() {
                 tb.buttons().removeClass('disabled');
             });
 
+            table.find('tbody tr').on('dblclick', function() {
+                var $tr = $(this);
+                if ($tr.hasClass('editing')) {
+                    return false;
+                }
+
+                tb.options.groups[1][1].disabled = false;
+                tb.render();
+
+                var save = function() {
+                    if (!$tr.hasClass('modified')) {
+                        return self.refresh();
+                    }
+                    serialize($tr, function(data) {
+                        $tr.find('input[type="text"]').prop('disabled', true);
+                        if (!self.value_controller) {
+                            var id = JSON.parse($tr.children().first().find('input').val());
+                            var index = find_indexes_matching_pk(self.data, id)[0];
+                            self.data[index] = data;
+                            data = null;
+                        }
+                        self.executeSave(data);
+                    });
+                };
+
+                $tr.data('save', save);
+                $tr.addClass('editing').children().filter(':not(.no-edit)').each(function() {
+                    var $this = $(this);
+                    var input = $('<input type="text" />')
+                        .attr('name', $this.data('field'))
+                        .data('type', $this.data('type'))
+                        .val($this.text());
+
+                    input.on('keypress', function(e) {
+                        if (e.which == 13) {
+                            save();
+                            e.preventDefault();
+                        } else {
+                            $tr.addClass('modified');
+                        }
+                    });
+
+                    $this.empty().append(input);
+                });
+            });
+
             this.listenTo(tb, 'btn-click', function(controller, action) {
                 if (action == 'remove') {
                     this.executeRemove(serialize_table(table));
@@ -615,6 +678,24 @@ $(function() {
                     this.renderAdd();
                 } else if (action == 'create') {
                     this.renderCreate();
+                } else if (action == 'edit_inline') {
+                    table.find('tbody tr').dblclick();
+                    tb.options.groups[1][0].disabled = true;
+                    tb.options.groups[1][1].disabled = false;
+                    tb.render();
+                } else if (action == 'save_inline') {
+                    table.find('input[type="text"]').prop('disabled', true);
+                    var tr = table.find('tbody tr.editing.modified');
+                    var lock = tr.length;
+                    var done = function() {
+                        if (--lock <= 0) {
+                            self.refresh();
+                        }
+                    };
+                    if (lock == 0) {
+                        return done();
+                    }
+                    tr.each(function() { tr.data('save')(); });
                 }
             });
         },
@@ -636,6 +717,27 @@ $(function() {
                 this.refresh();
             }
         },
+        executeSave: function(data, callback, err_callback) {
+            if (typeof(data) == 'function') {
+                callback = data;
+                data = null;
+            }
+            if (this.value_controller) {
+                var action = new Dashboard.Action(this.model.controller, 'save', data, false, false);
+                this.listenTo(action, 'response', function() {
+                    this.refresh();
+                    callback && callback();
+                });
+                if (err_callback) {
+                    this.listenTo(action, 'error', err_callback);
+                }
+                action.execute();
+            } else {
+                this.updateData();
+                this.refresh();
+                callback && callback();
+            }
+        },
         renderEdit: function(id) {
             var view, modal;
 
@@ -651,14 +753,13 @@ $(function() {
                 this.listenTo(viewAction, 'error', this.showError);
                 this.listenTo(viewAction, 'response', function(data) {
                     create_form(data);
-                    var action = new Dashboard.Action(this.model.controller, 'save', null, false, false);
-                    connect_action_to_view(action, view);
-                    this.listenTo(action, 'response', function() {
-                        modal.modal('hide').detach();
-                        view = null;
-                        modal = null;
-                        this.refresh();
-                    });
+                    this.listenTo(view, 'submit', function(data) {
+                        this.executeSave(data, function() {
+                            modal.modal('hide').remove();
+                            view = null;
+                            modal = null;
+                        }, _.bind(view.showError, view));
+                    })
                     modal.modal('show');
                 });
                 viewAction.execute(_.extend({}, id, this.data));
@@ -666,12 +767,12 @@ $(function() {
                 var index = find_indexes_matching_pk(this.data, id)[0];
                 create_form(this.data[index]);
                 this.listenTo(view, 'submit', function(data) {
-                    modal.modal('hide').detach();
-                    view = null;
-                    modal = null;
                     this.data[index] = data;
-                    this.updateData();
-                    this.refresh();
+                    this.executeSave(function() {
+                        modal.modal('hide').remove();
+                        view = null;
+                        modal = null;
+                    });
                 });
                 modal.modal('show');
             }
