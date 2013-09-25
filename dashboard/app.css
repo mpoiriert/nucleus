@@ -2,6 +2,9 @@ body {
     padding-top: 40px;
 }
 
+.navbar {
+    z-index: 10000;
+}
 .navbar-inverse .navbar-inner {
     margin-left: 0px;
     color: #e78f88;
@@ -22,14 +25,14 @@ body {
 
 #main {
     padding: 10px;
-    margin-top: 25px;
+    margin-top: 24px;
 }
 
 #submenu {
     background: #efefef;
     padding-left: 8px;
     width: 100%;
-    z-index: 100;
+    z-index: 10000;
 }
     #submenu ul {
         list-style: none;
@@ -72,22 +75,31 @@ body {
     padding-top: 20px;
 }
 
+.toolbar {
+    background: #fff;
+    width: 100%;
+}
+.toolbar.affix {
+    border-bottom: 1px solid #eee;
+}
+
 .form-action-view,
 .object-action-view {
     position: relative;
 }
-    .form-action-view > .btn-toolbar,
-    .object-action-view > .btn-toolbar {
+    .form-action-view > .toolbar,
+    .object-action-view > .toolbar {
         position: absolute;
         right: 10px;
         top: 0px;
+        width: auto;
     }
 
 #overlay {
     position: absolute;
     opacity: .4;
     background: #fff url(ajax-loader.gif) center center no-repeat;
-    z-index: 10000;
+    z-index: 5000;
 }
 
 .form-action-view select.localizer {

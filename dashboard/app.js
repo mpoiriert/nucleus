@@ -367,7 +367,7 @@ $(function() {
      */
     Dashboard.ToolbarView = Backbone.View.extend({
         tagName: 'div',
-        className: 'btn-toolbar',
+        className: 'toolbar',
         events: {
             "click a.btn": "btnClick"
         },
@@ -420,6 +420,9 @@ $(function() {
             this.$el.attr('enctype', 'multipart/form-data');
             this.$body = this.$el;
             this.overrideRequestData = {};
+            if (this.options.parent) {
+                this.parent = this.options.parent;
+            }
         },
         refresh: function() {
             if (!this.options.refreshable) {
@@ -477,7 +480,8 @@ $(function() {
             
             this.$sidebar = $('<div class="span3 sidebar" />').appendTo(row);
             body.append(this.$body.children());
-            this.$el.empty().append(row);
+            this.$toolbar.$el.detach();
+            this.$el.empty().append(this.$toolbar.$el).append(row);
             this.$body = body;
         },
         toolbarClick: function(controller, action) {
@@ -1112,11 +1116,16 @@ $(function() {
             Dashboard.ListWidgetView.__super__.initialize.apply(this);
             this.nbPages = 1;
             this.currentPage = 1;
+
+            if (this.options.input_data.__offset) {
+                this.currentPage = this.options.input_data.__offset / this.options.behaviors.paginated.per_page + 1;
+            }
         },
         render: function() {
             this.$body.empty();
             this.renderToolbar();
             this.$toolbar.disable();
+            this.$toolbar.$el.affix();
 
             if (this.options.behaviors.paginated) {
                 this.renderTable(this.model.data);
@@ -1138,6 +1147,7 @@ $(function() {
         },
         refresh: function(reloadPagination) {
             this.freeze();
+            this.parent.updateUrl(this.overrideRequestData);
             this.parent.action._call(_.extend({}, this.parent.action.data, this.overrideRequestData), 
                 _.bind(function(resp) {
                     this.unfreeze();
@@ -1150,10 +1160,12 @@ $(function() {
                     if (reloadPagination) {
                         this.renderPagination(resp.count);
                     }
+                    window.scrollTo(0, 0);
                 }, this),
                 _.bind(function(message) {
                     this.unfreeze();
                     this.showError(message);
+                    window.scrollTo(0, 0);
                 }, this)
             );
         },
@@ -1200,7 +1212,10 @@ $(function() {
                 return;
             }
 
-            var pagination = $(render_template('#list-pagination-tpl', { nb_pages: this.nbPages }));
+            var pagination = $(render_template('#list-pagination-tpl', { 
+                nb_pages: this.nbPages,
+                current_page: this.currentPage
+            }));
 
             this.$body.append(pagination);
             this.$pagination = pagination;
@@ -1238,7 +1253,15 @@ $(function() {
         renderFilters: function() {
             this.addSidebar();
             var self = this;
-            this.$sidebar.html(render_template('#list-filters-tpl', { fields: filter_visible_fields(this.options.fields, 'query') }));
+            var values = {};
+            if (this.parent.input_data.__filters) {
+                values = JSON.parse(this.parent.input_data.__filters);
+            }
+
+            this.$sidebar.html(render_template('#list-filters-tpl', { 
+                fields: filter_visible_fields(this.options.fields, 'query'),
+                values: values
+            }));
             this.$sidebar.find('button.filter').on('click', function(e) {
                 e.preventDefault();
                 serialize(self.$sidebar, true, function(filters) {
@@ -1248,7 +1271,7 @@ $(function() {
             });
             this.$sidebar.find('button.reset').on('click', function(e) {
                 e.preventDefault();
-                delete self.overrideRequestData.__filters;
+                self.overrideRequestData.__filters = '{}';
                 self.$sidebar.find(':input').each(function() {
                     if (this.type == 'checkbox') {
                         this.checked = false;
@@ -1288,6 +1311,7 @@ $(function() {
         tagName: 'div',
         className: 'action',
         initialize: function() {
+            this.url_data = {};
             this.action = this.options.action;
             this.listenTo(this.action, 'input', this.renderInput);
             this.listenTo(this.action, 'before_execute', this.updateUrl);
@@ -1305,30 +1329,35 @@ $(function() {
                 field_visibility: ['edit'],
                 tabs_for_related_models: false,
                 title_with_id: false,
-                model: data
+                model: data,
+                parent: this,
+                refreshable: true
             }, this.action.schema.input));
-            this.view.options.refreshable = false;
-            this.view.parent = this;
             this.listenTo(this.view, 'submit', this.execute);
             this.$el.empty().append(this.view.el);
             this.view.render();
             this.trigger('render', this);
         },
-        renderResponse: function(data) {
+        renderResponse: function(data, input_data) {
+            this.input_data = input_data;
+
+            var options = _.extend({
+                input_data: input_data,
+                parent: this,
+                model: data
+            }, this.action.schema.output);
+
             var view;
-            if (this.action.schema.output.type == 'list') {
-                view = new Dashboard.ListWidgetView(this.action.schema.output);
-            } else if (this.action.schema.output.type == 'object') {
-                view = new Dashboard.ObjectWidgetView(this.action.schema.output);
-            } else if (this.action.schema.output.type == 'form') {
-                view = new Dashboard.FormWidgetView(this.action.schema.output);
+            if (options.type == 'list') {
+                view = new Dashboard.ListWidgetView(options);
+            } else if (options.type == 'object') {
+                view = new Dashboard.ObjectWidgetView(options);
+            } else if (options.type == 'form') {
+                view = new Dashboard.FormWidgetView(options);
             } else {
                 this.trigger('done');
                 return;
             }
-
-            view.parent = this;
-            view.model = data;
 
             this.listenTo(view, 'tbclick', function(controller, action, data) {
                 this.freeze();
@@ -1368,8 +1397,9 @@ $(function() {
             this.action.execute(data); 
         },
         updateUrl: function(data) {
+            this.url_data = data || {};
             var url = this.action.url;
-            if (data && this.action.schema.input.type != 'form') {
+            if (data && !$.isEmptyObject(data) && this.action.schema.input.type != 'form') {
                 var params = $.param(data);
                 if (params) {
                     url += '?' + params;
@@ -1479,7 +1509,7 @@ $(function() {
                 this.trigger('redirect', next_controller, next_action, data);
                 return;
             }
-            this.trigger('response', data);
+            this.trigger('response', data, this.lastRequest);
         },
         handleError: function(message) {
             this.trigger('error', message);
@@ -1746,6 +1776,7 @@ $(function() {
             actionView.previous = this.currentActionView;
             this.currentActionView = actionView;
             this.$('#main').append(actionView.$el);
+            window.scrollTo(0, 0);
         },
         highlightMenu: function(menuName) {
             var menu_segs = menuName.split('/'), top = _.head(menu_segs);

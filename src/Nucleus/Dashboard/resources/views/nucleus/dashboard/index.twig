@@ -42,12 +42,14 @@
   <div id="main"></div>
 
   <script type="text/template" id="toolbar-tpl">
-    <div class="btn-group">
-    <% _.each(buttons, function(btn) { %>
-      <% if (btn.name != current_action) { %>
-        <a href="<%= base_url + btn.controller + '/' + btn.name %>" data-controller="<%= btn.controller %>" data-action="<%= btn.name %>" class="btn <% if (btn.disabled) print('disabled'); %>"><i class="icon-<%= btn.icon %>"></i> <%= btn.title %></a>
-      <% } %>
-    <% }); %>
+    <div class="btn-toolbar">
+      <div class="btn-group">
+      <% _.each(buttons, function(btn) { %>
+        <% if (btn.name != current_action) { %>
+          <a href="<%= base_url + btn.controller + '/' + btn.name %>" data-controller="<%= btn.controller %>" data-action="<%= btn.name %>" class="btn <% if (btn.disabled) print('disabled'); %>"><i class="icon-<%= btn.icon %>"></i> <%= btn.title %></a>
+        <% } %>
+      <% }); %>
+      </div>
     </div>
   </script>
 
@@ -99,7 +101,7 @@
       <p>
         <label><%= f.title %></label>
         <input type="<%= f.field_type %>" name="<%= f.name %>" data-type="<%= f.formated_type %>"
-          value="<% if (f.field_type == 'checkbox') print('1'); %>">
+          value="<% if (f.field_type == 'checkbox') print('1'); else if (values[f.name]) print(values[f.name]); %>">
       </p>
     <% }) %>
     <button class="btn filter">Filter</button>
@@ -109,11 +111,11 @@
   <script type="text/template" id="list-pagination-tpl">
     <div class="pagination">
       <ul>
-        <li class="disabled"><a href="#" class="prev">Prev</a></li>
+        <li class="<% if (current_page == 1) print('disabled'); %>"><a href="#" class="prev">Prev</a></li>
         <% for (var i = 1; i <= nb_pages; i++) { %>
-          <li class="<% if (i == 1) print('active'); %>"><a href="#" data-page="<%= i %>"><%= i %></a></li>
+          <li class="<% if (i == current_page) print('active'); %>"><a href="#" data-page="<%= i %>"><%= i %></a></li>
         <% } %>
-        <li class="<% if (nb_pages == 1) print('disabled'); %>"><a href="#" class="next">Next</a></li>
+        <li class="<% if (current_page == nb_pages) print('disabled'); %>"><a href="#" class="next">Next</a></li>
       </ul>
     </div>
   </script>
