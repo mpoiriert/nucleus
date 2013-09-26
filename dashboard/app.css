@@ -132,3 +132,7 @@ body {
 .help-block {
     color: #aaa;
 }
+
+.table-wrapper {
+    overflow: auto;
+}

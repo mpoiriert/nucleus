@@ -250,6 +250,12 @@ $(function() {
         return values[find_indexes_matching_pk(values, id)[0]];
     };
 
+    escape_html = function(str) {
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
+    };
+
     var format_value = function(v, f) {
         if (f && f.i18n) {
             v = v[f.i18n[0]];
@@ -259,7 +265,7 @@ $(function() {
         } else if (v === true) {
             return 'true';
         }
-        return v || '';
+        return escape_html(v || '');
     };
 
     var render_table = function(fields, rows, with_value_controller) {
@@ -1278,6 +1284,7 @@ $(function() {
         renderTable: function(rows) {
             var self = this;
             var table = render_table(this.options.fields, rows, true);
+            var wrapper = $('<div class="table-wrapper" />').append(table);
 
             if (this.options.behaviors.sortable) {
                 table.addClass('sortable');
@@ -1295,12 +1302,13 @@ $(function() {
                 self.$toolbar.enable();
             });
 
-            if (this.$table) {
-                this.$table.replaceWith(table);
+            if (this.$wrapper) {
+                this.$wrapper.replaceWith(wrapper);
             } else {
-                table.appendTo(this.$el);
+                wrapper.appendTo(this.$el);
             }
             this.$table = table;
+            this.$wrapper = wrapper;
         },
         renderPagination: function(count) {
             if (this.$pagination) {
