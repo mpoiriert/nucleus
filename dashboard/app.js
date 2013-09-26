@@ -1554,6 +1554,7 @@ $(function() {
         this.lastRequest = {};
         this.url = "/" + this.controller + "/" + this.name;
         this.schema_url = Dashboard.config.schema_base_url + this.url + "/_schema";
+        this.input_called = false;
     };
 
     _.extend(Dashboard.Action.prototype, Backbone.Events, {
@@ -1570,9 +1571,10 @@ $(function() {
         execute: function(data) {
             data = data || this.data;
             this.getSchema(_.bind(function(schema) {
-                if (schema.input.type != 'form' || (!$.isEmptyObject(data) && !this.force_input)) {
+                if (schema.input.type != 'form' || (!$.isEmptyObject(data) && (!this.force_input || this.input_called))) {
                     this.doExecute(data);
                 } else {
+                    this.input_called = true;
                     this.trigger('input', data);
                 }
             }, this));
