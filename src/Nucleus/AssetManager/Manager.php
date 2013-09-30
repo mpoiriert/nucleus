@@ -35,6 +35,8 @@ class Manager implements \Nucleus\IService\AssetManager\IAssetManager
      */
     private $urlBuilder;
 
+    private $packages = array();
+
     const WATCH_DIRECTORY_DELAY = 5;
 
     /**
@@ -47,6 +49,10 @@ class Manager implements \Nucleus\IService\AssetManager\IAssetManager
         $this->configuration = $configuration;
         $this->filePersister = $assetManagerFilePersister;
         $this->urlBuilder = $urlBuilder;
+
+        if (isset($configuration['packages'])) {
+            $this->addPackages($configuration['packages']);
+        }
     }
 
     /**
@@ -145,6 +151,62 @@ class Manager implements \Nucleus\IService\AssetManager\IAssetManager
         return new FileAsset($rootDirectory . $path, array(), $rootDirectory, $path);
     }
 
+    public function addPackage($name, array $files)
+    {
+        $this->packages[$name] = $files;
+    }
+
+    public function addPackages(array $packages)
+    {
+        foreach ($packages as $name => $files) {
+            $this->addPackage($name, $files);
+        }
+    }
+
+    public function hasPackage($name)
+    {
+        return isset($this->packages[$name]);
+    }
+
+    public function getPackageFiles($name)
+    {
+        if (!isset($this->packages[$name])) {
+            throw new Exception("Unknow asset package name: $name");
+        }
+        $files = array();
+        foreach ($this->packages[$name] as $file) {
+            if (substr($file, 0, 1) === '@') {
+                $files = array_merge($files, $this->getPackageFiles(substr($file, 1)));
+            } else {
+                $files[] = $file;
+            }
+        }
+        return $files;
+    }
+
+    public function getPackagePaths($name)
+    {
+        return array_map(array($this, 'getPath'), $this->getPackageFiles($name));
+    }
+
+    public function getPackageAsCollection($name)
+    {
+        list($cssFiles, $jsFiles) = $this->splitCssAndJsFiles($this->getPackageFiles($name));
+
+        if (!empty($cssFiles)) {
+            $cssFiles = new AssetCollection($cssFiles);
+        } else {
+            $cssFiles = null;
+        }
+        if (!empty($jsFiles)) {
+            $jsFiles = new AssetCollection($jsFiles);
+        } else {
+            $jsFiles = null;
+        }
+
+        return array($cssFiles, $jsFiles);
+    }
+
     /**
      * @param array $files
      * @return string
@@ -154,57 +216,103 @@ class Manager implements \Nucleus\IService\AssetManager\IAssetManager
      */
     public function getHtmTags(array $files)
     {
-        $cssFiles = array();
-        $jsFiles = array();
-
-        foreach ($files as $file) {
-            $path = $this->getPath($file);
-            switch (true) {
-                case strpos($file, '://') !== false:
-                    $asset = new HttpAsset($path);
-                    break;
-                default:
-                    $asset = $this->getFileAsset($file, $path);
-                    break;
-            }
-
-            switch (pathinfo($path, PATHINFO_EXTENSION)) {
-                case 'less':
-                    $asset->ensureFilter(new LessphpFilter());
-                    $cssFiles[] = $asset;
-                    break;
-                case 'scss':
-                    $asset->ensureFilter(new ScssphpFilter());
-                    $cssFiles[] = $asset;
-                    break;
-                case 'css':
-                    $cssFiles[] = $asset;
-                    break;
-                case 'js':
-                    $jsFiles[] = $asset;
-                    break;
-                default:
-                    throw new Exception('Not supported file [' . $file . ']');
-            }
-        }
-
         if ($this->configuration['aggregation'] === true) {
+            list($packages, $files) = $this->extractPackages($files);
+            list($cssFiles, $jsFiles) = $this->splitCssAndJsFiles($files);
+
             $cssFiles = !empty($cssFiles) ? array(new AssetCollection($cssFiles)) : array();
             $jsFiles = !empty($jsFiles) ? array(new AssetCollection($jsFiles)) : array();
+
+            foreach (array_reverse($packages) as $name) {
+                list($css, $js) = $this->getPackageAsCollection($name);
+                if ($css !== null) {
+                    array_unshift($cssFiles, $css);
+                }
+                if ($js !== null) {
+                    array_unshift($jsFiles, $js);
+                }
+            }
+        } else {
+            list($cssFiles, $jsFiles) = $this->splitCssAndJsFiles($files);
         }
 
-
         $tags = array();
-
         foreach ($cssFiles as $file) {
             $tags[] = '<link rel="stylesheet" href="' . $this->getAssetUrl($file, 'css') . '" type="text/css" />';
         }
-
         foreach ($jsFiles as $file) {
             $tags[] = "<script src='" . $this->getAssetUrl($file, 'js') . "'></script>";
         }
 
         return $tags;
+    }
+
+    private function extractPackages(array $files)
+    {
+        $packages = array();
+        $assets = array();
+        foreach ($files as $file) {
+            if (substr($file, 0, 1) === '@') {
+                $packages[] = substr($file, 1);
+            } else {
+                $assets[] = $file;
+            }
+        }
+        return array($packages, $assets);
+    }
+
+    private function splitCssAndJsFiles(array $files)
+    {
+        $cssFiles = array();
+        $jsFiles = array();
+        foreach ($files as $file) {
+            if (substr($file, 0, 1) === '@') {
+                $file = $this->getPackageFiles(substr($file, 1));
+            }
+            foreach ((array) $file as $f) {
+                list($type, $asset) = $this->makeAsset($f);
+                if ($type === 'css') {
+                    $cssFiles[] = $asset;
+                } else {
+                    $jsFiles[] = $asset;
+                }
+            }
+        }
+        return array($cssFiles, $jsFiles);
+    }
+
+    private function makeAsset($file)
+    {
+        $path = $this->getPath($file);
+        switch (true) {
+            case strpos($file, '://') !== false:
+                $asset = new HttpAsset($path);
+                break;
+            default:
+                $asset = $this->getFileAsset($file, $path);
+                break;
+        }
+
+        switch (pathinfo($path, PATHINFO_EXTENSION)) {
+            case 'less':
+                $asset->ensureFilter(new LessphpFilter());
+                $type = 'css';
+                break;
+            case 'scss':
+                $asset->ensureFilter(new ScssphpFilter());
+                $type = 'css';
+                break;
+            case 'css':
+                $type = 'css';
+                break;
+            case 'js':
+                $type = 'js';
+                break;
+            default:
+                throw new Exception('Not supported file [' . $file . ']');
+        }
+
+        return array($type, $asset);
     }
 
     private function getPath($source)
