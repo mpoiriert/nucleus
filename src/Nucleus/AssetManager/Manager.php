@@ -86,7 +86,6 @@ class Manager implements \Nucleus\IService\AssetManager\IAssetManager
         if (!$this->filePersister->exists($targetPath)) {
             $asset->setTargetPath($targetPath);
             $this->applyFilters($asset, $fileType);
-            $asset->load();
             $this->filePersister->persist($targetPath, $asset->dump());
         }
 
@@ -207,6 +206,48 @@ class Manager implements \Nucleus\IService\AssetManager\IAssetManager
         return array($cssFiles, $jsFiles);
     }
 
+    public function dumpPackage($name)
+    {
+        list($css, $js) = $this->assetManager->getPackageAsCollection($name);
+        if ($css) {
+            $this->dumpPackageCollection($name, "$name.css");
+        }
+        if ($js) {
+            $this->dumpPackageCollection($name, "$name.js");
+        }
+    }
+
+    protected function dumpPackageCollection($name, $type, AssetCollection $coll)
+    {
+        $key = $this->getCacheKey($coll);
+        $filename = "$name.$key.$type";
+        $filepath = $this->getPackagesTargetPath() . "/$filename";
+        if (!file_exists($filepath)) {
+            file_put_contents($filepath, $coll->dump());
+        }
+        return $filename;
+    }
+
+    /**
+     * @\Nucleus\IService\Cache\Cacheable(namespace="asset_packages")
+     */
+    public function getPackageUrls($name)
+    {
+        list($css, $js) = $this->getPackageAsCollection($name);
+        $baseUrl = $this->getPackagesTargetUrl();
+        $cssUrl = null;
+        if ($css) {
+            $filename = $this->dumpPackageCollection($name, 'css', $css);
+            $cssUrl = "$baseUrl/$filename";
+        }
+        $jsUrl = null;
+        if ($js) {
+            $filename = $this->dumpPackageCollection($name, 'js', $js);
+            $jsUrl = "$baseUrl/$filename";
+        }
+        return array($cssUrl, $jsUrl);
+    }
+
     /**
      * @param array $files
      * @return string
@@ -216,6 +257,9 @@ class Manager implements \Nucleus\IService\AssetManager\IAssetManager
      */
     public function getHtmTags(array $files)
     {
+        $cssUrls = array();
+        $jsUrls = array();
+
         if ($this->configuration['aggregation'] === true) {
             list($packages, $files) = $this->extractPackages($files);
             list($cssFiles, $jsFiles) = $this->splitCssAndJsFiles($files);
@@ -223,27 +267,34 @@ class Manager implements \Nucleus\IService\AssetManager\IAssetManager
             $cssFiles = !empty($cssFiles) ? array(new AssetCollection($cssFiles)) : array();
             $jsFiles = !empty($jsFiles) ? array(new AssetCollection($jsFiles)) : array();
 
-            foreach (array_reverse($packages) as $name) {
-                list($css, $js) = $this->getPackageAsCollection($name);
-                if ($css !== null) {
-                    array_unshift($cssFiles, $css);
+            foreach ($packages as $name) {
+                list($cssu, $jsu) = $this->getPackageUrls($name);
+                if ($cssu) {
+                    $cssUrls[] = $cssu;
                 }
-                if ($js !== null) {
-                    array_unshift($jsFiles, $js);
+                if ($jsu) {
+                    $jsUrls[] = $jsu;
                 }
             }
+
         } else {
             list($cssFiles, $jsFiles) = $this->splitCssAndJsFiles($files);
         }
 
-        $tags = array();
         foreach ($cssFiles as $file) {
-            $tags[] = '<link rel="stylesheet" href="' . $this->getAssetUrl($file, 'css') . '" type="text/css" />';
+            $cssUrls[] = $this->getAssetUrl($file, 'css');
         }
         foreach ($jsFiles as $file) {
-            $tags[] = "<script src='" . $this->getAssetUrl($file, 'js') . "'></script>";
+            $jsUrls[] = $this->getAssetUrl($file, 'js');
         }
 
+        $tags = array();
+        foreach ($cssUrls as $url) {
+            $tags[] = sprintf('<link rel="stylesheet" type="text/css" href="%s" />', $url);
+        }
+        foreach ($jsUrls as $url) {
+            $tags[] = sprintf('<script type="text/javascript" src="%s"></script>', $url);
+        }
         return $tags;
     }
 
@@ -337,6 +388,16 @@ class Manager implements \Nucleus\IService\AssetManager\IAssetManager
     private function getRootDirectory()
     {
         return $this->configuration['rootDirectory'];
+    }
+
+    private function getPackagesTargetPath()
+    {
+        return $this->configuration['packagesTargetPath'];
+    }
+
+    private function getPackagesTargetUrl()
+    {
+        return $this->configuration['packagesTargetUrl'];
     }
 
     /**
