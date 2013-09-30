@@ -223,6 +223,10 @@ class Manager implements \Nucleus\IService\AssetManager\IAssetManager
         $filename = "$name.$key.$type";
         $filepath = $this->getPackagesTargetPath() . "/$filename";
         if (!file_exists($filepath)) {
+            $dir = dirname($filepath);
+            if (!is_dir($dir)) {
+                @mkdir($dir, 0777, true);
+            }
             file_put_contents($filepath, $coll->dump());
         }
         return $filename;
