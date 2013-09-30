@@ -77,4 +77,9 @@ class Action
      * Menu name
      */
     public $menu;
+
+    /**
+     * Confirmation message before executing
+     */
+    public $confirm;
 }

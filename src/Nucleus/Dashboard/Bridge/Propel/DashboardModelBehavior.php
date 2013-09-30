@@ -176,7 +176,8 @@ class DashboardModelBehavior extends Behavior
             $script = "\$model->addAction(ActionDefinition::create()\n"
                     . "->setName('delete')\n"
                     . "->setTitle('Delete')\n"
-                    . "->setIcon('trash'));\n\n";
+                    . "->setIcon('trash')\n"
+                    . "->addBehavior(new \Nucleus\Dashboard\ActionBehaviors\ConfirmBehavior()));\n\n";
         }
 
         return $script;

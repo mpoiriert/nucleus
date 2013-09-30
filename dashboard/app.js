@@ -400,6 +400,10 @@ $(function() {
             if (a.hasClass('disabled')) {
                 return;
             }
+            var confirmmsg = a.data('confirm');
+            if (confirmmsg && !confirm(confirmmsg)) {
+                return;
+            }
             this.trigger("btn-click", a.data('controller'), a.data('action'));
         },
         disable: function() {
@@ -677,7 +681,9 @@ $(function() {
 
             this.listenTo(tb, 'btn-click', function(controller, action) {
                 if (action == 'remove') {
-                    this.executeRemove(serialize_table(table));
+                    if (confirm('Are you sure?')) {
+                        this.executeRemove(serialize_table(table));
+                    }
                 } else if (action == 'edit') {
                     this.renderEdit(serialize_table(table)); 
                 } else if (action == 'add') {

@@ -12,6 +12,7 @@ use Symfony\Component\Validator\Validation;
 use Nucleus\Dashboard\ActionBehaviors\PaginatedBehavior;
 use Nucleus\Dashboard\ActionBehaviors\OrderableBehavior;
 use Nucleus\Dashboard\ActionBehaviors\FilterableBehavior;
+use Nucleus\Dashboard\ActionBehaviors\ConfirmBehavior;
 
 /**
  * Builds Definition objects according to annotations
@@ -256,6 +257,9 @@ class DefinitionBuilder
             }
             if ($annotation->on_model) {
                 $action->applyToModel($annotation->on_model);
+            }
+            if ($annotation->confirm) {
+                $action->addBehavior(new ConfirmBehavior(array('message' => $annotation->confirm)));
             }
         }
 

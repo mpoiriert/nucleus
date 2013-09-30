@@ -27,7 +27,7 @@ abstract class AbstractActionBehavior
 
     public function setParams(array $params)
     {
-        $this->params = $params;
+        $this->params = array_merge($this->params, $params);
         return $this;
     }
 

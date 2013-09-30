@@ -252,6 +252,8 @@ class Dashboard
                 array('controllerName' => $controller->getName(), 'actionName' => $action->getName()));
         }
 
+        $json['behaviors'] = $this->getBehaviorsSchema($controller, $action);
+
         if (($model = $action->getInputModel()) !== null) {
             $json['model_name'] = $model->getName();
             $json['fields'] = $this->getFieldsSchema($model->getPublicFields());
@@ -283,14 +285,7 @@ class Dashboard
             return $json;
         }
 
-        $json['behaviors'] = array();
-        foreach ($action->getBehaviors() as $b) {
-            $json['behaviors'][$b->getName()] = $b->getParams();
-            if ($b->isInvokable()) {
-                $json['behaviors'][$b->getName()]['url'] = $this->routing->generate('dashboard.invokeBehavior',
-                    array('controllerName' => $controller->getName(), 'actionName' => $action->getName(), 'behaviorName' => $b->getName()));
-            }
-        }
+        $json['behaviors'] = $this->getBehaviorsSchema($controller, $action);
 
         $self = $this;
         $json['actions'] = array_merge(
@@ -299,8 +294,9 @@ class Dashboard
                     return false;
                 }
                 return array_merge($self->getLimitedActionSchema($modelAction), array(
-                    'controller' => $controller->getName(),
+                    'behaviors' => $self->getBehaviorsSchema($controller, $modelAction),
                     'name' => $action->getName() . '/' . $modelAction->getName(),
+                    'controller' => $controller->getName(),
                     'url' => $self->routing->generate('dashboard.invokeModel', 
                         array('controllerName' => $controller->getName(), 'actionName' => $action->getName(), 
                             'modelActionName' => $modelAction->getName()))
@@ -312,6 +308,7 @@ class Dashboard
                     return false;
                 }
                 return array_merge($self->getLimitedActionSchema($action), array(
+                    'behaviors' => $self->getBehaviorsSchema($controller, $action),
                     'controller' => $controller->getName(),
                     'url' => $self->routing->generate('dashboard.invoke', 
                         array('controllerName' => $controller->getName(), 'actionName' => $action->getName()))
@@ -325,6 +322,25 @@ class Dashboard
         }
 
         return $json;
+    }
+
+    /**
+     * Returns the schema for an array of behaviors
+     * 
+     * @param array $behaviors
+     * @return array
+     */
+    public function getBehaviorsSchema($controller, $action)
+    {
+        $array = array();
+        foreach ($action->getBehaviors() as $b) {
+            $array[$b->getName()] = $b->getParams();
+            if ($b->isInvokable()) {
+                $array[$b->getName()]['url'] = $this->routing->generate('dashboard.invokeBehavior',
+                    array('controllerName' => $controller->getName(), 'actionName' => $action->getName(), 'behaviorName' => $b->getName()));
+            }
+        }
+        return $array;
     }
 
     /**
