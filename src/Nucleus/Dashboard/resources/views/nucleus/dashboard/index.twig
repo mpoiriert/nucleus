@@ -87,17 +87,19 @@
   </script>
 
   <script type="text/template" id="object-action-tpl">
-    <dl class="dl-horizontal">
+    <table class="table table-bordered table-striped table-condensed">
     <% _.each(fields, function(field) { %>
-      <dt><%= field.title %></dt>
-      <dd>
-        <%= model[field.name] %>
-        <% if (field.identifier) { %>
-          <input type="hidden" name="<%= field.name %>" value="<%= model[field.name] %>">
-        <% } %>
-      </dd>
+      <tr>
+        <td width="20%"><strong><%= field.title %></strong></td>
+        <td>
+          <%= model[field.name] %>
+          <% if (field.identifier) { %>
+            <input type="hidden" name="<%= field.name %>" value="<%= model[field.name] %>">
+          <% } %>
+        </td>
+      </tr>
     <% }) %>
-    </dl>
+    </table>
   </script>
 
   <script type="text/template" id="list-filters-tpl">
