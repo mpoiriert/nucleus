@@ -1433,6 +1433,7 @@ $(function() {
             this.listenTo(this.action, 'response', this.renderResponse);
             this.listenTo(this.action, 'error', this.renderError);
             this.listenTo(this.action, 'redirect', this._redirectHandler);
+            this.listenTo(this.action, 'done', function() { this.trigger('done'); });
         },
         render: function() {
             this.action.execute();
@@ -1481,7 +1482,7 @@ $(function() {
                     this.unfreeze();
                     if (schema.output.type == 'form') {
                         this._redirectHandler(action.controller, action.name, data, true);
-                    } else if (schema.output.type != 'file' && schema.output.type != 'none') {
+                    } else if (schema.output.type != 'file' && schema.output.type != 'none' && schema.output.next_action != '$url') {
                         this._redirectHandler(action.controller, action.name, data);
                     } else {
                         this.listenTo(action, 'response', function() {
@@ -1615,6 +1616,11 @@ $(function() {
                 var next_controller = this.controller;
                 var next_action = this.schema.output.next_action;
                 if (this.schema.output.type == 'redirect') {
+                    if (next_action == '$url') {
+                        window.open(data);
+                        this.trigger('done');
+                        return;
+                    }
                     next_controller = data['controller'] || next_controller;
                     next_action = data['action'];
                     data = data['data'];

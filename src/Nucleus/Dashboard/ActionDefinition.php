@@ -221,7 +221,7 @@ class ActionDefinition
         if ($nextActionName !== null) {
             $this->setNextAction($nextActionName);
         }
-        if ($flow == self::FLOW_REDIRECT && $nextActionName == '$return') {
+        if ($flow == self::FLOW_REDIRECT && substr($nextActionName, 0, 1) == '$') {
             $this->returnType = self::RETURN_REDIRECT;
         } else if ($flow !== self::FLOW_NONE) {
             $this->returnType = self::RETURN_FORM;
