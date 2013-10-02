@@ -94,7 +94,8 @@ $(function() {
     var render_template = function(id, data) {
         var tpl = _.template($(id).html());
         return tpl(_.extend({
-            render_template: render_template
+            render_template: render_template,
+            format_value: format_value
         }, data));
     };
 
@@ -257,92 +258,123 @@ $(function() {
     };
 
     var format_value = function(v, f) {
+        if (f && f.type == 'object' && !f.related_model) {
+            var a = $('<a href="#">view data</a>');
+            a.on('click', function(e) {
+                show_modal(f.name, JSON.stringify(v, null, "  ").replace(/\n/g, "<br>"));
+                e.preventDefault();
+            });
+            return a;
+        }
+
         if (f && f.i18n) {
             v = v[f.i18n[0]];
         }
         if (v === false) {
-            return 'false';
+            v = 'false';
         } else if (v === true) {
-            return 'true';
+            v = 'true';
+        } else {
+            v = escape_html(v || '');
         }
-        return escape_html(v || '');
+
+        if (f && f.value_controller) {
+            var url = Dashboard.config.base_url + "#" + f.value_controller.controller + "/edit?" + f.value_controller.remote_id + '=' + v;
+            var a = $('<a class="related" />').attr('href', url).text(v).data({
+                model: f.related_model.name,
+                controller: f.value_controller.controller,
+                action: 'edit',
+                params: _.object([[f.value_controller.remote_id, v]])
+            });
+            activate_related_popup(a);
+            return a;
+        }
+
+        return v;
+    };
+
+    var activate_related_popup = function(item) {
+        var popoverTimeout;
+        item.on('click', function(e) {
+            if (e.which != 2 && !e.ctrlKey) {
+                Dashboard.app.runAction($(this).data('controller'), $(this).data('action'), $(this).data('params'));
+                e.preventDefault();
+            }
+        })
+        .on('mouseenter', function() {
+            var a = $(this);
+            popoverTimeout = setTimeout(function() {
+                var action = new Dashboard.Action(a.data('controller'), 'view', a.data('params'));
+                action.on('response', function(resp) {
+                    var p = a.data('popover');
+                    p.options.content = render_template('#related-popover-tpl', { data: resp });
+                    p.setContent();
+                });
+                a.popover({
+                    trigger: 'manual',
+                    html: true,
+                    content: '<em>Loading...</em>',
+                    title: a.data('model'),
+                    placement: 'bottom'
+                }).popover('show');
+                action.execute();
+            }, 500);
+        })
+        .on('mouseleave', function() {
+            clearTimeout(popoverTimeout);
+            $(this).popover('hide');
+        });
     };
 
     var render_table = function(fields, rows, with_value_controller) {
         var vfields = filter_visible_fields(fields, 'list');
-        var table = $(render_template('#table-tpl', { fields: vfields }));
-        var tbody = '';
+        var table = $('<table class="table table-bordered table-striped table-condensed" />');
 
+        var thead = $('<thead />').appendTo(table);
+        var theadtr = $('<tr />').appendTo(thead).append('<th width="30" />');
+        _.each(vfields, function(f) {
+            theadtr.append($('<th />').data('field', f.name).text(f.title));
+        });
+
+        var tbody = $('<tbody />').appendTo(table);
         _.each(rows, function(row, index) {
-            tbody += '<tr><td align="center" class="no-edit"><input type="radio" name="id" class="no-serialize" value=\'' + JSON.stringify(build_pk(fields, row)) + '\'></td>';
+            var tr = $('<tr />');
+            var pk = build_pk(fields, row);
+            var input = $('<input type="radio" name="id" class="no-serialize serialized-in-data" />')
+                .val(JSON.stringify(pk)).data('serialized', pk);
+
+            tr.append($('<td align="center" class="no-edit" />').append(input));
+            tr.on('click', function() { input.prop('checked', true); });
 
             _.each(vfields, function(f) {
-                tbody += '<td data-field="' + f.name + '" data-type="' + f.formated_type + '">';
-                if (f.value_controller) {
-                    var url = Dashboard.config.base_url + "#" + f.value_controller.controller + "/edit?" + f.value_controller.remote_id + '=' + row[f.name];
-                    tbody += '<a href="' + url + '" class="related" data-model="' + f.related_model.name + '" data-controller="' + f.value_controller.controller + '" ' +
-                             'data-action="edit" data-params=\'{"' + f.value_controller.remote_id + '": "' + row[f.name] + '"}\'>' + 
-                             format_value(row[f.name], f) + '</a>';
-                } else {
-                    tbody += format_value(row[f.name], f);
-                }
-                tbody += '</td>';
+                var td = $('<td />').data('field', f.name).data('type', f.formated_type);
+                td.append(format_value(row[f.name], f));
+                tr.append(td);
             });
 
-            tbody += '</tr>';
+            tbody.append(tr);
         });
-
-        table.find('tbody').html(tbody);
-        table.find('tbody tr').on('click', function() {
-            $(this).find('input[type="radio"]')[0].checked = true;
-        });
-
-        var popoverTimeout;
-        table.find('a.related')
-            .on('click', function(e) {
-                if (e.which != 2 && !e.ctrlKey) {
-                    Dashboard.app.runAction($(this).data('controller'), $(this).data('action'), $(this).data('params'));
-                    e.preventDefault();
-                }
-            })
-            .on('mouseenter', function() {
-                var a = $(this);
-                popoverTimeout = setTimeout(function() {
-                    var action = new Dashboard.Action(a.data('controller'), 'view', a.data('params'));
-                    action.on('response', function(resp) {
-                        var p = a.data('popover');
-                        p.options.content = render_template('#related-popover-tpl', { data: resp });
-                        p.setContent();
-                    });
-                    a.popover({
-                        trigger: 'manual',
-                        html: true,
-                        content: '<em>Loading...</em>',
-                        title: a.data('model'),
-                        placement: 'bottom'
-                    }).popover('show');
-                    action.execute();
-                }, 500);
-            })
-            .on('mouseleave', function() {
-                clearTimeout(popoverTimeout);
-                $(this).popover('hide');
-            });
 
         return table;
     };
 
     var serialize_table = function(table) {
-        var data = JSON.parse(table.find('tbody td:first-child input:checked').val());
-        return data;
+        return table.find('tbody td:first-child input:checked').data('serialized');
     };
 
     var delete_table_row = function(table, id) {
         table.find("input[value='" + JSON.stringify(id) + "']").parents('tr').remove();
     };
 
-    var create_modal = function(title, view) {
-        var modal = $(render_template('#modal-tpl', { title: title })).appendTo('body');
+    var show_modal = function(title, content) {
+        var modal = $(render_template('#modal-tpl', { title: title, close_btn: true })).appendTo('body');
+        modal.find('.modal-body').append(content);
+        modal.modal();
+        return modal;
+    };
+
+    var create_view_modal = function(title, view) {
+        var modal = $(render_template('#modal-tpl', { title: title, close_btn: false })).appendTo('body');
         modal.find('.modal-body').append(view.el);
         modal.modal({ show: false });
         modal.on('show', function() {
@@ -567,6 +599,15 @@ $(function() {
                 return !this.value_controller || f.name != this.value_controller.remote_id; }, this)), data);
 
             var tb_groups = [[], []];
+            if (_.contains(this.model.actions, 'view') && this.model.controller) {
+                tb_groups[0].push({
+                    name: 'view', 
+                    controller: '',
+                    title: 'View',
+                    icon: 'eye-open',
+                    disabled: true
+                });
+            }
             if (_.contains(this.model.actions, 'remove')) {
                 tb_groups[0].push({
                     name: 'remove', 
@@ -584,19 +625,21 @@ $(function() {
                     icon: 'edit',
                     disabled: true
                 });
-                tb_groups[1].push({
-                    name: 'edit_inline',
-                    controller: '',
-                    title: 'Edit all inline',
-                    icon: 'edit'
-                });
-                tb_groups[1].push({
-                    name: 'save_inline',
-                    controller: '',
-                    title: 'Save',
-                    icon: 'hdd',
-                    disabled: true
-                })
+                if (!_.contains(this.model.actions, 'noinline')) {
+                    tb_groups[1].push({
+                        name: 'edit_inline',
+                        controller: '',
+                        title: 'Edit all inline',
+                        icon: 'edit'
+                    });
+                    tb_groups[1].push({
+                        name: 'save_inline',
+                        controller: '',
+                        title: 'Save',
+                        icon: 'hdd',
+                        disabled: true
+                    })
+                }
             }
             if (_.contains(this.model.actions, 'create')) {
                 tb_groups[0].push({
@@ -633,6 +676,46 @@ $(function() {
                 tb.buttons().removeClass('disabled');
             });
 
+            if (!_.contains(this.model.actions, 'noinline')) {
+                this.activateInlineEdit(table, tb);
+            }
+
+            this.listenTo(tb, 'btn-click', function(controller, action) {
+                if (action == 'view') {
+                    this.trigger('redirect', this.model.controller, 'view', serialize_table(table));
+                } else if (action == 'remove') {
+                    if (confirm('Are you sure?')) {
+                        this.executeRemove(serialize_table(table));
+                    }
+                } else if (action == 'edit') {
+                    this.renderEdit(serialize_table(table)); 
+                } else if (action == 'add') {
+                    this.renderAdd();
+                } else if (action == 'create') {
+                    this.renderCreate();
+                } else if (action == 'edit_inline') {
+                    table.find('tbody tr').dblclick();
+                    tb.options.groups[1][0].disabled = true;
+                    tb.options.groups[1][1].disabled = false;
+                    tb.render();
+                } else if (action == 'save_inline') {
+                    table.find('input[type="text"]').prop('disabled', true);
+                    var tr = table.find('tbody tr.editing.modified');
+                    var lock = tr.length;
+                    var done = function() {
+                        if (--lock <= 0) {
+                            self.refresh();
+                        }
+                    };
+                    if (lock == 0) {
+                        return done();
+                    }
+                    tr.each(function() { tr.data('save')(); });
+                }
+            });
+        },
+        activateInlineEdit: function(table, tb) {
+            var self = this;
             table.find('tbody tr').on('dblclick', function() {
                 var $tr = $(this);
                 if ($tr.hasClass('editing')) {
@@ -677,38 +760,6 @@ $(function() {
 
                     $this.empty().append(input);
                 });
-            });
-
-            this.listenTo(tb, 'btn-click', function(controller, action) {
-                if (action == 'remove') {
-                    if (confirm('Are you sure?')) {
-                        this.executeRemove(serialize_table(table));
-                    }
-                } else if (action == 'edit') {
-                    this.renderEdit(serialize_table(table)); 
-                } else if (action == 'add') {
-                    this.renderAdd();
-                } else if (action == 'create') {
-                    this.renderCreate();
-                } else if (action == 'edit_inline') {
-                    table.find('tbody tr').dblclick();
-                    tb.options.groups[1][0].disabled = true;
-                    tb.options.groups[1][1].disabled = false;
-                    tb.render();
-                } else if (action == 'save_inline') {
-                    table.find('input[type="text"]').prop('disabled', true);
-                    var tr = table.find('tbody tr.editing.modified');
-                    var lock = tr.length;
-                    var done = function() {
-                        if (--lock <= 0) {
-                            self.refresh();
-                        }
-                    };
-                    if (lock == 0) {
-                        return done();
-                    }
-                    tr.each(function() { tr.data('save')(); });
-                }
             });
         },
         executeRemove: function(id) {
@@ -755,7 +806,7 @@ $(function() {
 
             var create_form = _.bind(function(data) {
                 view = this.createModelForm(data);
-                modal = create_modal(view.computeTitle(), view);
+                modal = create_view_modal(view.computeTitle(), view);
                 view.render();
                 return view;
             }, this);
@@ -793,7 +844,7 @@ $(function() {
             var view = this.createModelForm(this.data, {
                 fields: this.model.fields
             });
-            var modal = create_modal(view.computeTitle(), view);
+            var modal = create_view_modal(view.computeTitle(), view);
             view.render();
 
             if (this.value_controller) {
@@ -853,7 +904,7 @@ $(function() {
                 fields: _.filter(this.model.fields, _.bind(function(f) {
                     return f.name == this.value_controller.local_id; }, this))
             });
-            var modal = create_modal(view.computeTitle(), view);
+            var modal = create_view_modal(view.computeTitle(), view);
             view.render();
 
             connect_action_to_view(viewAction, view);
@@ -906,10 +957,26 @@ $(function() {
             return this;
         },
         renderObject: function(parent) {
-            parent.append(render_template('#object-action-tpl', { 
-                fields: filter_visible_fields(this.options.fields, 'view'), 
-                model: this.model 
-            }));
+            var vfields = filter_visible_fields(this.options.fields, 'view');
+            var table = $('<table class="table table-bordered table-striped table-condensed" />');
+            var model = this.model;
+
+            _.each(vfields, function(f) {
+                if (f.related_model && f.is_array) {
+                    return;
+                }
+                var tr = $('<tr />');
+                var td = $('<td />');
+                td.append(format_value(model[f.name], f));
+                if (f.identifier) {
+                    td.append($('<input type="hidden" name="' + f.name + '" />')
+                        .val(model[f.name]).data('type', f.formated_type).data('field', f.name));
+                }
+                tr.append('<td width="20%"><strong>' + f.title + '</strong></td>').append(td);
+                table.append(tr);
+            });
+
+            parent.append(table);
         },
         buildTabList: function() {
             var tabs = [];
@@ -961,6 +1028,10 @@ $(function() {
                     data[f.name] = self.model[f.name];
                 });
                 this.trigger('submit', data, false);
+            });
+
+            this.listenTo(view, 'redirect', function(controller, action, data, force_input) {
+                this.trigger('redirect', controller, action, data, force_input);
             });
 
             pan.empty().append(view.el);
@@ -1251,10 +1322,6 @@ $(function() {
                 this.renderFilters();
             }
 
-            if (this.options.behaviors.sortable) {
-                this.makeSortable();
-            }
-
             this.unfreeze();
             return this;
         },
@@ -1292,7 +1359,7 @@ $(function() {
             var table = render_table(this.options.fields, rows, true);
             var wrapper = $('<div class="table-wrapper" />').append(table);
 
-            if (this.options.behaviors.sortable) {
+            if (this.options.behaviors.orderable) {
                 table.addClass('sortable');
                 table.find('th').on('click', function() {
                     table.find('th.sorted').removeClass('sorted');
@@ -1307,6 +1374,10 @@ $(function() {
             table.find('tbody tr').on('click', function() {
                 self.$toolbar.enable();
             });
+
+            if (this.options.behaviors.sortable) {
+                this.makeSortable(table);
+            }
 
             if (this.$wrapper) {
                 this.$wrapper.replaceWith(wrapper);
@@ -1397,23 +1468,20 @@ $(function() {
                 self.refresh(true);
             });
         },
-        makeSortable: function() {
-            var table = this.$('table tbody');
+        makeSortable: function(table) {
             var url = this.options.behaviors.sortable.url;
             var originalIndex;
 
-            table.sortable({
+            table.find('tbody').sortable({
                 axis: "y",
                 start: function(e, ui) {
                     originalIndex = ui.item.index();
                     ui.item.find('input[type="radio"]')[0].checked = true;
                 },
                 stop: function(e, ui) {
-                    serialize(ui.item, function(data) {
-                        var delta = ui.item.index() - originalIndex;
-                        var data = _.extend({ delta: delta }, data);
-                        Dashboard.api.call('post', url, data);
-                    });
+                    var delta = ui.item.index() - originalIndex;
+                    var data = _.extend({ delta: delta }, ui.item.find('td:first-child input').data('serialized'));
+                    Dashboard.api.call('post', url, data);
                 }
             });
         },
@@ -1496,6 +1564,7 @@ $(function() {
 
             this.listenTo(view, 'done', function() { this.trigger('done'); });
             this.listenTo(view, 'submit', this.pipe);
+            this.listenTo(view, 'redirect', this._redirectHandler);
 
             this.view = view;
             this.$el.empty().append(view.el);

@@ -28,6 +28,8 @@ class DashboardModelBehavior extends Behavior
         'nocreatechildren' => '',
         'noremovechildren' => '',
         'noeditchildren' => '',
+        'noviewchildren' => '',
+        'childaliases' => '',
         'internal' => '',
         'propertylaliases' => '',
         'nofkembed' => ''
@@ -188,12 +190,19 @@ class DashboardModelBehavior extends Behavior
         $isIdentifier = $column->isPrimaryKey();
         $name = ucfirst(str_replace('_', ' ', $this->getAlias($column->getName())));
 
+        if (!($type = $column->getPhpType())) {
+            $type = 'string';
+            if ($column->getType() == 'OBJECT') {
+                $type = 'object';
+            }
+        }
+
         $script = "FieldDefinition::create()\n"
                 . "->setProperty('" . $this->getAlias($column->getPhpName(), 'propertyaliases') . "')\n"
                 . "->setInternalProperty('" . $column->getPhpName() . "')\n"
                 . "->setAccessMethod(FieldDefinition::ACCESS_GETTER_SETTER)\n"
                 . "->setName('" . $name . "')\n"
-                . "->setType('" . $column->getPhpType() . "')\n"
+                . "->setType('" . $type . "')\n"
                 . "->setIdentifier(" . ($isIdentifier ? 'true' : 'false') . ")\n"
                 . "->setOptional(" . ($column->isNotNull() ? 'false' : 'true') . ")\n"
                 . "->setDescription('" . str_replace("'", "\\'", $column->getDescription()) . "')";
@@ -283,7 +292,7 @@ class DashboardModelBehavior extends Behavior
         $fqdn = $table->getNamespace() . '\\' . $table->getPhpName();
         $controllerFqdn = $table->getPhpName() . 'DashboardController';
 
-        $availableActions = array('edit', 'create', 'remove');
+        $availableActions = array('edit', 'create', 'remove', 'view');
         if (!$table->getIsCrossRef()) {
             $availableActions[] = 'add';
         }

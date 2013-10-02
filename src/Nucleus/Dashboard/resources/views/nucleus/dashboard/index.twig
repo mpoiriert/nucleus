@@ -72,36 +72,6 @@
     </div>
   </script>
 
-  <script type="text/template" id="table-tpl">
-    <table class="table table-bordered table-striped table-condensed">
-      <thead>
-        <tr>
-          <th width="30"></th>
-          <% _.each(fields, function(f) { %>
-            <th data-field="<%= f.name %>"><%= f.title %></th>
-          <% }) %>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </script>
-
-  <script type="text/template" id="object-action-tpl">
-    <table class="table table-bordered table-striped table-condensed">
-    <% _.each(fields, function(field) { %>
-      <tr>
-        <td width="20%"><strong><%= field.title %></strong></td>
-        <td>
-          <%= model[field.name] %>
-          <% if (field.identifier) { %>
-            <input type="hidden" name="<%= field.name %>" value="<%= model[field.name] %>">
-          <% } %>
-        </td>
-      </tr>
-    <% }) %>
-    </table>
-  </script>
-
   <script type="text/template" id="list-filters-tpl">
     <% _.each(fields, function(f) { %>
       <p>
@@ -144,6 +114,11 @@
         <h3><%= title %></h3>
       </div>
       <div class="modal-body"></div>
+      <% if (close_btn) { %>
+        <div class="modal-footer">
+          <a href="#" data-dismiss="modal" class="btn">Close</a>
+        </div>
+      <% } %>
     </div>
   </script>
 
