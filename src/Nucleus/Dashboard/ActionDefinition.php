@@ -221,7 +221,7 @@ class ActionDefinition
         if ($nextActionName !== null) {
             $this->setNextAction($nextActionName);
         }
-        if ($flow == self::FLOW_REDIRECT && $nextActionName == '$return') {
+        if ($flow == self::FLOW_REDIRECT && substr($nextActionName, 0, 1) == '$') {
             $this->returnType = self::RETURN_REDIRECT;
         } else if ($flow !== self::FLOW_NONE) {
             $this->returnType = self::RETURN_FORM;
@@ -245,6 +245,7 @@ class ActionDefinition
             throw new DefinitionBuilderException("Flow must be set to something else than return to set a next action");
         }
         $this->nextAction = $actionName;
+        return $this;
     }
 
     public function getNextAction()
@@ -271,6 +272,7 @@ class ActionDefinition
     public function setPermissions(array $perms)
     {
         $this->permissions = $perms;
+        return $this;
     }
 
     public function getPermissions()
@@ -282,6 +284,7 @@ class ActionDefinition
     {
         $this->behaviors[] = $behavior;
         $behavior->setAction($this);
+        return $this;
     }
 
     public function getBehavior($name)
@@ -304,5 +307,6 @@ class ActionDefinition
         foreach ($this->behaviors as $behavior) {
             $behavior->trigger($eventName, $args);
         }
+        return $this;
     }
 }

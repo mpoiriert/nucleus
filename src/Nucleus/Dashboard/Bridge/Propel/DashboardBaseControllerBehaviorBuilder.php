@@ -81,22 +81,25 @@ abstract class " . $this->getClassname() . "
 
     protected function addListAction()
     {
+        $table = $this->getTable();
         $annotations = $this->getDefaultActionAnnotations();
         $objectClassname = $this->getStubObjectBuilder()->getFullyQualifiedClassname();
         $queryClassname = $this->getStubQueryBuilder()->getFullyQualifiedClassname();
         $perPage = $this->getParameter('items_per_page');
 
-        $pk = $this->getTable()->getPrimaryKey();
-        $orderBy = $pk[0]->getPhpName();
-
         $annotations[] = "@\Nucleus\IService\Dashboard\Action(title=\"List\", icon=\"list\", default=true)";
         $annotations[] = "@\Nucleus\IService\Dashboard\Paginate(per_page={$perPage}, offset_param=\"offset\")";
-        $annotations[] = "@\Nucleus\IService\Dashboard\Orderable(param=\"order_by\", order_param=\"order_by_direction\")";
         $annotations[] = "@\Nucleus\IService\Dashboard\Filterable(param=\"filters\")";
 
-        if ($this->getTable()->hasBehavior('sortable')) {
+        if ($table->hasBehavior('sortable')) {
             $annotations[] = '@\Nucleus\IService\Dashboard\ActionBehavior(class="Nucleus\Dashboard\Bridge\Propel\SortableActionBehavior")';
-            $orderBy = $this->getTable()->getBehavior('sortable')->getParameter('rank_column');
+            $orderargs = '';
+            $orderby = 'orderByRank()';
+        } else {
+            $annotations[] = "@\Nucleus\IService\Dashboard\Orderable(param=\"order_by\", order_param=\"order_by_direction\")";
+            $pk = $table->getPrimaryKey();
+            $orderargs = ", \$order_by= '{$pk[0]->getPhpName()}', \$order_by_direction = 'asc'";
+            $orderby = 'orderBy($order_by, $order_by_direction)';
         }
 
         return "
@@ -105,12 +108,12 @@ abstract class " . $this->getClassname() . "
      *
      * @return \\{$objectClassname}[]
      */
-    public function listAll(array \$filters = array(), \$offset = 0, \$order_by= '{$orderBy}', \$order_by_direction = 'asc')
+    public function listAll(array \$filters = array(), \$offset = 0{$orderargs})
     {
         \$items = \\{$queryClassname}::create()
                 ->_or()
                 ->filterByArray(\$filters)
-                ->orderBy(\$order_by, \$order_by_direction);
+                ->{$orderby};
 
         if (\$offset >= 0) {
             \$items = \$items->paginate((\$offset / {$perPage}) + 1, {$perPage});

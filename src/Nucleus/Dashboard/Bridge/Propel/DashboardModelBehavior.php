@@ -16,14 +16,20 @@ class DashboardModelBehavior extends Behavior
         'htmlfields' => '',
         'repr' => 'id',
         'nolist' => '',
+        'listable' => '',
         'noedit' => '',
+        'editable' => '',
         'noview' => '',
+        'viewable' => '',
         'noquery' => '',
+        'queryable' => '',
         'children' => '',
         'noaddchildren' => '',
         'nocreatechildren' => '',
         'noremovechildren' => '',
         'noeditchildren' => '',
+        'noviewchildren' => '',
+        'childaliases' => '',
         'internal' => '',
         'propertylaliases' => '',
         'nofkembed' => ''
@@ -123,8 +129,8 @@ class DashboardModelBehavior extends Behavior
             if (in_array($column->getName(), $excludedColumns)) {
                 continue;
             }
-            $queryable = $column->isPrimaryKey() || in_array($column->getName(), $indexColumns);
-            $script .= "\$model->addField(" . $this->addFieldDefinition($column, $queryable) . ");\n\n";
+            $isIndexed = $column->isPrimaryKey() || in_array($column->getName(), $indexColumns);
+            $script .= "\$model->addField(" . $this->addFieldDefinition($column, $isIndexed) . ");\n\n";
         }
 
         foreach ($this->getChildrenFKs() as $fk) {
@@ -172,28 +178,35 @@ class DashboardModelBehavior extends Behavior
             $script = "\$model->addAction(ActionDefinition::create()\n"
                     . "->setName('delete')\n"
                     . "->setTitle('Delete')\n"
-                    . "->setIcon('trash'));\n\n";
+                    . "->setIcon('trash')\n"
+                    . "->addBehavior(new \Nucleus\Dashboard\ActionBehaviors\ConfirmBehavior()));\n\n";
         }
 
         return $script;
     }
 
-    protected function addFieldDefinition($column, $queryable = false)
+    protected function addFieldDefinition($column, $isIndexed = false)
     {
         $isIdentifier = $column->isPrimaryKey();
-        $visibility = array('list', 'view');
-
         $name = ucfirst(str_replace('_', ' ', $this->getAlias($column->getName())));
+
+        if (!($type = $column->getPhpType())) {
+            $type = 'string';
+            if ($column->getType() == 'OBJECT') {
+                $type = 'object';
+            }
+        }
 
         $script = "FieldDefinition::create()\n"
                 . "->setProperty('" . $this->getAlias($column->getPhpName(), 'propertyaliases') . "')\n"
                 . "->setInternalProperty('" . $column->getPhpName() . "')\n"
                 . "->setAccessMethod(FieldDefinition::ACCESS_GETTER_SETTER)\n"
                 . "->setName('" . $name . "')\n"
-                . "->setType('" . $column->getPhpType() . "')\n"
+                . "->setType('" . $type . "')\n"
                 . "->setIdentifier(" . ($isIdentifier ? 'true' : 'false') . ")\n"
                 . "->setOptional(" . ($column->isNotNull() ? 'false' : 'true') . ")\n"
                 . "->setDescription('" . str_replace("'", "\\'", $column->getDescription()) . "')";
+
 
         $editable = !$isIdentifier || !$column->isAutoIncrement();
         if ($this->getTable()->hasBehavior('timestampable')) {
@@ -202,14 +215,14 @@ class DashboardModelBehavior extends Behavior
                 $this->getTable()->getBehavior('timestampable')->getParameter('update_column')));
         }
 
+        $visibility = array('list', 'view');
         if ($column->isLobType()) {
             $visibility = array();
         }
-
         if ($editable) {
             $visibility[] = 'edit';
         }
-        if ($queryable) {
+        if ($isIndexed) {
             $visibility[] = 'query';
         }
         $script .= "\n->setVisibility(array('" . implode("', '", $this->getVisibility($column->getName(), $visibility)) . "'))";
@@ -279,7 +292,7 @@ class DashboardModelBehavior extends Behavior
         $fqdn = $table->getNamespace() . '\\' . $table->getPhpName();
         $controllerFqdn = $table->getPhpName() . 'DashboardController';
 
-        $availableActions = array('edit', 'create', 'remove');
+        $availableActions = array('edit', 'create', 'remove', 'view');
         if (!$table->getIsCrossRef()) {
             $availableActions[] = 'add';
         }
@@ -335,7 +348,9 @@ class DashboardModelBehavior extends Behavior
     {
         $visibility = array();
         foreach (array('list', 'edit', 'view', 'query') as $v) {
-            if (in_array($v, $default) && !in_array($name, $this->getListParameter("no$v"))) {
+            if (!in_array($v, $default) && in_array($name, $this->getListParameter("{$v}able"))) {
+                $visibility[] = $v;
+            } else if (in_array($v, $default) && !in_array($name, $this->getListParameter("no$v"))) {
                 $visibility[] = $v;
             }
         }

@@ -67,6 +67,11 @@ abstract class BaseServiceContainer extends Container implements IServiceContain
         return $services;
     }
 
+    public function isDisabled($name)
+    {
+        return in_array($name, $this->disabled);
+    }
+
     public function get($name, $invalidBehavior = self::EXCEPTION_ON_INVALID_REFERENCE)
     {
         if (in_array($name, $this->disabled)) {

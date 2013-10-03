@@ -12,6 +12,7 @@ use Symfony\Component\Validator\Validation;
 use Nucleus\Dashboard\ActionBehaviors\PaginatedBehavior;
 use Nucleus\Dashboard\ActionBehaviors\OrderableBehavior;
 use Nucleus\Dashboard\ActionBehaviors\FilterableBehavior;
+use Nucleus\Dashboard\ActionBehaviors\ConfirmBehavior;
 
 /**
  * Builds Definition objects according to annotations
@@ -34,12 +35,12 @@ class DefinitionBuilder
     }
 
     /**
-     * Builds a controller from a class name
+     * Builds a controller from a class name without building its actions
      * 
      * @param string $className
-     * @return ControllerDefinition
+     * @return array
      */
-    public function buildController($className)
+    public function buildBaseController($className)
     {
         if (is_object($className)) {
             $className = get_class($className);
@@ -65,7 +66,30 @@ class DefinitionBuilder
             }
         }
 
+        return array($controller, $annotations);
+    }
+
+    /**
+     * Builds a controller from a class name
+     * 
+     * @param string $className
+     * @param array $annotations
+     * @return ControllerDefinition
+     */
+    public function buildController($className, array $annotations = array())
+    {
+        if (is_array($className)) {
+            list($className, $annotations) = $className;
+        }
+        if ($className instanceof ControllerDefinition) {
+            $controller = $className;
+            $className = $controller->getClassName();
+        } else {
+            list($controller, $annotations) = $this->buildBaseController($className);
+        }
+
         // extract actions
+        $class = new ReflectionClass($className);
         $actions = $this->extractActionsFromClass($class, $annotations);
 
         // sets the default menu to be the controller's title
@@ -234,6 +258,9 @@ class DefinitionBuilder
             if ($annotation->on_model) {
                 $action->applyToModel($annotation->on_model);
             }
+            if ($annotation->confirm) {
+                $action->addBehavior(new ConfirmBehavior(array('message' => $annotation->confirm)));
+            }
         }
 
         // some annotations use arguments which could trigger the creation
@@ -333,7 +360,7 @@ class DefinitionBuilder
         $model->setValidator(Validation::createValidator());
 
         $paramComments = array();
-        if (preg_match_all('/@param ([a-zA-Z\\\\]+) (\$[a-zA-Z_0-9]+)( .+)?$/m', $method->getDocComment(), $results)) {
+        if (preg_match_all('/@param ([a-zA-Z\\\\]+) \$([a-zA-Z_0-9]+)( .+)?$/m', $method->getDocComment(), $results)) {
             for ($i = 0, $c = count($results[0]); $i < $c; $i++) {
                 $paramComments[$results[2][$i]] = array(
                     'type' => $results[1][$i],
@@ -349,7 +376,9 @@ class DefinitionBuilder
             $com = isset($paramComments[$param->getName()]) ? $paramComments[$param->getName()] : null;
 
             if (!$com) {
-                if ($type = $param->getClass()) {
+                if ($param->isArray()) {
+                    $type = 'array';
+                } else if ($type = $param->getClass()) {
                     $type = $type->getName();
                 }
             } else {
