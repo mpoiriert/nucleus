@@ -30,8 +30,6 @@ abstract class BaseMigrationTask implements IMigrationTask
 
     public function getUniqueId()
     {
-        $reflectinClass = new ReflectionClass($this);
-        $filename = $reflectinClass->getFileName();
-        return md5(md5_file($filename) . md5(serialize($this->parameters)));
+        return md5(get_class($this) . md5(serialize($this->parameters)));
     }
 }
