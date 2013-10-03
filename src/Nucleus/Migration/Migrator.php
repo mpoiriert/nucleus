@@ -164,7 +164,7 @@ class Migrator implements IMigrator
 
     private function getTaskFullName(IMigrationTask $migrationTask)
     {
-        return get_class($migrationTask) . " " . json_encode($migrationTask->getParameters());
+        return "(Id: " . $migrationTask->getUniqueId() . ") " . get_class($migrationTask) . " " . json_encode($migrationTask->getParameters());
     }
 
     private function promptTask(IMigrationTask $migrationTask)
@@ -190,6 +190,28 @@ class Migrator implements IMigrator
                 $this->markAsRun($migrationTask);
             }
         }
+    }
+
+    /**
+     * Run a task by it's id, use the migration:report to see all the task and their id
+     *
+     * @\Nucleus\IService\CommandLine\Consolable(name="migration:runById")
+     *
+     * @param $taskId
+     */
+    public function runById($taskId)
+    {
+        foreach ($this->configuration['versions'] as $version => $tasks) {
+            foreach ($tasks as $task) {
+                $migrationTask = $this->loadTask($task);
+                if($migrationTask->getUniqueId() == $taskId) {
+                    $this->runTask($migrationTask);
+                    echo "\n\nRunned";
+                    return;
+                }
+            }
+        }
+        echo "\nNot found";
     }
 
     /**
