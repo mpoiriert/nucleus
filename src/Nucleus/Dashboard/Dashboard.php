@@ -441,6 +441,9 @@ class Dashboard
             if ($result instanceof Response) {
                 return $result;
             }
+            if ($response->getContent()) {
+                return $response;
+            }
             return $this->formatInvokedResponse($request, $response, $action, $result);
 
         } catch (\Exception $e) {
@@ -479,6 +482,9 @@ class Dashboard
 
             if ($result instanceof Response) {
                 return $result;
+            }
+            if ($response->getContent()) {
+                return $response;
             }
             return $this->formatInvokedResponse($request, $response, $modelAction, $result, $object);
 
@@ -622,7 +628,8 @@ class Dashboard
         } else if ($action->getReturnType() === ActionDefinition::RETURN_FILE) {
             $filename = $action->getName();
             if (is_array($result)) {
-                list($filename, $result) = $result;
+                $r = $result;
+                list($filename, $result) = $r;
             }
             $response->headers->set('Content-Type', 'application/octet-stream');
             $response->headers->set('Content-Disposition', 'attachment; filename=' . $filename);

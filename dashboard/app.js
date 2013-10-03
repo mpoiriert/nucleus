@@ -1747,9 +1747,7 @@ $(function() {
                 target: 'action-execute-iframe-' + id
             });
 
-            for (var k in data) {
-                form.append($('<input type="text" name="' + k + '" />').val(data[k]));
-            }
+            form.append($('<input type="text" name="data" />').val(JSON.stringify(data)));
 
             form.submit().remove();
             callback(null);
