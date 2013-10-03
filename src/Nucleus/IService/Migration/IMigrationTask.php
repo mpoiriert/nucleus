@@ -33,6 +33,13 @@ interface IMigrationTask
     public function run();
 
     /**
+     * Return the parameters send to prepare
+     *
+     * @return array
+     */
+    public function getParameters();
+
+    /**
      * Return a unique id of the task so we can know if it have bee run
      * 
      * @return string

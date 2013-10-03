@@ -7,3 +7,4 @@ autoload.php
 /vendor/
 /cache/
 web/nucleus
+.idea

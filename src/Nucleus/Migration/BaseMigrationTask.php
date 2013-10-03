@@ -23,6 +23,11 @@ abstract class BaseMigrationTask implements IMigrationTask
         $this->parameters = $parameters;
     }
 
+    public function getParameters()
+    {
+        return $this->parameters;
+    }
+
     public function getUniqueId()
     {
         $reflectinClass = new ReflectionClass($this);

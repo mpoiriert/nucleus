@@ -3,7 +3,7 @@
         "src/Nucleus/Framework/nucleus.json",
         "src/Nucleus/Dashboard/nucleus.json"
     ],
-     "services": {
+    "services": {
         "assetManager": {
             "configuration": {
                 "rootDirectory": "<?php echo str_replace('\\','/',__DIR__) . '/web' ?>"
@@ -11,6 +11,22 @@
         },
         "debugBarTwigExtension": {
             "disabled": true
+        },
+        "migrator": {
+            "class": "Nucleus\\Migration\\Migrator",
+            "configuration": {
+                "versions": {
+                    "v1": [
+                        { "taskName": "demo", "parameters": {"value":1} }
+                    ],
+                    "v2": [
+                        { "taskName": "demo", "parameters": {"value":2} }
+                    ]
+                }
+            }
+        },
+        "migrationTask.demo": {
+            "class": "Nucleus\\Migration\\DemoTask"
         }
-     }
+    }
 }
