@@ -198,9 +198,12 @@ class FieldDefinition
         return $this->isArray;
     }
 
-    public function setIsHash($isHash = true)
+    public function setIsHash($isHash = true, array $possibleKeys = array())
     {
         $this->isHash = $isHash;
+        if (!empty($possibleKeys)) {
+            $this->formFieldOptions['possible_keys'] = $possibleKeys;
+        }
         return $this;
     }
 

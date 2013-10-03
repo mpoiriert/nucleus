@@ -1222,8 +1222,8 @@ $(function() {
             var div = $('<div class="hash-field" />');
             var add = $('<a href="javascript:" class="valign">Add</a>').appendTo(div);
 
-            add.on('click', function(e) {
-                var keyinput = $('<input type="text" class="no-serialize" />');
+            var create_item = function(key) {
+                var keyinput = $('<input type="text" class="no-serialize" />').val(key || '');
                 var input = self.renderInputField(field).data('key', keyinput).removeClass('input-xxlarge').addClass('input-xlarge');
                 var remove = $('<a href="javascript:">Remove</a>').on('click', function(e) {
                     $(this).parent().remove();
@@ -1231,8 +1231,16 @@ $(function() {
                 });
                 var p = $('<p />').append(keyinput).append(' ').append(input).append(' ').append(remove);
                 p.insertBefore(add);
+            };
+
+            add.on('click', function(e) {
+                create_item();
                 e.preventDefault();
             });
+
+            if (field.field_options && field.field_options.possible_keys) {
+                _.each(field.field_options.possible_keys, create_item);
+            }
 
             return div;
         },
@@ -1635,12 +1643,15 @@ $(function() {
 
     _.extend(Dashboard.Action.prototype, Backbone.Events, {
         getSchema: function(callback) {
+            if (this.original_schema) {
+                this.schema = this.original_schema;
+            }
             if (this.schema) {
                 callback(this.schema);
                 return;
             }
             Dashboard.api.get(RestEndpoint.cached(this.schema_url), _.bind(function(schema) {
-                this.schema = schema;
+                this.original_schema = this.schema = schema;
                 callback(schema);
             }, this));
         },
@@ -1681,24 +1692,38 @@ $(function() {
             }
         },
         handleResponse: function(data) {
+            if (this.schema.output.type == 'dynamic') {
+                this.schema = _.extend({}, this.schema, {output: data['schema']});
+                data = data['data'];
+            }
+            if (this.schema.output.type == 'builder') {
+                var action = new Dashboard.Action(data.controller, data.action, data.data, data.force_input);
+                action.original_schema = data.schema;
+                this.trigger('redirect', action);
+                return;
+            }
             if (this.allow_flow && this.schema.output.flow.indexOf('redirect') === 0) {
                 var next_controller = this.controller;
                 var next_action = this.schema.output.next_action;
+                var force_input = false;
                 if (this.schema.output.type == 'redirect') {
                     if (next_action == '$url') {
                         window.open(data);
                         this.trigger('done');
                         return;
                     }
-                    next_controller = data['controller'] || next_controller;
-                    next_action = data['action'];
+                    next_controller = data.controller || next_controller;
+                    next_action = data.action;
+                    if (typeof(data['force_input']) != 'undefined') {
+                        force_input = data.force_input;
+                    }
                     data = data['data'];
                 } else if (this.schema.output.flow == 'redirect') {
                     data = null;
                 } else if (this.schema.output.flow == 'redirect_with_id') {
                     data = build_pk(this.schema.output.fields, data);
                 }
-                this.trigger('redirect', next_controller, next_action, data);
+                this.trigger('redirect', next_controller, next_action, data, force_input);
                 return;
             }
             this.trigger('response', data, this.lastRequest);
@@ -1924,10 +1949,14 @@ $(function() {
                 this.runActionOnLoad = [controller, action, data];
                 return;
             }
-
-            var view = new Dashboard.ActionView({ 
-                action: new Dashboard.Action(controller, action, data, force_input) 
-            });
+            if (typeof(controller) != 'string') {
+                this.showAction(controller);
+            } else {
+                this.showAction(new Dashboard.Action(controller, action, data, force_input));
+            }
+        },
+        showAction: function(action) {
+            var view = new Dashboard.ActionView({action: action});
 
             this.listenTo(view, 'render', this.switchActionView);
             this.listenTo(view, 'redirect', this.runAction);
