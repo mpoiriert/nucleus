@@ -286,6 +286,12 @@ class ModelDefinition
         return $array;
     }
 
+    public function getObjectRepr($obj)
+    {
+        $f = $this->getStringReprField();
+        return $f->getValue($obj);
+    }
+
     /**
      * Validates an object using fields validators
      * 

@@ -258,6 +258,10 @@ $(function() {
     };
 
     var format_value = function(v, f) {
+        var hover_embed = arguments.length > 2 ? arguments[2] : false;
+        var orig_v = v;
+        var enable_vc = true;
+
         if (f && f.type == 'object' && !f.related_model) {
             var a = $('<a href="#">view data</a>');
             a.on('click', function(e) {
@@ -270,7 +274,20 @@ $(function() {
         if (f && f.i18n) {
             v = v[f.i18n[0]];
         }
-        if (v === false) {
+        if (f && f.related_model && !f.is_array) {
+            if (f.related_model.embed) {
+                enable_vc = false;
+                v = render_object(f.related_model.fields, v['data']);
+                if (hover_embed) {
+                    v = $('<a href="#" class="related-hover" />')
+                        .append(orig_v['repr'] + ' (#' + orig_v['id'] + ')')
+                        .append($('<div />').append(v));
+                }
+            } else {
+                v = v['repr'] + ' (#' + v['id'] + ')';
+            }
+            orig_v = orig_v['id'];
+        } else if (v === false) {
             v = 'false';
         } else if (v === true) {
             v = 'true';
@@ -278,13 +295,13 @@ $(function() {
             v = escape_html(v || '');
         }
 
-        if (f && f.value_controller) {
-            var url = Dashboard.config.base_url + "#" + f.value_controller.controller + "/edit?" + f.value_controller.remote_id + '=' + v;
+        if (f && f.value_controller && enable_vc) {
+            var url = Dashboard.config.base_url + "#" + f.value_controller.controller + "/edit?" + f.value_controller.remote_id + '=' + orig_v;
             var a = $('<a class="related" />').attr('href', url).text(v).data({
                 model: f.related_model.name,
                 controller: f.value_controller.controller,
                 action: 'edit',
-                params: _.object([[f.value_controller.remote_id, v]])
+                params: _.object([[f.value_controller.remote_id, orig_v]])
             });
             activate_related_popup(a);
             return a;
@@ -326,7 +343,29 @@ $(function() {
         });
     };
 
-    var render_table = function(fields, rows, with_value_controller) {
+    var render_object = function(fields, obj) {
+        var vfields = filter_visible_fields(fields, 'view');
+        var table = $('<table class="table table-bordered table-striped table-condensed" />');
+
+        _.each(vfields, function(f) {
+            if (f.related_model && f.is_array) {
+                return;
+            }
+            var tr = $('<tr />');
+            var td = $('<td />');
+            td.append(format_value(obj[f.name], f));
+            if (f.identifier) {
+                td.append($('<input type="hidden" name="' + f.name + '" />')
+                    .val(obj[f.name]).data('type', f.formated_type).data('field', f.name));
+            }
+            tr.append('<td width="20%"><strong>' + f.title + '</strong></td>').append(td);
+            table.append(tr);
+        });
+
+        return table;
+    };
+
+    var render_object_list = function(fields, objs, with_value_controller) {
         var vfields = filter_visible_fields(fields, 'list');
         var table = $('<table class="table table-bordered table-striped table-condensed" />');
 
@@ -337,9 +376,9 @@ $(function() {
         });
 
         var tbody = $('<tbody />').appendTo(table);
-        _.each(rows, function(row, index) {
+        _.each(objs, function(obj, index) {
             var tr = $('<tr />');
-            var pk = build_pk(fields, row);
+            var pk = build_pk(fields, obj);
             var input = $('<input type="radio" name="id" class="no-serialize serialized-in-data" />')
                 .val(JSON.stringify(pk)).data('serialized', pk);
 
@@ -348,7 +387,7 @@ $(function() {
 
             _.each(vfields, function(f) {
                 var td = $('<td />').data('field', f.name).data('type', f.formated_type);
-                td.append(format_value(row[f.name], f));
+                td.append(format_value(obj[f.name], f, true));
                 tr.append(td);
             });
 
@@ -358,12 +397,8 @@ $(function() {
         return table;
     };
 
-    var serialize_table = function(table) {
+    var serialize_object_list = function(table) {
         return table.find('tbody td:first-child input:checked').data('serialized');
-    };
-
-    var delete_table_row = function(table, id) {
-        table.find("input[value='" + JSON.stringify(id) + "']").parents('tr').remove();
     };
 
     var show_modal = function(title, content) {
@@ -587,15 +622,15 @@ $(function() {
             this.freeze();
             if (this.value_controller) {
                 var action = new Dashboard.Action(this.value_controller.controller, 'list' + this.field.name);
-                this.listenTo(action, 'response', this.renderTable);
+                this.listenTo(action, 'response', this.renderList);
                 action.execute(this.data);
             } else {
-                this.renderTable(this.data);
+                this.renderList(this.data);
             }
         },
-        renderTable: function(data) {
+        renderList: function(data) {
             var self = this;
-            var table = render_table(_.filter(this.model.fields, _.bind(function(f) {
+            var table = render_object_list(_.filter(this.model.fields, _.bind(function(f) {
                 return !this.value_controller || f.name != this.value_controller.remote_id; }, this)), data);
 
             var tb_groups = [[], []];
@@ -682,13 +717,15 @@ $(function() {
 
             this.listenTo(tb, 'btn-click', function(controller, action) {
                 if (action == 'view') {
-                    this.trigger('redirect', this.model.controller, 'view', serialize_table(table));
+                    this.trigger('redirect', this.model.controller, 'view', serialize_object_list(table));
                 } else if (action == 'remove') {
                     if (confirm('Are you sure?')) {
-                        this.executeRemove(serialize_table(table));
+                        this.executeRemove(serialize_object_list(table), function() {
+                            self.refresh();
+                        });
                     }
                 } else if (action == 'edit') {
-                    this.renderEdit(serialize_table(table)); 
+                    this.renderEdit(serialize_object_list(table)); 
                 } else if (action == 'add') {
                     this.renderAdd();
                 } else if (action == 'create') {
@@ -710,7 +747,7 @@ $(function() {
                     if (lock == 0) {
                         return done();
                     }
-                    tr.each(function() { tr.data('save')(); });
+                    tr.each(function() { $(this).data('save')(done); });
                 }
             });
         },
@@ -725,9 +762,10 @@ $(function() {
                 tb.options.groups[1][1].disabled = false;
                 tb.render();
 
-                var save = function() {
+                var save = function(callback) {
                     if (!$tr.hasClass('modified')) {
-                        return self.refresh();
+                        callback && callback();
+                        return;
                     }
                     serialize($tr, function(data) {
                         $tr.find('input[type="text"]').prop('disabled', true);
@@ -737,7 +775,7 @@ $(function() {
                             self.data[index] = data;
                             data = null;
                         }
-                        self.executeSave(data);
+                        self.executeSave(data, callback);
                     });
                 };
 
@@ -749,9 +787,9 @@ $(function() {
                         .data('type', $this.data('type'))
                         .val($this.text());
 
-                    input.on('keypress', function(e) {
+                    input.on('keyup', function(e) {
                         if (e.which == 13) {
-                            save();
+                            save(function() { self.refresh(); });
                             e.preventDefault();
                         } else {
                             $tr.addClass('modified');
@@ -762,11 +800,13 @@ $(function() {
                 });
             });
         },
-        executeRemove: function(id) {
+        executeRemove: function(id, callback) {
             this.freeze();
             if (this.value_controller) {
                 var action = new Dashboard.Action(this.value_controller.controller, 'remove' + this.field.name);
-                this.listenTo(action, 'response', this.refresh);
+                this.listenTo(action, 'response', function(data) {
+                    callback && callback();
+                });
                 action.execute(_.extend({}, this.data, id));
             } else {
                 var index_to_delete = find_indexes_matching_pk(this.data, id);
@@ -777,7 +817,7 @@ $(function() {
                 }
 
                 this.updateData();
-                this.refresh();
+                callback && callback();
             }
         },
         executeSave: function(data, callback, err_callback) {
@@ -788,7 +828,6 @@ $(function() {
             if (this.value_controller) {
                 var action = new Dashboard.Action(this.model.controller, 'save', data, false, false);
                 this.listenTo(action, 'response', function() {
-                    this.refresh();
                     callback && callback();
                 });
                 if (err_callback) {
@@ -797,19 +836,19 @@ $(function() {
                 action.execute();
             } else {
                 this.updateData();
-                this.refresh();
                 callback && callback();
             }
         },
         renderEdit: function(id) {
             var view, modal;
+            var self = this;
 
-            var create_form = _.bind(function(data) {
-                view = this.createModelForm(data);
+            var create_form = function(data) {
+                view = self.createModelForm(data);
                 modal = create_view_modal(view.computeTitle(), view);
                 view.render();
                 return view;
-            }, this);
+            };
 
             if (this.value_controller) {
                 var viewAction = new Dashboard.Action(this.model.controller, 'view', null, false, false);
@@ -821,6 +860,7 @@ $(function() {
                             modal.modal('hide').remove();
                             view = null;
                             modal = null;
+                            self.refresh();
                         }, _.bind(view.showError, view));
                     })
                     modal.modal('show');
@@ -835,6 +875,7 @@ $(function() {
                         modal.modal('hide').remove();
                         view = null;
                         modal = null;
+                        self.refresh();
                     });
                 });
                 modal.modal('show');
@@ -957,26 +998,7 @@ $(function() {
             return this;
         },
         renderObject: function(parent) {
-            var vfields = filter_visible_fields(this.options.fields, 'view');
-            var table = $('<table class="table table-bordered table-striped table-condensed" />');
-            var model = this.model;
-
-            _.each(vfields, function(f) {
-                if (f.related_model && f.is_array) {
-                    return;
-                }
-                var tr = $('<tr />');
-                var td = $('<td />');
-                td.append(format_value(model[f.name], f));
-                if (f.identifier) {
-                    td.append($('<input type="hidden" name="' + f.name + '" />')
-                        .val(model[f.name]).data('type', f.formated_type).data('field', f.name));
-                }
-                tr.append('<td width="20%"><strong>' + f.title + '</strong></td>').append(td);
-                table.append(tr);
-            });
-
-            parent.append(table);
+            parent.append(render_object(this.options.fields, this.model));
         },
         buildTabList: function() {
             var tabs = [];
@@ -1117,6 +1139,13 @@ $(function() {
             _.each(this.delayedFieldInit, function(cb) { cb(); });
         },
         renderField: function(field, value) {
+            if (value && field.related_model && !field.is_array) {
+                if (field.related_model.embed) {
+                    value = value['data'];
+                } else {
+                    value = value['id'];
+                }
+            }
             if (!this.options.force_edit && !_.contains(field.visibility, 'edit')) {
                 return this.wrapInBootstrapControlGroup(field, [
                     this.renderHiddenField(field, value), 
@@ -1127,8 +1156,14 @@ $(function() {
         },
         renderEditableField: function(field, value) {
             var input;
-            if (field.value_controller && field.value_controller.embed && !field.is_array) {
-                input = this.renderValueControllerSelectBox(field, value);
+            if (field.related_model && !field.is_array) {
+                if (field.related_model.embed) {
+                    input = this.renderRelatedModelInputs(field, value);
+                } else if (field.value_controller && field.value_controller.embed) {
+                    input = this.renderValueControllerSelectBox(field, value);
+                } else {
+                    input = this.renderInputField(field, value);
+                }
             } else if (field.is_array) {
                 input = this.renderArrayField(field, value);
             } else if (field.is_hash) {
@@ -1168,6 +1203,9 @@ $(function() {
             action.execute();
 
             return select;
+        },
+        renderRelatedModelInputs: function(field, value) {
+            // TODO
         },
         renderBooleanField: function(field, value) {
             var input = this.createInputWithAttrs('input', field)
@@ -1320,10 +1358,10 @@ $(function() {
             this.$toolbar.$el.affix();
 
             if (this.options.behaviors.paginated) {
-                this.renderTable(this.model.data);
+                this.renderList(this.model.data);
                 this.renderPagination(this.model.count);
             } else {
-                this.renderTable(this.model);
+                this.renderList(this.model);
             }
 
             if (this.options.behaviors.filterable) {
@@ -1341,9 +1379,9 @@ $(function() {
                     this.unfreeze();
                     this.$toolbar.disable();
                     if (this.options.behaviors.paginated) {
-                        this.renderTable(resp.data);
+                        this.renderList(resp.data);
                     } else {
-                        this.renderTable(resp);
+                        this.renderList(resp);
                     }
                     if (reloadPagination) {
                         this.renderPagination(resp.count);
@@ -1362,9 +1400,9 @@ $(function() {
             this.overrideRequestData.__offset = (page - 1) * this.options.behaviors.paginated.per_page;
             this.refresh();
         },
-        renderTable: function(rows) {
+        renderList: function(rows) {
             var self = this;
-            var table = render_table(this.options.fields, rows, true);
+            var table = render_object_list(this.options.fields, rows, true);
             var wrapper = $('<div class="table-wrapper" />').append(table);
 
             if (this.options.behaviors.orderable) {
@@ -1396,23 +1434,22 @@ $(function() {
             this.$wrapper = wrapper;
         },
         renderPagination: function(count) {
-            if (this.$pagination) {
-                this.$pagination.remove();
-                this.$pagination = null;
-            }
+            this.$('.pagination').remove();
 
             this.nbPages = Math.ceil(count / this.options.behaviors.paginated.per_page);
             if (this.nbPages < 2) {
                 return;
             }
 
-            var pagination = $(render_template('#list-pagination-tpl', { 
-                nb_pages: this.nbPages,
-                current_page: this.currentPage
-            }));
+            var create_paginator = _.bind(function() {
+                return $(render_template('#list-pagination-tpl', { 
+                    nb_pages: this.nbPages,
+                    current_page: this.currentPage
+                }));
+            }, this);
 
-            this.$body.append(pagination);
-            this.$pagination = pagination;
+            this.$body.prepend(create_paginator());
+            this.$body.append(create_paginator());
 
             var self = this;
             this.$('.pagination a').on('click', function(e) {
@@ -1494,7 +1531,7 @@ $(function() {
             });
         },
         serialize: function(callback) {
-            callback(serialize_table(this.$table));
+            callback(serialize_object_list(this.$table));
         }
     });
 

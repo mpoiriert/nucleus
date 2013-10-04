@@ -32,7 +32,8 @@ class DashboardModelBehavior extends Behavior
         'childaliases' => '',
         'internal' => '',
         'propertylaliases' => '',
-        'nofkembed' => ''
+        'fkembed' => '',
+        'novcmebed' => ''
     );
 
     public function objectAttributes()
@@ -188,7 +189,16 @@ class DashboardModelBehavior extends Behavior
     protected function addFieldDefinition($column, $isIndexed = false)
     {
         $isIdentifier = $column->isPrimaryKey();
-        $name = ucfirst(str_replace('_', ' ', $this->getAlias($column->getName())));
+        $name = $column->getName();
+        $fk = null;
+
+        if ($column->isForeignKey() && !$column->hasMultipleFK()) {
+            $fks = $column->getForeignKeys();
+            $fk = $fks[0];
+            $name = $fk->getPhpName() ?: $fk->getForeignTable()->getPhpName();
+        }
+
+        $name = ucfirst(str_replace('_', ' ', $this->getAlias($name)));
 
         if (!($type = $column->getPhpType())) {
             $type = 'string';
@@ -236,9 +246,8 @@ class DashboardModelBehavior extends Behavior
             $script .= "\n->setDefaultValue(" . $defaultValue . ")";
         }
 
-        if ($column->isForeignKey() && !$column->hasMultipleFK()) {
-            $fks = $column->getForeignKeys();
-            $fk = $fks[0];
+        if ($fk) {
+            $fkname = $fk->getPhpName() ?: $fk->getForeignTable()->getPhpName();
             $table = $fk->getForeignTable();
             if (!($b = $table->getBehavior('dashboard_controller'))) {
                 $b = $table->getBehavior('dashboard_parent_controller');
@@ -247,9 +256,10 @@ class DashboardModelBehavior extends Behavior
                 $fcols = $fk->getForeignColumnObjects();
                 $fcol = $fcols[0];
                 $fqdn = $table->getNamespace() . '\\' . $table->getPhpName();
-                $embed = !in_array($column->getName(), $this->getListParameter('nofkembed'));
-                $script .= "\n->setRelatedModel(\\$fqdn::getDashboardModelDefinition())"
-                         . "\n->setValueController('" . $table->getPhpName() . "DashboardController', '" . $fcol->getPhpName() . "', null, " . ($embed ? 'true' : 'false') . ")";
+                $embedRelated = in_array($column->getName(), $this->getListParameter('fkembed'));
+                $embedVC = !in_array($column->getName(), $this->getListParameter('novcembed'));
+                $script .= "\n->setRelatedModel(\\$fqdn::getDashboardModelDefinition(), 'get{$fkname}', null, null, " . ($embedRelated ? 'true' : 'false') . ")"
+                         . "\n->setValueController('" . $table->getPhpName() . "DashboardController', '" . $fcol->getPhpName() . "', null, " . ($embedVC ? 'true' : 'false') . ")";
             }
         }
 
@@ -315,7 +325,7 @@ class DashboardModelBehavior extends Behavior
                 . "->setName('" . $this->getAlias($table->getName(), 'childaliases') . "')\n"
                 . "->setType('object[]')\n"
                 . "->setVisibility(array('view', 'edit'))\n"
-                . "->setRelatedModel(\\$fqdn::getDashboardModelDefinition(), '$controllerFqdn', array('" . implode("', '", $actions) . "'))\n"
+                . "->setRelatedModel(\\$fqdn::getDashboardModelDefinition(), 'get" . $table->getPhpName() . "s', '$controllerFqdn', array('" . implode("', '", $actions) . "'))\n"
                 . "->setValueController('" . $this->getTable()->getPhpName() . "DashboardController', '" . $lcol->getPhpName() . "', '" . $fcol->getPhpName() . "')";
 
         return $script;

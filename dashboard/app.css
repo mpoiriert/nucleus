@@ -136,3 +136,17 @@ body {
 .table-wrapper {
     overflow: auto;
 }
+
+.related-hover {
+    position: relative;
+}
+    .related-hover > div {
+        display: none;
+    }
+    .related-hover:hover > div {
+        display: block;
+        position: absolute;
+        padding: 5px;
+        background: #fff;
+        z-index: 1000;
+    }

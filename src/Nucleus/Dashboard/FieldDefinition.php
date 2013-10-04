@@ -29,6 +29,8 @@ class FieldDefinition
 
     protected $relatedModelController;
 
+    protected $relatedModelEmbed = false;
+
     protected $relatedModelActions = array('add', 'create', 'remove');
 
     protected $name;
@@ -157,10 +159,12 @@ class FieldDefinition
         return $this->type . $suffix;
     }
 
-    public function setRelatedModel(ModelDefinition $model, $modelController = null, $actions = null)
+    public function setRelatedModel(ModelDefinition $model, $getter = null, $modelController = null, $actions = null, $embed = false)
     {
         $this->relatedModel = $model;
+        $this->relatedModelGetter = $getter;
         $this->relatedModelController = $modelController;
+        $this->relatedModelEmbed = $embed;
         if ($actions !== null) {
             $this->relatedModelActions = $actions;
         }
@@ -180,6 +184,11 @@ class FieldDefinition
     public function getRelatedModelController()
     {
         return $this->relatedModelController;
+    }
+
+    public function isRelatedModelEmbeded()
+    {
+        return $this->relatedModelEmbed;
     }
 
     public function getRelatedModelActions()
@@ -462,15 +471,28 @@ class FieldDefinition
             return $object->{$this->internalProperty};
         }
 
-        if (!$this->isTranslatable()) {
-            return call_user_func(array($object, $this->getGetterMethodName()));
+        if ($this->isTranslatable()) {
+            $values = array();
+            foreach ($this->i18n as $locale) {
+                $values[$locale] = call_user_func(array($object, $this->getGetterMethodName()), array(), $locale);
+            }
+            return $values;
         }
 
-        $values = array();
-        foreach ($this->i18n as $locale) {
-            $values[$locale] = call_user_func(array($object, $this->getGetterMethodName()), array(), $locale);
+        $v = call_user_func(array($object, $this->getGetterMethodName()));
+
+        if ($this->relatedModel && !$this->isArray()) {
+            $v = array('id' => $v, 'repr' => $v);
+            if ($this->relatedModelGetter) {
+                $related = call_user_func(array($object, $this->relatedModelGetter));
+                $v['repr'] = $this->relatedModel->getObjectRepr($related);
+                if ($this->relatedModelEmbed) {
+                    $v['data'] = $this->relatedModel->convertObjectToArray($related);
+                }
+            }
         }
-        return $values;
+
+        return $v;
     }
 
     /**
