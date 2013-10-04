@@ -337,6 +337,12 @@ class FieldDefinition
         return $this->formFieldType;
     }
 
+    public function setFormFieldOptions($options)
+    {
+        $this->formFieldOptions = $options;
+        return $this;
+    }
+
     public function getFormFieldOptions()
     {
         return $this->formFieldOptions;
