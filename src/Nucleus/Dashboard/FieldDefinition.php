@@ -481,13 +481,14 @@ class FieldDefinition
 
         $v = call_user_func(array($object, $this->getGetterMethodName()));
 
-        if ($this->relatedModel && !$this->isArray()) {
+        if ($this->relatedModel && !$this->isArray() && $v !== null) {
             $v = array('id' => $v, 'repr' => $v);
             if ($this->relatedModelGetter) {
-                $related = call_user_func(array($object, $this->relatedModelGetter));
-                $v['repr'] = $this->relatedModel->getObjectRepr($related);
-                if ($this->relatedModelEmbed) {
-                    $v['data'] = $this->relatedModel->convertObjectToArray($related);
+                if ($related = call_user_func(array($object, $this->relatedModelGetter))) {
+                    $v['repr'] = $this->relatedModel->getObjectRepr($related);
+                    if ($this->relatedModelEmbed) {
+                        $v['data'] = $this->relatedModel->convertObjectToArray($related);
+                    }
                 }
             }
         }

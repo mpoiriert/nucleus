@@ -274,7 +274,7 @@ $(function() {
         if (f && f.i18n) {
             v = v[f.i18n[0]];
         }
-        if (f && f.related_model && !f.is_array) {
+        if (f && f.related_model && !f.is_array && v !== null) {
             if (f.related_model.embed) {
                 enable_vc = false;
                 v = render_object(f.related_model.fields, v['data']);
