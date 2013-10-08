@@ -390,6 +390,10 @@ $(function() {
                 td.append(format_value(obj[f.name], f, true));
                 if (!_.contains(f.visibility, 'edit')) {
                     td.addClass('no-edit');
+                    if (f.identifier) {
+                        td.append($('<input type="hidden" name="' + f.name + '" />')
+                            .val(obj[f.name]).data('type', f.formated_type).data('field', f.name));
+                    }
                 }
                 tr.append(td);
             });
@@ -1395,7 +1399,7 @@ $(function() {
             this.unfreeze();
             return this;
         },
-        refresh: function(reloadPagination) {
+        refresh: function() {
             this.freeze();
             this.parent.updateUrl(this.overrideRequestData);
             this.parent.action._call(_.extend({}, this.parent.action.data, this.overrideRequestData), 
@@ -1407,9 +1411,7 @@ $(function() {
                     } else {
                         this.renderList(resp);
                     }
-                    if (reloadPagination) {
-                        this.renderPagination(resp.count);
-                    }
+                    this.renderPagination(resp.count);
                     window.scrollTo(0, 0);
                 }, this),
                 _.bind(function(message) {
@@ -1458,26 +1460,33 @@ $(function() {
             this.$wrapper = wrapper;
         },
         renderPagination: function(count) {
-            this.$('.pagination').remove();
+            var self = this;
+            var maxDisplayedPages = 10;
 
             this.nbPages = Math.ceil(count / this.options.behaviors.paginated.per_page);
             if (this.nbPages < 2) {
                 return;
             }
 
-            var create_paginator = _.bind(function() {
-                return $(render_template('#list-pagination-tpl', { 
-                    nb_pages: this.nbPages,
-                    current_page: this.currentPage
+            var create_paginator = function() {
+                var start_page = self.currentPage - maxDisplayedPages / 2;
+                var end_page = self.currentPage + maxDisplayedPages / 2;
+                if (start_page < 2) {
+                    end_page = Math.min(self.nbPages - 1, end_page + 2 - start_page);
+                    start_page = 2;
+                } else if (end_page > (self.nbPages - 1)) {
+                    start_page = Math.max(2, start_page - end_page - self.nbPages - 1);
+                    end_page = self.nbPages - 1;
+                }
+
+                var paginator = $(render_template('#list-pagination-tpl', { 
+                    nb_pages: self.nbPages,
+                    current_page: self.currentPage,
+                    start_page: start_page,
+                    end_page: end_page
                 }));
-            }, this);
 
-            this.$body.prepend(create_paginator());
-            this.$body.append(create_paginator());
-
-            var self = this;
-            this.$('.pagination a').on('click', function(e) {
-                if (!$(this).parent().hasClass('active') && !$(this).parent().hasClass('disabled')) {
+                paginator.find('li:not(.active):not(.disabled) a').on('click', function(e) {
                     var page = $(this).text();
                     if (page == 'Prev') {
                         self.loadPage(self.currentPage - 1);
@@ -1486,24 +1495,16 @@ $(function() {
                     } else {
                         self.loadPage(parseInt(page, 10));
                     }
+                    e.preventDefault();
+                });
 
-                    if (self.currentPage == 1) {
-                        self.$('.pagination li:first-child').addClass('disabled');
-                    } else {
-                        self.$('.pagination li:first-child').removeClass('disabled');
-                    }
+                return paginator;
+            };
 
-                    self.$('.pagination .active').removeClass('active');
-                    self.$('.pagination a[data-page="' + self.currentPage + '"]').parent().addClass('active');
+            this.$('.pagination').remove();
+            this.$body.prepend(create_paginator());
+            this.$body.append(create_paginator());
 
-                    if (self.currentPage == self.nbPages) {
-                        self.$('.pagination li:last-child').addClass('disabled');
-                    } else {
-                        self.$('.pagination li:last-child').removeClass('disabled');
-                    }
-                }
-                e.preventDefault();
-            });
         },
         renderFilters: function() {
             this.addSidebar();
@@ -1521,7 +1522,7 @@ $(function() {
                 e.preventDefault();
                 serialize(self.$sidebar, true, function(filters) {
                     self.overrideRequestData.__filters = JSON.stringify(filters);
-                    self.refresh(true);
+                    self.refresh();
                 });
             });
             this.$sidebar.find('button.reset').on('click', function(e) {
@@ -1534,7 +1535,7 @@ $(function() {
                         this.value = '';
                     }
                 });
-                self.refresh(true);
+                self.refresh();
             });
         },
         makeSortable: function(table) {
