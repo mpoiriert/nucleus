@@ -262,7 +262,7 @@ $(function() {
         var orig_v = v;
         var enable_vc = true;
 
-        if (f && f.type == 'object' && !f.related_model) {
+        if (f && _.contains(['object', 'array', 'hash'], f.type) && !f.related_model) {
             var a = $('<a href="#">view data</a>');
             a.on('click', function(e) {
                 show_modal(f.name, JSON.stringify(v, null, "  ").replace(/\n/g, "<br>"));
@@ -388,6 +388,9 @@ $(function() {
             _.each(vfields, function(f) {
                 var td = $('<td />').data('field', f.name).data('type', f.formated_type);
                 td.append(format_value(obj[f.name], f, true));
+                if (!_.contains(f.visibility, 'edit')) {
+                    td.addClass('no-edit');
+                }
                 tr.append(td);
             });
 
@@ -1170,6 +1173,8 @@ $(function() {
                 input = this.renderHashField(field, value);
             } else if (field.field_type == 'checkbox' || field.field_type == 'radio') {
                 input = this.renderBooleanField(field, value);
+            } else if (field.field_type == 'select') {
+                input = this.renderSelectField(field, value);
             } else {
                 input = this.renderInputField(field, value);
             }
@@ -1218,6 +1223,14 @@ $(function() {
 
             return input;
         },
+        renderSelectField: function(field, value) {
+            var select = this.createInputWithAttrs('select', field);
+            _.each(field.field_options.values, function(v, k) {
+                select.append($('<option />').text(v).val(k));
+            });
+            select.val(value);
+            return select;
+        },
         renderInputField: function(field, value) {
             var tagName = _.contains(['textarea', 'richtext'], field.field_type) ? 'textarea' : 'input';
             var input = this.createInputWithAttrs(tagName, field).val(value || '');
@@ -1242,16 +1255,24 @@ $(function() {
             var div = $('<div class="array-field" />');
             var add = $('<a href="javascript:" class="valign">Add</a>').appendTo(div);
 
-            add.on('click', function(e) {
-                var input = self.renderInputField(field);
+            var create_item = function(value) {
+                var input = self.renderInputField(field).val(value || '');
                 var remove = $('<a href="javascript:">Remove</a>').on('click', function(e) {
                     $(this).parent().remove();
                     e.preventDefault();
                 });
                 var p = $('<p />').append(input).append(' ').append(remove);
                 p.insertBefore(add);
+            };
+
+            add.on('click', function(e) {
+                create_item();
                 e.preventDefault();
             });
+
+            if ($.isArray(value)) {
+                _.each(value, create_item);
+            }
 
             return div;
         },
@@ -1260,9 +1281,10 @@ $(function() {
             var div = $('<div class="hash-field" />');
             var add = $('<a href="javascript:" class="valign">Add</a>').appendTo(div);
 
-            var create_item = function(key) {
+            var create_item = function(key, value) {
                 var keyinput = $('<input type="text" class="no-serialize" />').val(key || '');
-                var input = self.renderInputField(field).data('key', keyinput).removeClass('input-xxlarge').addClass('input-xlarge');
+                var input = self.renderInputField(field).data('key', keyinput).val(value || '')
+                                .removeClass('input-xxlarge').addClass('input-xlarge');
                 var remove = $('<a href="javascript:">Remove</a>').on('click', function(e) {
                     $(this).parent().remove();
                     e.preventDefault();
@@ -1276,7 +1298,9 @@ $(function() {
                 e.preventDefault();
             });
 
-            if (field.field_options && field.field_options.possible_keys) {
+            if (!$.isEmptyObject(value)) {
+                _.each(value, function(v, k) { create_item(k, v); });
+            } else if (field.field_options && field.field_options.possible_keys) {
                 _.each(field.field_options.possible_keys, create_item);
             }
 
