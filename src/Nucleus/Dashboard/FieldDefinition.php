@@ -467,9 +467,12 @@ class FieldDefinition
     {
         if ($this->isAccessedUsingProperty()) {
             if (!property_exists($object, $this->internalProperty)) {
-                return $this->defaultValue;
+                $v = $this->defaultValue;
+            } else {
+                $v = $object->{$this->internalProperty};
             }
-            return $object->{$this->internalProperty};
+        } else {
+            $v = call_user_func(array($object, $this->getGetterMethodName()));
         }
 
         if ($this->isTranslatable()) {
@@ -479,8 +482,6 @@ class FieldDefinition
             }
             return $values;
         }
-
-        $v = call_user_func(array($object, $this->getGetterMethodName()));
 
         if ($this->relatedModel && !$this->isArray() && $v !== null) {
             $v = array('id' => $v, 'repr' => $v);
