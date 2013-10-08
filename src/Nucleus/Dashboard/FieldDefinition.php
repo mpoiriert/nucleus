@@ -72,7 +72,8 @@ class FieldDefinition
         'double' => 'text',
         'float' => 'text',
         'bool' => 'checkbox',
-        'boolean' => 'checkbox'
+        'boolean' => 'checkbox',
+        'resource' => 'file'
     );
 
     protected $valueController;

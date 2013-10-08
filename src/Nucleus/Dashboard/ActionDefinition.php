@@ -18,6 +18,7 @@ class ActionDefinition
     const RETURN_FILE = 'file';
     const RETURN_DYNAMIC = 'dynamic';
     const RETURN_BUILDER = 'builder';
+    const RETURN_HTML = 'html';
 
     const FLOW_NONE = 'none';
     const FLOW_DELEGATE = 'delegate';

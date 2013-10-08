@@ -308,8 +308,19 @@ class Dashboard
 
         $json['behaviors'] = $this->getBehaviorsSchema($controller, $action);
 
+        if (($model = $action->getReturnModel()) !== null) {
+            $json['actions'] = $this->getActionActionsSchema($controller, $action, $model);
+            $json['model_name'] = $model->getName();
+            $json['fields'] = $this->getFieldsSchema($model->getPublicFields());
+        }
+
+        return $json;
+    }
+
+    public function getActionActionsSchema(ControllerDefinition $controller, ActionDefinition $action, ModelDefinition $model)
+    {
         $self = $this;
-        $json['actions'] = array_merge(
+        return array_merge(
             array_values(array_filter(array_map(function($modelAction) use ($controller, $action, $self) {
                 if (!$self->accessControl->checkPermissions($modelAction->getPermissions())) {
                     return false;
@@ -322,7 +333,7 @@ class Dashboard
                         array('controllerName' => $controller->getName(), 'actionName' => $action->getName(), 
                             'modelActionName' => $modelAction->getName()))
                 ));
-            }, $action->getReturnModel()->getActions()))),
+            }, $model->getActions()))),
 
             array_values(array_filter(array_map(function($action) use ($controller, $self) {
                 if (!$self->accessControl->checkPermissions($action->getPermissions())) {
@@ -334,15 +345,8 @@ class Dashboard
                     'url' => $self->routing->generate('dashboard.invoke', 
                         array('controllerName' => $controller->getName(), 'actionName' => $action->getName()))
                 ));
-            }, $controller->getActionsForModel($action->getReturnModel()->getClassName()))))
+            }, $controller->getActionsForModel($model->getClassName()))))
         );
-
-        if (($model = $action->getReturnModel()) !== null) {
-            $json['model_name'] = $model->getName();
-            $json['fields'] = $this->getFieldsSchema($model->getPublicFields());
-        }
-
-        return $json;
     }
 
     /**
@@ -446,7 +450,7 @@ class Dashboard
                     if ($action->isModelOnlyArgument()) {
                         $params = array($action->getModelArgumentName() => $object);
                     } else {
-                        $params = $model->convertObjectToArray($object);
+                        $params = $model->convertObjectToArray($object, true);
                     }
                 } catch (ValidationException $e) {
                     return $this->formatErrorResponse((string) $e->getVioliations());

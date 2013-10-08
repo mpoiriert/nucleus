@@ -1535,6 +1535,13 @@ $(function() {
         }
     });
 
+    Dashboard.HtmlWidgetView = Dashboard.BaseWidgetView.extend({
+        render: function() {
+            this.$el.append(this.model);
+            this.unfreeze();
+        }
+    });
+
     Dashboard.ActionView = Backbone.View.extend({
         tagName: 'div',
         className: 'action',
@@ -1583,6 +1590,8 @@ $(function() {
                 view = new Dashboard.ObjectWidgetView(options);
             } else if (options.type == 'form') {
                 view = new Dashboard.FormWidgetView(options);
+            } else if (options.type == 'html') {
+                view = new Dashboard.HtmlWidgetView(options);
             } else {
                 this.trigger('done');
                 return;

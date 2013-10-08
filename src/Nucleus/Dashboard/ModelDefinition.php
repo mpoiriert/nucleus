@@ -274,12 +274,12 @@ class ModelDefinition
      * @param object $obj
      * @return array
      */
-    public function convertObjectToArray($obj)
+    public function convertObjectToArray($obj, $ignoreSerializable = false)
     {
         $array = array();
         $class = new ReflectionClass($obj);
         foreach ($this->getFields() as $f) {
-            if (!$f->isInternal() && $f->isSerializable() && (!$f->hasValueController() || !$f->isArray())) {
+            if (!$f->isInternal() && ($ignoreSerializable || $f->isSerializable()) && (!$f->hasValueController() || !$f->isArray())) {
                 $array[$f->getProperty()] = $f->getValue($obj);
             }
         }
