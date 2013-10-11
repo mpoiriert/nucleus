@@ -8,7 +8,7 @@ $(function() {
             alert('Missing config key: ' + key);
             throw new Exception('Missing config key: ' + key);
         }
-    }
+    };
 
     // ----------------------------------------------------
 
@@ -45,7 +45,7 @@ $(function() {
         }
 
         var payload = params;
-        if (method === 'post') {
+        if (method === 'POST') {
             payload = { data: JSON.stringify(params) };
         }
 
@@ -99,14 +99,12 @@ $(function() {
         }, data));
     };
 
-    var serialize = function(container, callback) {
-        var ignoreEmptyValues = false;
-        if (arguments.length > 2) {
-            ignoreEmptyValues = callback;
-            callback = arguments[2];
-        }
-
+    var serialize = function(container, callback, ignoreEmptyValues) {
         var inputs = $(container).find(':input:not(button)');
+        return serialize_inputs(inputs, callback, ignoreEmptyValues);
+    }
+
+    var serialize_inputs = function(inputs, callback, ignoreEmptyValues) {
         var lock = inputs.length;
         var o = {};
         var map = {
@@ -121,7 +119,7 @@ $(function() {
             }
         };
 
-        if (inputs.length == 0) {
+        if (inputs.length === 0) {
             return done();
         }
 
@@ -195,7 +193,7 @@ $(function() {
         var idfields = [];
         for (var i = 0; i < fields.length; i++) {
             if (fields[i].identifier) {
-                idfields.push(fields[i])
+                idfields.push(fields[i]);
             }
         }
         return idfields;
@@ -499,10 +497,7 @@ $(function() {
      * Base view class for actions
      */
     Dashboard.BaseWidgetView = Backbone.View.extend({
-        tagName: 'form',
-        events: {
-            "submit": "handleFormSubmited"
-        },
+        tagName: 'div',
         options: {
             done_on_empty_data: true,
             refreshable: true
@@ -576,15 +571,9 @@ $(function() {
             this.$body = body;
         },
         toolbarClick: function(controller, action) {
-            this.serialize(_.bind(function(data) {
+            serialize(this.$body, _.bind(function(data) {
                 this.trigger('tbclick', controller, action, data);
             }, this));
-        },
-        handleFormSubmited: function(e) {
-            this.serialize(_.bind(function(data) {
-                this.trigger('submit', data);
-            }, this));
-            e.preventDefault();
         },
         freeze: function() {
             Dashboard.app.showOverlay(this.$el);
@@ -605,9 +594,6 @@ $(function() {
                 }
             }
             this.$error.text(message);
-        },
-        serialize: function(callback) {
-            serialize(this.$body, callback);
         }
     });
 
@@ -778,8 +764,9 @@ $(function() {
                         callback && callback();
                         return;
                     }
-                    serialize($tr, function(data) {
-                        $tr.find('input[type="text"]').prop('disabled', true);
+                    var inputs = $tr.find('input[type="text"]');
+                    serialize_inputs(inputs, function(data) {
+                        inputs.prop('disabled', true);
                         if (!self.value_controller) {
                             var id = JSON.parse($tr.children().first().find('input').val());
                             var index = find_indexes_matching_pk(self.data, id)[0];
@@ -939,6 +926,8 @@ $(function() {
 
             if (this.value_controller) {
                 options.hidden_fields = [this.value_controller.remote_id];
+            } else {
+                options.send_modified_fields_only = false;
             }
 
             var view = new Dashboard.FormWidgetView(options);
@@ -1076,7 +1065,11 @@ $(function() {
      * Represents an action to show a form
      */
     Dashboard.FormWidgetView = Dashboard.ObjectWidgetView.extend({
+        tagName: 'form',
         className: 'form-action-view form-horizontal',
+        events: {
+            "submit": "handleFormSubmited"
+        },
         options: {
             title: null,
             show_title: true,
@@ -1084,7 +1077,8 @@ $(function() {
             field_visibility: ['edit', 'view'],
             hidden_fields: [],
             force_edit: false,
-            tabs_for_related_models: true
+            tabs_for_related_models: true,
+            send_modified_fields_only: true
         },
         computeTitle: function() {
             var title = '';
@@ -1159,7 +1153,7 @@ $(function() {
             }
             if (!this.options.force_edit && !_.contains(field.visibility, 'edit')) {
                 return this.wrapInBootstrapControlGroup(field, [
-                    this.renderHiddenField(field, value), 
+                    this.renderHiddenField(field, value),
                     $('<span class="valign" />').text(value)
                 ]);
             }
@@ -1195,7 +1189,7 @@ $(function() {
             return this.wrapInBootstrapControlGroup(field, inputs);
         },
         renderHiddenField: function(field, value) {
-            return this.createInputWithAttrs('input', field).attr('type', 'hidden').val(value);
+            return this.createInputWithAttrs('input', field).addClass('modified').attr('type', 'hidden').val(value);
         },
         renderValueControllerSelectBox: function(field, value) {
             var select = this.createInputWithAttrs('select', field).addClass('related');
@@ -1251,7 +1245,7 @@ $(function() {
                     input.attr('type', field.field_type);
                 }
             } else if (field.field_type == 'richtext') {
-                input.addClass('richtext');
+                input.addClass('richtext').addClass('modified');
                 this.delayedFieldInit.push(function() {
                     $('.richtext').ckeditor();
                 });
@@ -1355,6 +1349,11 @@ $(function() {
                 .attr('name', field.name)
                 .data('type', override_type || field.formated_type)
                 .addClass('input-xxlarge');
+
+            input.on('keyup change', function(e) {
+                input.addClass('modified');
+            });
+
             return input;
         },
         wrapInBootstrapControlGroup: function(field, items) {
@@ -1366,6 +1365,16 @@ $(function() {
                 controls.append('<span class="help-block">' + field.description + '</span>');
             }
             return ctrlgrp;
+        },
+        handleFormSubmited: function(e) {
+            var selector = ':input:not(button)';
+            if (this.options.send_modified_fields_only) {
+                selector += '.modified';
+            }
+            serialize_inputs(this.$(selector), _.bind(function(data) {
+                this.trigger('submit', data);
+            }, this));
+            e.preventDefault();
         }
     });
 
@@ -1524,10 +1533,10 @@ $(function() {
             }));
             this.$sidebar.find('button.filter').on('click', function(e) {
                 e.preventDefault();
-                serialize(self.$sidebar, true, function(filters) {
+                serialize(self.$sidebar, function(filters) {
                     self.overrideRequestData.__filters = JSON.stringify(filters);
                     self.refresh();
-                });
+                }, true);
             });
             this.$sidebar.find('button.reset').on('click', function(e) {
                 e.preventDefault();
@@ -1555,12 +1564,15 @@ $(function() {
                 stop: function(e, ui) {
                     var delta = ui.item.index() - originalIndex;
                     var data = _.extend({ delta: delta }, ui.item.find('td:first-child input').data('serialized'));
-                    Dashboard.api.call('post', url, data);
+                    Dashboard.api.call('POST', url, data);
                 }
             });
         },
         serialize: function(callback) {
             callback(serialize_object_list(this.$table));
+        },
+        toolbarClick: function(controller, action) {
+            this.trigger('tbclick', controller, action, serialize_object_list(this.$table));
         }
     });
 
@@ -1596,7 +1608,8 @@ $(function() {
                 title_with_id: false,
                 model: data,
                 parent: this,
-                refreshable: true
+                refreshable: true,
+                send_modified_fields_only: false
             }, this.action.schema.input));
             this.listenTo(this.view, 'submit', this.execute);
             this.$el.empty().append(this.view.el);
@@ -1814,7 +1827,7 @@ $(function() {
                     this.listenTo(action, 'response', function(resp) { this.trigger('response', resp); });
                     this.listenTo(action, 'error', function(msg) { this.trigger('error', msg); });
                 }
-                action.override_method = 'post';
+                action.override_method = 'POST';
                 action.execute();
                 return action;
             }
@@ -1822,7 +1835,7 @@ $(function() {
         _call: function(data, callback, err_callback, url, method) {
             data = data || {};
             if (!method) {
-                method = this.schema.input.type == 'form' ? 'post' : 'get';
+                method = this.schema.input.type == 'form' ? 'POST' : 'GET';
             }
             if (!url) {
                 url = this.schema.input.delegate || this.schema.input.url;
@@ -1833,7 +1846,7 @@ $(function() {
         _callInIframe: function(data, callback, url, method) {
             data = data || {};
             if (!method) {
-                method = this.schema.input.type == 'form' ? 'post' : 'get';
+                method = this.schema.input.type == 'form' ? 'POST' : 'GET';
             }
             if (!url) {
                 url = this.schema.input.delegate || this.schema.input.url;
