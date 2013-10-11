@@ -205,7 +205,11 @@ $(function() {
         var pk = {};
         for (var i = 0; i < fields.length; i++) {
             if (fields[i].identifier && data[fields[i].name]) {
-                pk[fields[i].name] = data[fields[i].name];
+                if (fields[i].related_model) {
+                    pk[fields[i].name] = data[fields[i].name].id;
+                } else {
+                    pk[fields[i].name] = data[fields[i].name];
+                }
             }
         }
         return pk;
@@ -227,7 +231,7 @@ $(function() {
         var vfields = [];
         for (var i = 0; i < fields.length; i++) {
             if (_.intersection(fields[i].visibility, visibility).length > 0) {
-                vfields.push(fields[i])
+                vfields.push(fields[i]);
             }
         }
         return vfields;
@@ -303,7 +307,7 @@ $(function() {
                 action: 'edit',
                 params: _.object([[f.value_controller.remote_id, orig_v]])
             });
-            activate_related_popup(a);
+            //activate_related_popup(a);
             return a;
         }
 
@@ -422,7 +426,7 @@ $(function() {
         modal.on('show', function() {
             $(this).find('.modal-body').css({
                 width: 'auto',
-                height: 'auto', 
+                height: 'auto',
                'max-height': '100%'
             });
         });
@@ -461,8 +465,8 @@ $(function() {
             }
         },
         render: function() {
-            this.$el.html(render_template('#toolbar-tpl', { 
-                base_url: this.base_url, 
+            this.$el.html(render_template('#toolbar-tpl', {
+                base_url: this.base_url,
                 groups: this.options.groups,
                 current_action: this.options.current_action
             }));
@@ -517,7 +521,7 @@ $(function() {
             }
             this.freeze();
             this.parent.action._call(
-                _.extend({}, this.parent.action.data, this.overrideRequestData), 
+                _.extend({}, this.parent.action.data, this.overrideRequestData),
                 _.bind(function(resp) {
                     if (!resp && this.options.done_on_empty_data) {
                         this.trigger('done');
@@ -550,7 +554,7 @@ $(function() {
         },
         renderToolbar: function() {
             if (this.options.actions) {
-                this.$toolbar = new Dashboard.ToolbarView({ base_url: "#", 
+                this.$toolbar = new Dashboard.ToolbarView({ base_url: "#",
                         buttons: this.options.actions, current_action: this.parent.action.name });
                 this.listenTo(this.$toolbar, 'btn-click', this.toolbarClick);
                 this.$body.append(this.$toolbar.render().el);
@@ -643,7 +647,7 @@ $(function() {
             var tb_groups = [[], []];
             if (_.contains(this.model.actions, 'view') && this.model.controller) {
                 tb_groups[0].push({
-                    name: 'view', 
+                    name: 'view',
                     controller: '',
                     title: 'View',
                     icon: 'eye-open',
@@ -652,7 +656,7 @@ $(function() {
             }
             if (_.contains(this.model.actions, 'remove')) {
                 tb_groups[0].push({
-                    name: 'remove', 
+                    name: 'remove',
                     controller: '',
                     title: 'Remove',
                     icon: 'trash',
@@ -661,7 +665,7 @@ $(function() {
             }
             if (_.contains(this.model.actions, 'edit')) {
                 tb_groups[0].push({
-                    name: 'edit', 
+                    name: 'edit',
                     controller: '',
                     title: 'Edit',
                     icon: 'edit',
@@ -680,7 +684,7 @@ $(function() {
                         title: 'Save',
                         icon: 'hdd',
                         disabled: true
-                    })
+                    });
                 }
             }
             if (_.contains(this.model.actions, 'create')) {
@@ -732,7 +736,7 @@ $(function() {
                         });
                     }
                 } else if (action == 'edit') {
-                    this.renderEdit(serialize_object_list(table)); 
+                    this.renderEdit(serialize_object_list(table));
                 } else if (action == 'add') {
                     this.renderAdd();
                 } else if (action == 'create') {
@@ -751,7 +755,7 @@ $(function() {
                             self.refresh();
                         }
                     };
-                    if (lock == 0) {
+                    if (lock === 0) {
                         return done();
                     }
                     tr.each(function() { $(this).data('save')(done); });
