@@ -1132,7 +1132,8 @@ $(function() {
         },
         renderFields: function(form, fields, model) {
             var self = this;
-            this.delayedFieldInit = [];
+            this.usesCkEditor = false;
+
             _.each(fields, function(field) {
                 var value = typeof(model[field.name]) == 'undefined' ? field.defaultValue : model[field.name];
                 if (!_.contains(self.options.hidden_fields, field.name)) {
@@ -1141,7 +1142,10 @@ $(function() {
                     form.append(self.renderHiddenField(field, value));
                 }
             });
-            _.each(this.delayedFieldInit, function(cb) { cb(); });
+
+            if (this.usesCkEditor) {
+                setTimeout(function() { $('.ckeditor').ckeditor(); }, 200);
+            }
         },
         renderField: function(field, value) {
             if (value && field.related_model && !field.is_array) {
@@ -1245,10 +1249,8 @@ $(function() {
                     input.attr('type', field.field_type);
                 }
             } else if (field.field_type == 'richtext') {
-                input.addClass('richtext').addClass('modified');
-                this.delayedFieldInit.push(function() {
-                    $('.richtext').ckeditor();
-                });
+                input.addClass('ckeditor').addClass('modified');
+                this.usesCkEditor = true;
             }
             return input;
         },
@@ -1315,20 +1317,22 @@ $(function() {
             values = values || {};
 
             select.data('target', input).on('change', function() {
-                input.val(values[this.value] || '');
+                input.trigger('localeChanged');
                 $('select.localizer').each(function() {
                     if (this.value != select.val()) {
-                        $(this).val(select.val()).change();
+                        $(this).val(select.val()).data('target').trigger('localeChanged');
                     }
                 });
             });
 
             input.data('localized', values)
                  .addClass('localized')
-                 .val(values[field.i18n[0]] || '')
-                 .on('keypress blur', function() {
-                     values[select.val()] = this.value;
-                     input.data('localized', values);
+                 .data('currentLocale', select.val())
+                 .val(values[select.val()] || '')
+                 .on('localeChanged', function() {
+                    values[input.data('currentLocale')] = input.val();
+                    input.data('localized', values).data('currentLocale', select.val());
+                    input.val(values[select.val()] || '');
                  });
 
             return input;
@@ -1367,6 +1371,8 @@ $(function() {
             return ctrlgrp;
         },
         handleFormSubmited: function(e) {
+            this.$(':input.localized').trigger('localeChanged');
+
             var selector = ':input:not(button)';
             if (this.options.send_modified_fields_only) {
                 selector += '.modified';
@@ -1374,6 +1380,7 @@ $(function() {
             serialize_inputs(this.$(selector), _.bind(function(data) {
                 this.trigger('submit', data);
             }, this));
+
             e.preventDefault();
         }
     });
