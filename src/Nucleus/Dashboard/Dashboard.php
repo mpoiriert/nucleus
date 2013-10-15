@@ -320,6 +320,17 @@ class Dashboard
     public function getActionActionsSchema(ControllerDefinition $controller, ActionDefinition $action, ModelDefinition $model)
     {
         $self = $this;
+
+        $controllerActions = $controller->getActionsForModel($model->getClassName());
+        $modelActions = array();
+        foreach ($model->getActions() as $a) {
+            if ($a->isAppliedToModel()) {
+                $modelActions[] = $a;
+            } else {
+                $controllerActions[] = $a;
+            }
+        }
+
         return array_merge(
             array_values(array_filter(array_map(function($modelAction) use ($controller, $action, $self) {
                 if (!$self->accessControl->checkPermissions($modelAction->getPermissions())) {
@@ -333,7 +344,7 @@ class Dashboard
                         array('controllerName' => $controller->getName(), 'actionName' => $action->getName(), 
                             'modelActionName' => $modelAction->getName()))
                 ));
-            }, $model->getActions()))),
+            }, $modelActions))),
 
             array_values(array_filter(array_map(function($action) use ($controller, $self) {
                 if (!$self->accessControl->checkPermissions($action->getPermissions())) {
@@ -345,7 +356,7 @@ class Dashboard
                     'url' => $self->routing->generate('dashboard.invoke', 
                         array('controllerName' => $controller->getName(), 'actionName' => $action->getName()))
                 ));
-            }, $controller->getActionsForModel($model->getClassName()))))
+            }, $controllerActions)))
         );
     }
 

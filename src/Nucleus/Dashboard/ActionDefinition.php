@@ -259,13 +259,17 @@ class ActionDefinition
 
     public function applyToModel($className)
     {
-        $this->appliedToModel = trim($className, '\\');
+        if (!$className) {
+            $this->appliedToModel = $className === false ? false : null;
+        } else {
+            $this->appliedToModel = trim($className, '\\');
+        }
         return $this;
     }
 
     public function isAppliedToModel()
     {
-        return $this->appliedToModel !== null;
+        return !empty($this->appliedToModel);
     }
 
     public function getAppliedToModel()

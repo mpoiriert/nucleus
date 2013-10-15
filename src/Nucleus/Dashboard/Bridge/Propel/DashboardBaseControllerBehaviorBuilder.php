@@ -72,6 +72,10 @@ abstract class " . $this->getClassname() . "
             }
         }
 
+        if ($this->getTable()->hasBehavior('versionable')) {
+            $script .= $this->addVersionHistoryAction();
+        }
+
         if ($b = $this->getTable()->getBehavior('dashboard_model')) {
             foreach ($b->getChildrenFKs() as $fk) {
                 $script .= $this->addChildActions($fk);
@@ -282,6 +286,79 @@ abstract class " . $this->getClassname() . "
         \$child = \\{$childQueryClassname}::create()->findPK(\${$remoteId});
         \$obj->remove{$name}(\$child);
         \$obj->save();
+    }
+";
+    }
+
+    public function addVersionHistoryAction()
+    {
+        $objectClassname = $this->getStubObjectBuilder()->getFullyQualifiedClassname();
+        $queryClassname = $this->getStubQueryBuilder()->getFullyQualifiedClassname();
+        list($funcargs, $callargs) = $this->getPrimaryKeyAsArgs();
+
+        $listAnnotations = $this->getDefaultActionAnnotations();
+        $listAnnotations[] = "@\Nucleus\IService\Dashboard\Action(title=\"Show versions\", icon=\"random\", on_model=\"$objectClassname\", out=\"dynamic\")";
+
+        $showAnnotations = $this->getDefaultActionAnnotations();
+        $showAnnotations[] = "@\Nucleus\IService\Dashboard\Action(title=\"Show version\", menu=false, out=\"dynamic\")";
+
+        $modelCode = "\$model = clone \\{$objectClassname}::getDashboardModelDefinition();
+        \$model->setClassName('{$objectClassname}Version')
+           ->setActions(array())
+           ->addField(\\Nucleus\\Dashboard\\FieldDefinition::create()
+             ->setProperty('Version')
+             ->setIdentifier(true)
+             ->setAccessMethod(\\Nucleus\\Dashboard\\FieldDefinition::ACCESS_GETTER_SETTER));";
+
+        return "
+    /**
+    " . $this->renderAnnotations($listAnnotations) . "
+     *
+     * @return \\{$objectClassname}Version[]
+     */
+    public function listVersionHistory({$funcargs})
+    {
+        {$modelCode}
+
+        \$model->addAction(\\Nucleus\\Dashboard\\ActionDefinition::create()
+             ->setName('showVersion')
+             ->setTitle('Show version')
+             ->setIcon('random')
+             ->applyToModel(false));
+
+        \$action = new \\Nucleus\\Dashboard\\ActionDefinition();
+        \$action->setName('listVersionHistory')
+                ->setTitle('List Version History')
+                ->setReturnType('list')
+                ->setReturnModel(\$model);
+
+        \$item = \\{$queryClassname}::create()->findPK({$callargs});
+        return array(\$action, \$item->getAllVersions());
+    }
+
+    /**
+    " . $this->renderAnnotations($showAnnotations) . "
+     *
+     * @return \\{$objectClassname}Version
+     */
+    public function showVersion({$funcargs}, \$Version)
+    {
+        {$modelCode}
+        
+        \$model->addAction(\\Nucleus\\Dashboard\\ActionDefinition::create()
+             ->setName('listVersionHistory')
+             ->setTitle('Show versions')
+             ->setIcon('random')
+             ->applyToModel(false));
+
+        \$action = new \\Nucleus\\Dashboard\\ActionDefinition();
+        \$action->setName('showVersion')
+                ->setTitle('Show version')
+                ->setReturnType('object')
+                ->setReturnModel(\$model);
+
+        \$item = \\{$queryClassname}::create()->findPK({$callargs});
+        return array(\$action, \$item->getOneVersion(\$Version));
     }
 ";
     }
