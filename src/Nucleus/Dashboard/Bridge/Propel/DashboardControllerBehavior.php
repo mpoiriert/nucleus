@@ -9,7 +9,7 @@ class DashboardControllerBehavior extends Behavior
     protected $name = 'dashboard_controller';
 
     protected $parameters = array(
-        'items_per_page' => 20,
+        'items_per_page' => 50,
         'credentials' => null,
         'menu' => null,
         'edit' => 'true',
