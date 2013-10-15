@@ -104,6 +104,7 @@ class DashboardModelBehavior extends Behavior
     protected function addModelAttributes($builder)
     {
         return "\$model->setClassName('" . $builder->getStubObjectBuilder()->getFullyQualifiedClassname() . "')\n"
+             . "->setName('" . $this->getTable()->getPhpName() . "')\n"
              . "->setLoader(function(\$pk) { return \\" . $builder->getStubQueryBuilder()->getFullyQualifiedClassname() . "::create()->findPK(\$pk); })\n"
              . "->setValidationMethod(ModelDefinition::VALIDATE_WITH_METHOD);\n\n";
     }
