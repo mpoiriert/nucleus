@@ -1,0 +1,10 @@
+{
+    "services": {
+        "curlFactory": {
+            "class": "Nucleus\\Curl\\CurlFactory",
+            "configuration": {
+                "options": {}
+            }
+        }
+    }
+}

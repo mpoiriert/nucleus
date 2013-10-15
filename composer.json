@@ -33,7 +33,8 @@
         "monolog/monolog": "1.5.*",
         "psr/log": "1.0.0",
         "lisachenko/go-aop-php": "*",
-        "sami/sami":"1.0"
+        "sami/sami":"1.0",
+        "shuber/curl": "dev-master"
     },
     "require-dev": {
         "phpunit/phpunit": "3.7.*",
