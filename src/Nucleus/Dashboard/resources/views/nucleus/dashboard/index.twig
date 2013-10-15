@@ -85,12 +85,16 @@
   </script>
 
   <script type="text/template" id="list-pagination-tpl">
-    <div class="pagination">
+    <div class="pagination pagination-small">
       <ul>
         <li class="<% if (current_page == 1) print('disabled'); %>"><a href="#" class="prev">Prev</a></li>
-        <% for (var i = 1; i <= nb_pages; i++) { %>
+        <li class="<% if (current_page == 1) print('active'); %>"><a href="#" data-page="1">1</a></li>
+        <% if (start_page > 2) { %><li class="disabled"><a href="#">...</a></li><% } %>
+        <% for (var i = start_page; i <= end_page; i++) { %>
           <li class="<% if (i == current_page) print('active'); %>"><a href="#" data-page="<%= i %>"><%= i %></a></li>
         <% } %>
+        <% if (end_page < nb_pages - 1) { %><li class="disabled"><a href="#">...</a></li><% } %>
+        <li class="<% if (current_page == nb_pages) print('active'); %>"><a href="#" data-page="<%= nb_pages %>"><%= nb_pages %></a></li>
         <li class="<% if (current_page == nb_pages) print('disabled'); %>"><a href="#" class="next">Next</a></li>
       </ul>
     </div>

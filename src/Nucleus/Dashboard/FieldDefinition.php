@@ -29,6 +29,8 @@ class FieldDefinition
 
     protected $relatedModelController;
 
+    protected $relatedModelEmbed = false;
+
     protected $relatedModelActions = array('add', 'create', 'remove');
 
     protected $name;
@@ -70,7 +72,8 @@ class FieldDefinition
         'double' => 'text',
         'float' => 'text',
         'bool' => 'checkbox',
-        'boolean' => 'checkbox'
+        'boolean' => 'checkbox',
+        'resource' => 'file'
     );
 
     protected $valueController;
@@ -157,10 +160,12 @@ class FieldDefinition
         return $this->type . $suffix;
     }
 
-    public function setRelatedModel(ModelDefinition $model, $modelController = null, $actions = null)
+    public function setRelatedModel(ModelDefinition $model, $getter = null, $modelController = null, $actions = null, $embed = false)
     {
         $this->relatedModel = $model;
+        $this->relatedModelGetter = $getter;
         $this->relatedModelController = $modelController;
+        $this->relatedModelEmbed = $embed;
         if ($actions !== null) {
             $this->relatedModelActions = $actions;
         }
@@ -182,6 +187,11 @@ class FieldDefinition
         return $this->relatedModelController;
     }
 
+    public function isRelatedModelEmbeded()
+    {
+        return $this->relatedModelEmbed;
+    }
+
     public function getRelatedModelActions()
     {
         return $this->relatedModelActions;
@@ -198,9 +208,12 @@ class FieldDefinition
         return $this->isArray;
     }
 
-    public function setIsHash($isHash = true)
+    public function setIsHash($isHash = true, array $possibleKeys = array())
     {
         $this->isHash = $isHash;
+        if (!empty($possibleKeys)) {
+            $this->formFieldOptions['possible_keys'] = $possibleKeys;
+        }
         return $this;
     }
 
@@ -334,6 +347,12 @@ class FieldDefinition
         return $this->formFieldType;
     }
 
+    public function setFormFieldOptions($options)
+    {
+        $this->formFieldOptions = $options;
+        return $this;
+    }
+
     public function getFormFieldOptions()
     {
         return $this->formFieldOptions;
@@ -448,20 +467,35 @@ class FieldDefinition
     {
         if ($this->isAccessedUsingProperty()) {
             if (!property_exists($object, $this->internalProperty)) {
-                return $this->defaultValue;
+                $v = $this->defaultValue;
+            } else {
+                $v = $object->{$this->internalProperty};
             }
-            return $object->{$this->internalProperty};
+        } else {
+            $v = call_user_func(array($object, $this->getGetterMethodName()));
         }
 
-        if (!$this->isTranslatable()) {
-            return call_user_func(array($object, $this->getGetterMethodName()));
+        if ($this->isTranslatable()) {
+            $values = array();
+            foreach ($this->i18n as $locale) {
+                $values[$locale] = call_user_func(array($object, $this->getGetterMethodName()), array(), $locale);
+            }
+            return $values;
         }
 
-        $values = array();
-        foreach ($this->i18n as $locale) {
-            $values[$locale] = call_user_func(array($object, $this->getGetterMethodName()), array(), $locale);
+        if ($this->relatedModel && !$this->isArray() && $v !== null) {
+            $v = array('id' => $v, 'repr' => $v);
+            if ($this->relatedModelGetter) {
+                if ($related = call_user_func(array($object, $this->relatedModelGetter))) {
+                    $v['repr'] = $this->relatedModel->getObjectRepr($related);
+                    if ($this->relatedModelEmbed) {
+                        $v['data'] = $this->relatedModel->convertObjectToArray($related);
+                    }
+                }
+            }
         }
-        return $values;
+
+        return $v;
     }
 
     /**

@@ -8,6 +8,7 @@ class ActionDefinition
 {
     const INPUT_CALL = 'call';
     const INPUT_FORM = 'form';
+    const INPUT_DYNAMIC = 'dynamic';
 
     const RETURN_NONE = 'none';
     const RETURN_LIST = 'list';
@@ -15,6 +16,9 @@ class ActionDefinition
     const RETURN_FORM = 'form';
     const RETURN_REDIRECT = 'redirect';
     const RETURN_FILE = 'file';
+    const RETURN_DYNAMIC = 'dynamic';
+    const RETURN_BUILDER = 'builder';
+    const RETURN_HTML = 'html';
 
     const FLOW_NONE = 'none';
     const FLOW_DELEGATE = 'delegate';

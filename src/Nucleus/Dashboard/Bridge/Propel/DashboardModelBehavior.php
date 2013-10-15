@@ -32,7 +32,9 @@ class DashboardModelBehavior extends Behavior
         'childaliases' => '',
         'internal' => '',
         'propertylaliases' => '',
-        'nofkembed' => ''
+        'fkembed' => '',
+        'novcmebed' => '',
+        'typeoverrides' => ''
     );
 
     public function objectAttributes()
@@ -188,7 +190,16 @@ class DashboardModelBehavior extends Behavior
     protected function addFieldDefinition($column, $isIndexed = false)
     {
         $isIdentifier = $column->isPrimaryKey();
-        $name = ucfirst(str_replace('_', ' ', $this->getAlias($column->getName())));
+        $name = $column->getName();
+        $fk = null;
+
+        if ($column->isForeignKey() && !$column->hasMultipleFK()) {
+            $fks = $column->getForeignKeys();
+            $fk = $fks[0];
+            $name = $fk->getPhpName() ?: $fk->getForeignTable()->getPhpName();
+        }
+
+        $name = ucfirst(str_replace('_', ' ', $this->getAlias($name, 'namealiases')));
 
         if (!($type = $column->getPhpType())) {
             $type = 'string';
@@ -202,7 +213,7 @@ class DashboardModelBehavior extends Behavior
                 . "->setInternalProperty('" . $column->getPhpName() . "')\n"
                 . "->setAccessMethod(FieldDefinition::ACCESS_GETTER_SETTER)\n"
                 . "->setName('" . $name . "')\n"
-                . "->setType('" . $type . "')\n"
+                . "->setType('" . $this->getOverride($column->getName(), $type, 'typeoverrides') . "')\n"
                 . "->setIdentifier(" . ($isIdentifier ? 'true' : 'false') . ")\n"
                 . "->setOptional(" . ($column->isNotNull() ? 'false' : 'true') . ")\n"
                 . "->setDescription('" . str_replace("'", "\\'", $column->getDescription()) . "')";
@@ -236,9 +247,8 @@ class DashboardModelBehavior extends Behavior
             $script .= "\n->setDefaultValue(" . $defaultValue . ")";
         }
 
-        if ($column->isForeignKey() && !$column->hasMultipleFK()) {
-            $fks = $column->getForeignKeys();
-            $fk = $fks[0];
+        if ($fk) {
+            $fkname = $fk->getPhpName() ?: $fk->getForeignTable()->getPhpName();
             $table = $fk->getForeignTable();
             if (!($b = $table->getBehavior('dashboard_controller'))) {
                 $b = $table->getBehavior('dashboard_parent_controller');
@@ -247,9 +257,10 @@ class DashboardModelBehavior extends Behavior
                 $fcols = $fk->getForeignColumnObjects();
                 $fcol = $fcols[0];
                 $fqdn = $table->getNamespace() . '\\' . $table->getPhpName();
-                $embed = !in_array($column->getName(), $this->getListParameter('nofkembed'));
-                $script .= "\n->setRelatedModel(\\$fqdn::getDashboardModelDefinition())"
-                         . "\n->setValueController('" . $table->getPhpName() . "DashboardController', '" . $fcol->getPhpName() . "', null, " . ($embed ? 'true' : 'false') . ")";
+                $embedRelated = in_array($column->getName(), $this->getListParameter('fkembed'));
+                $embedVC = !in_array($column->getName(), $this->getListParameter('novcembed'));
+                $script .= "\n->setRelatedModel(\\$fqdn::getDashboardModelDefinition(), 'get{$fkname}', null, null, " . ($embedRelated ? 'true' : 'false') . ")"
+                         . "\n->setValueController('" . $table->getPhpName() . "DashboardController', '" . $fcol->getPhpName() . "', null, " . ($embedVC ? 'true' : 'false') . ")";
             }
         }
 
@@ -262,7 +273,7 @@ class DashboardModelBehavior extends Behavior
         }
 
         $options = null;
-        if (!($type = $this->getFormFieldType($column->getName()))) {
+        if (!($type = $this->getOverride($column->getName(), null, 'htmlfields'))) {
             if ($column->isTemporalType()) {
                 if ($column->getType() == 'DATE') {
                     $type = 'datepicker';
@@ -276,6 +287,9 @@ class DashboardModelBehavior extends Behavior
                 }
             } else if ($column->isLobType()) {
                 $type = 'file';
+            } else if ($column->isEnumType()) {
+                $type = 'select';
+                $options = array('values' => $column->getValueSet());
             }
         }
 
@@ -315,33 +329,27 @@ class DashboardModelBehavior extends Behavior
                 . "->setName('" . $this->getAlias($table->getName(), 'childaliases') . "')\n"
                 . "->setType('object[]')\n"
                 . "->setVisibility(array('view', 'edit'))\n"
-                . "->setRelatedModel(\\$fqdn::getDashboardModelDefinition(), '$controllerFqdn', array('" . implode("', '", $actions) . "'))\n"
+                . "->setRelatedModel(\\$fqdn::getDashboardModelDefinition(), 'get" . $table->getPhpName() . "s', '$controllerFqdn', array('" . implode("', '", $actions) . "'))\n"
                 . "->setValueController('" . $this->getTable()->getPhpName() . "DashboardController', '" . $lcol->getPhpName() . "', '" . $fcol->getPhpName() . "')";
 
         return $script;
     }
 
-    protected function getAlias($name, $param = 'namealiases')
+    protected function getAlias($name, $param)
     {
-        $aliases = array_filter(explode(',', $this->getParameter($param)));
-        foreach ($aliases as $alias) {
-            list($c, $a) = explode(':', $alias, 2);
-            if ($c == $name) {
-                return $a;
-            }
-        }
-        return $name;
+        return $this->getOverride($name, $name, $param);
     }
 
-    protected function getFormFieldType($name)
+    protected function getOverride($name, $default, $param)
     {
-        $types = array_filter(explode(',', $this->getParameter('htmlfields')));
-        foreach ($types as $type) {
-            list($c, $a) = explode(':', $type, 2);
+        $overrides = array_filter(explode(',', $this->getParameter($param)));
+        foreach ($overrides as $override) {
+            list($c, $o) = explode(':', $override, 2);
             if ($c == $name) {
-                return $a;
+                return $o;
             }
         }
+        return $default;
     }
 
     protected function getVisibility($name, $default)

@@ -173,19 +173,10 @@ class Dashboard
      * 
      * @\Nucleus\IService\Routing\Route(name="dashboard.actionSchema", path="/nucleus/dashboard/{controllerName}/{actionName}/_schema")
      */
-    public function getActionSchema($controllerName, $actionName)
+    public function getActionSchemaFromNames($controllerName, $actionName)
     {
         list($controller, $action) = $this->getAction($controllerName, $actionName);
-
-        $schema = array_merge(
-            $this->getLimitedActionSchema($action),
-            array(
-                'input' => $this->getActionInputSchema($controller, $action),
-                'output' => $this->getActionOutputSchema($controller, $action)
-            )
-        );
-
-        return $this->formatResponse($schema);
+        return $this->formatResponse($this->getActionSchema($controller, $action));
     }
 
     /**
@@ -193,26 +184,10 @@ class Dashboard
      * 
      * @\Nucleus\IService\Routing\Route(name="dashboard.modelActionSchema", path="/nucleus/dashboard/{controllerName}/{actionName}/{modelActionName}/_schema")
      */
-    public function getModelActionSchema($controllerName, $actionName, $modelActionName)
+    public function getModelActionSchemaFromNames($controllerName, $actionName, $modelActionName)
     {
         list($controller, $action, $modelAction) = $this->getAction($controllerName, $actionName, $modelActionName);
-
-        $schema = array_merge(
-            $this->getLimitedActionSchema($modelAction),
-            array(
-                'name' => $action->getName() . '/' . $modelAction->getName(),
-                'input' => array_merge(
-                    $this->getActionInputSchema($controller, $action),
-                    array('url' => $this->routing->generate('dashboard.invokeModel', array(
-                        'controllerName' => $controller->getName(), 'actionName' => $action->getName(), 
-                        'modelActionName' => $modelAction->getName()))
-                    )
-                ),
-                'output' => $this->getActionOutputSchema($controller, $modelAction)
-            )
-        );
-
-        return $this->formatResponse($schema);
+        return $this->formatResponse($this->getModelActionSchema($controller, $action, $modelAction));
     }
 
     /**
@@ -232,17 +207,62 @@ class Dashboard
     }
 
     /**
+     * Returns the schema for an action
+     * 
+     * @param  ControllerDefinition $controller
+     * @param  ActionDefinition     $action    
+     * @return array
+     */
+    public function getActionSchema(ControllerDefinition $controller, ActionDefinition $action)
+    {
+        return array_merge(
+            $this->getLimitedActionSchema($action),
+            array(
+                'input' => $this->getActionInputSchema($controller, $action),
+                'output' => $this->getActionOutputSchema($controller, $action)
+            )
+        );
+    }
+
+    /**
+     * Retuns the schema for a model action
+     * 
+     * @param  ControllerDefinition $controller  
+     * @param  ActionDefinition     $action      
+     * @param  ActionDefinition     $modelAction 
+     * @return array                   
+     */
+    public function getModelActionSchema(ControllerDefinition $controller, ActionDefinition $action, ActionDefinition $modelAction)
+    {
+        return array_merge(
+            $this->getLimitedActionSchema($modelAction),
+            array(
+                'name' => $action->getName() . '/' . $modelAction->getName(),
+                'input' => array_merge(
+                    $this->getActionInputSchema($controller, $action),
+                    array('url' => $this->routing->generate('dashboard.invokeModel', array(
+                        'controllerName' => $controller->getName(), 'actionName' => $action->getName(), 
+                        'modelActionName' => $modelAction->getName()))
+                    )
+                ),
+                'output' => $this->getActionOutputSchema($controller, $modelAction)
+            )
+        );
+    }
+
+    /**
      * Returns the schema of the input part of an action
      * 
      * @param ControllerDefinition $controller
      * @param ActionDefinition $action
      * @return array
      */
-    protected function getActionInputSchema(ControllerDefinition $controller, ActionDefinition $action)
+    public function getActionInputSchema(ControllerDefinition $controller, ActionDefinition $action)
     {
-        $json = array(
-            'type' => $action->getInputType()
-        );
+        $json = array('type' => $action->getInputType());
+        if ($json['type'] == ActionDefinition::INPUT_DYNAMIC) {
+            $json['type'] = ActionDefinition::INPUT_FORM;
+        }
 
         if ($action->getFlow() === ActionDefinition::FLOW_DELEGATE) {
             $json['delegate'] = $this->routing->generate('dashboard.invoke', 
@@ -269,7 +289,7 @@ class Dashboard
      * @param ActionDefinition $action
      * @return array
      */
-    protected function getActionOutputSchema(ControllerDefinition $controller, ActionDefinition $action)
+    public function getActionOutputSchema(ControllerDefinition $controller, ActionDefinition $action)
     {
         $json = array(
             'type' => $action->getReturnType(),
@@ -280,15 +300,27 @@ class Dashboard
             $json['next_action'] = $action->getNextAction();
         }
 
-        $limitedSchemaActions = array(ActionDefinition::RETURN_NONE, ActionDefinition::RETURN_REDIRECT, ActionDefinition::RETURN_FILE);
+        $limitedSchemaActions = array(ActionDefinition::RETURN_NONE, ActionDefinition::RETURN_REDIRECT, ActionDefinition::RETURN_FILE,
+                                      ActionDefinition::RETURN_DYNAMIC, ActionDefinition::RETURN_BUILDER);
         if (in_array($action->getReturnType(), $limitedSchemaActions)) {
             return $json;
         }
 
         $json['behaviors'] = $this->getBehaviorsSchema($controller, $action);
 
+        if (($model = $action->getReturnModel()) !== null) {
+            $json['actions'] = $this->getActionActionsSchema($controller, $action, $model);
+            $json['model_name'] = $model->getName();
+            $json['fields'] = $this->getFieldsSchema($model->getPublicFields());
+        }
+
+        return $json;
+    }
+
+    public function getActionActionsSchema(ControllerDefinition $controller, ActionDefinition $action, ModelDefinition $model)
+    {
         $self = $this;
-        $json['actions'] = array_merge(
+        return array_merge(
             array_values(array_filter(array_map(function($modelAction) use ($controller, $action, $self) {
                 if (!$self->accessControl->checkPermissions($modelAction->getPermissions())) {
                     return false;
@@ -301,7 +333,7 @@ class Dashboard
                         array('controllerName' => $controller->getName(), 'actionName' => $action->getName(), 
                             'modelActionName' => $modelAction->getName()))
                 ));
-            }, $action->getReturnModel()->getActions()))),
+            }, $model->getActions()))),
 
             array_values(array_filter(array_map(function($action) use ($controller, $self) {
                 if (!$self->accessControl->checkPermissions($action->getPermissions())) {
@@ -313,15 +345,8 @@ class Dashboard
                     'url' => $self->routing->generate('dashboard.invoke', 
                         array('controllerName' => $controller->getName(), 'actionName' => $action->getName()))
                 ));
-            }, $controller->getActionsForModel($action->getReturnModel()->getClassName()))))
+            }, $controller->getActionsForModel($model->getClassName()))))
         );
-
-        if (($model = $action->getReturnModel()) !== null) {
-            $json['model_name'] = $model->getName();
-            $json['fields'] = $this->getFieldsSchema($model->getPublicFields());
-        }
-
-        return $json;
     }
 
     /**
@@ -369,7 +394,8 @@ class Dashboard
                     'identifier' => array_map(function($f) { return $f->getProperty(); }, $m->getIdentifierFields()),
                     'repr' => $m->getStringReprField()->getProperty(),
                     'controller' => $f->getRelatedModelController(),
-                    'actions' => $f->getRelatedModelActions()
+                    'actions' => $f->getRelatedModelActions(),
+                    'embed' => $f->isRelatedModelEmbeded()
                 );
 
                 if ($recurse) {
@@ -411,7 +437,7 @@ class Dashboard
             $data = $this->getInputData($request);
             $params = array();
 
-            if ($model !== null) {
+            if ($model !== null && $action->getInputType() != ActionDefinition::INPUT_DYNAMIC) {
                 try {
                     if ($action->isModelLoaded()) {
                         $object = $model->loadObject($data);
@@ -424,24 +450,29 @@ class Dashboard
                     if ($action->isModelOnlyArgument()) {
                         $params = array($action->getModelArgumentName() => $object);
                     } else {
-                        $params = $model->convertObjectToArray($object);
+                        $params = $model->convertObjectToArray($object, true);
                     }
                 } catch (ValidationException $e) {
                     return $this->formatErrorResponse((string) $e->getVioliations());
                 }
+            } else if ($action->getInputType() == ActionDefinition::INPUT_DYNAMIC) {
+                $params = array('data' => $data);
             }
 
             $action->applyBehaviors('beforeInvoke', array($model, $data, &$params, $request, $response));
 
             $result = $this->invoker->invoke(
-                array($service, $action->getName()), $params, array($request, $response));
+                array($service, $action->getName()), $params, array($request, $response, $this));
 
             $action->applyBehaviors('afterInvoke', array($model, &$result, $request, $response));
 
             if ($result instanceof Response) {
                 return $result;
             }
-            return $this->formatInvokedResponse($request, $response, $action, $result);
+            if ($response->getContent()) {
+                return $response;
+            }
+            return $this->formatInvokedResponse($request, $response, $controller, $action, $result);
 
         } catch (\Exception $e) {
             if ($this->throwExceptions) {
@@ -473,14 +504,17 @@ class Dashboard
             $action->applyBehaviors('beforeModelInvoke', array($model, $data, $request, $response));
 
             $result = $this->invoker->invoke(
-                array($object, $modelAction->getName()), array(), array($request, $response));
+                array($object, $modelAction->getName()), array(), array($request, $response, $this));
 
             $action->applyBehaviors('afterModelInvoke', array($model, &$result, $request, $response));
 
             if ($result instanceof Response) {
                 return $result;
             }
-            return $this->formatInvokedResponse($request, $response, $modelAction, $result, $object);
+            if ($response->getContent()) {
+                return $response;
+            }
+            return $this->formatInvokedResponse($request, $response, $controller, $modelAction, $result, $object);
 
         } catch (\Exception $e) {
             if ($this->throwExceptions) {
@@ -602,15 +636,63 @@ class Dashboard
      * 
      * @param Request $request
      * @param Response $response
+     * @param ControllerDefinition $controller
      * @param ActionDefinition $action
      * @param mixed $result
      * @param object $obj The object used if this was a model action
      * @return array                 
      */
-    protected function formatInvokedResponse(Request $request, Response $response, ActionDefinition $action, $result, $obj = null)
+    protected function formatInvokedResponse(Request $request, Response $response, ControllerDefinition $controller, ActionDefinition $action, $result, $obj = null)
+    {
+        $data = $this->prepareResponseData($request, $response, $controller, $action, $result, $obj);
+        $action->applyBehaviors('formatInvokedResponse', array(&$data));
+        return $this->formatResponse($data);
+    }
+
+    protected function prepareResponseData(Request $request, Response $response, ControllerDefinition $controller, ActionDefinition $action, $result, $obj = null)
     {
         $model = $action->getReturnModel();
-        $data = null;
+
+        if ($action->getReturnType() === ActionDefinition::RETURN_BUILDER) {
+            $builderAction = $result;
+            $builderData = array();
+            $forceInput = false;
+            if (is_array($result)) {
+                $builderAction = $result['action'];
+                $builderController = isset($result['controller']) ? $result['controller'] : $controller;
+                $builderData = isset($result['data']) ? $result['data'] : array();
+                $forceInput = isset($result['force_input']) ? $result['force_input'] : false;
+            }
+
+            $schema = array_merge(
+                $this->getLimitedActionSchema($builderAction),
+                array(
+                    'input' => $this->getActionInputSchema($builderController, $builderAction),
+                    'output' => $this->getActionOutputSchema($builderController, $builderAction)
+                )
+            );
+
+            return array(
+                'controller' => $builderController->getName(),
+                'action' => $builderAction->getName(),
+                'schema' => $schema,
+                'data' => $builderData,
+                'force_input' => $forceInput
+            );
+        }
+
+        if ($action->getReturnType() === ActionDefinition::RETURN_DYNAMIC) {
+            $dynamicAction = $result;
+            $data = null;
+            if (is_array($result)) {
+                list($dynamicAction, $data) = $result;
+            }
+
+            return array(
+                'schema' => $this->getActionOutputSchema($controller, $dynamicAction), 
+                'data' => $this->prepareResponseData($request, $response, $controller, $dynamicAction, $data, $obj)
+            );
+        }
 
         if ($action->getReturnType() === ActionDefinition::RETURN_LIST) {
             $data = array();
@@ -619,31 +701,33 @@ class Dashboard
                     $data[] = $model->convertObjectToArray($item);
                 }
             }
-        } else if ($action->getReturnType() === ActionDefinition::RETURN_FILE) {
+            return $data;
+        }
+
+        if ($action->getReturnType() === ActionDefinition::RETURN_FILE) {
             $filename = $action->getName();
+            $content = $result;
             if (is_array($result)) {
-                list($filename, $result) = $result;
+                list($filename, $content) = $result;
             }
             $response->headers->set('Content-Type', 'application/octet-stream');
             $response->headers->set('Content-Disposition', 'attachment; filename=' . $filename);
             $response->headers->set('Expires', '0');
             $response->headers->set('Cache-Control', 'must-revalidate, post-check=0, pre-check=0');
             $response->headers->set('Pragma', 'public');
-            $response->headers->set('Content-Length', strlen($result));
-            $response->setContent($result);
+            $response->headers->set('Content-Length', strlen($content));
+            $response->setContent($content);
             return $response;
-        } else if ($action->getReturnType() === ActionDefinition::RETURN_NONE) {
-            $data = null;
-        } else if ($result === null) {
-            $data = null;
-        } else if ($model) {
-            $data = $model->convertObjectToArray($result);
-        } else if ($result) {
-            $data = $result;
         }
 
-        $action->applyBehaviors('formatInvokedResponse', array(&$data));
+        if ($action->getReturnType() === ActionDefinition::RETURN_NONE || $result === null) {
+            return null;
+        }
 
-        return $this->formatResponse($data);
+        if ($model) {
+            return $model->convertObjectToArray($result);
+        }
+
+        return $result;
     }
 }

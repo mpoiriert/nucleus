@@ -308,7 +308,7 @@ class DefinitionBuilder
             $action->setInputType($annotation->in);
         }
 
-        if ($action->getInputType() === ActionDefinition::INPUT_FORM || $method->getNumberOfParameters() > $minNbOfParams) {
+        if ($action->getInputType() === ActionDefinition::INPUT_FORM || ($method->getNumberOfParameters() > $minNbOfParams && $action->getInputType() != ActionDefinition::INPUT_DYNAMIC)) {
             // builds the input model from the method's arguments
             $inputModel = $this->buildModelFromMethod($method, $additionalAnnotations, $excludeParams);
             if ($method->getNumberOfParameters() == $minNbOfParams + 1) {
@@ -335,8 +335,8 @@ class DefinitionBuilder
             $action->setReturnType($annotation->out);
         }
 
-        $noModelTypes = array(ActionDefinition::RETURN_NONE, ActionDefinition::RETURN_REDIRECT, ActionDefinition::RETURN_FILE);
-        if (!in_array($action->getReturnType(), $noModelTypes)) {
+        $modelTypes = array(ActionDefinition::RETURN_LIST, ActionDefinition::RETURN_OBJECT, ActionDefinition::RETURN_FORM);
+        if (in_array($action->getReturnType(), $modelTypes)) {
             if ((!$annotation || $annotation->model === null) && !$returnTag) {
                 throw new DefinitionBuilderException("Action '{$action->getName()}' returns something but has no model attached");
             }
@@ -385,7 +385,7 @@ class DefinitionBuilder
                 $type = $com['type'];
             }
 
-            if (in_array($type, array('Symfony\Component\HttpFoundation\Request', 'Symfony\Component\HttpFoundation\Response'))) {
+            if (in_array($type, array('Symfony\Component\HttpFoundation\Request', 'Symfony\Component\HttpFoundation\Response', 'Nucleus\Dashboard\Dashboard'))) {
                 continue;
             }
 
