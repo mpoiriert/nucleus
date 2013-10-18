@@ -60,15 +60,19 @@ abstract class " . $this->getClassname() . "
 
     protected function addClassBody(&$script)
     {
-        $script .= $this->addListAction();
+        $script .= $this->addListAction()
+                 . $this->addListReprAction();
 
         if ($this->getParameter('is_concrete_parent') == 'true') {
-            $script .= $this->addConcreteInheritanceViewAction();
+            $script .= $this->addConcreteInheritanceViewAction()
+                     . $this->addEditRedirectAction();
         } else {
             $editable = $this->getParameter('edit') == 'true';
             $script .= $this->addViewAction(!$editable);
             if ($editable) {
                 $script .= $this->addAddAction() . $this->addEditAction();
+            } else {
+                $script .= $this->addEditRedirectAction();
             }
         }
 
@@ -90,8 +94,9 @@ abstract class " . $this->getClassname() . "
         $objectClassname = $this->getStubObjectBuilder()->getFullyQualifiedClassname();
         $queryClassname = $this->getStubQueryBuilder()->getFullyQualifiedClassname();
         $perPage = $this->getParameter('items_per_page');
+        $in = $this->getParameter('autolist') == 'true' ? 'call' : 'none';
 
-        $annotations[] = "@\Nucleus\IService\Dashboard\Action(title=\"List\", icon=\"list\", default=true)";
+        $annotations[] = "@\Nucleus\IService\Dashboard\Action(title=\"List\", icon=\"list\", default=true, in=\"$in\")";
         $annotations[] = "@\Nucleus\IService\Dashboard\Paginate(per_page={$perPage}, offset_param=\"offset\")";
         $annotations[] = "@\Nucleus\IService\Dashboard\Filterable(param=\"filters\")";
 
@@ -125,6 +130,34 @@ abstract class " . $this->getClassname() . "
         } else {
             return array(null, \$items->find());
         }
+    }
+";
+    }
+
+    protected function addListReprAction()
+    {
+        $table = $this->getTable();
+        $queryClassname = $this->getStubQueryBuilder()->getFullyQualifiedClassname();
+        $annotations = $this->getDefaultActionAnnotations();
+        $pk = $table->getFirstPrimaryKeyColumn()->getPhpName();
+        $repr = $table->getBehavior('dashboard_model')->getParameter('repr') ?: $pk;
+
+        $annotations[] = "@\Nucleus\IService\Dashboard\Action(menu=false)";
+
+        return "
+    /**
+    " . $this->renderAnnotations($annotations) . "
+     *
+     * @return array
+     */
+    public function listRepr()
+    {
+        \$items = \\{$queryClassname}::create()
+            ->setFormatter('PropelStatementFormatter')
+            ->select(array('{$pk}', '{$repr}'))
+            ->find()
+            ->fetchAll(\PDO::FETCH_KEY_PAIR);
+        return \$items;
     }
 ";
     }
@@ -234,6 +267,27 @@ abstract class " . $this->getClassname() . "
 ";
     }
 
+    protected function addEditRedirectAction()
+    {
+        $annotations = $this->getDefaultActionAnnotations();
+        $objectClassname = $this->getStubObjectBuilder()->getFullyQualifiedClassname();
+        $queryClassname = $this->getStubQueryBuilder()->getFullyQualifiedClassname();
+        list($funcargs, $callargs) = $this->getPrimaryKeyAsArgs();
+
+        return "
+    /**
+     * @\Nucleus\IService\Dashboard\Action(menu=false, redirect_with_id=\"view\")
+    " . $this->renderAnnotations($annotations) . "
+     *
+     * @return \\{$objectClassname}
+     */
+    public function edit({$funcargs})
+    {
+        return \\{$queryClassname}::create()->findPK({$callargs});
+    }
+";
+    }
+
     protected function addChildActions($fk)
     {
         $annotations = $this->getDefaultActionAnnotations();
@@ -249,6 +303,12 @@ abstract class " . $this->getClassname() . "
         $queryClassname = $this->getStubQueryBuilder()->getFullyQualifiedClassname();
         $childObjectClassname = $this->getNewStubObjectBuilder($table)->getFullyQualifiedClassname();
         $childQueryClassname = $this->getNewStubQueryBuilder($table)->getFullyQualifiedClassname();
+
+        if ($table->hasBehavior('sortable')) {
+            $annotations[] = '@\Nucleus\IService\Dashboard\ActionBehavior(class="Nucleus\Dashboard\Bridge\Propel\SortableActionBehavior")';
+            $orderargs = '';
+            $orderby = 'orderByRank()';
+        }
 
         return "
 

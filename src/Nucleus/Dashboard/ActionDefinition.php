@@ -6,6 +6,7 @@ use Nucleus\Dashboard\ActionBehaviors\AbstractActionBehavior;
 
 class ActionDefinition
 {
+    const INPUT_NONE = 'none';
     const INPUT_CALL = 'call';
     const INPUT_FORM = 'form';
     const INPUT_DYNAMIC = 'dynamic';

@@ -12,6 +12,7 @@ class DashboardControllerBehavior extends Behavior
         'items_per_page' => 50,
         'credentials' => null,
         'menu' => null,
+        'autolist' => 'true',
         'edit' => 'true',
         'is_concrete_parent' => 'false'
     );
