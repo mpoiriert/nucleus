@@ -303,11 +303,10 @@ abstract class " . $this->getClassname() . "
         $queryClassname = $this->getStubQueryBuilder()->getFullyQualifiedClassname();
         $childObjectClassname = $this->getNewStubObjectBuilder($table)->getFullyQualifiedClassname();
         $childQueryClassname = $this->getNewStubQueryBuilder($table)->getFullyQualifiedClassname();
-
+        
+        $childOrderBy = '';
         if ($table->hasBehavior('sortable')) {
-            $annotations[] = '@\Nucleus\IService\Dashboard\ActionBehavior(class="Nucleus\Dashboard\Bridge\Propel\SortableActionBehavior")';
-            $orderargs = '';
-            $orderby = 'orderByRank()';
+            $childOrderBy = "\\{$childQueryClassname}::create()->orderByRank()";
         }
 
         return "
@@ -321,7 +320,7 @@ abstract class " . $this->getClassname() . "
     public function list{$pname}(\${$localId})
     {
         \$obj = \\{$queryClassname}::create()->findPK(\${$localId});
-        return \$obj->get{$pname}();
+        return \$obj->get{$pname}({$childOrderBy});
     }
 
     /**
