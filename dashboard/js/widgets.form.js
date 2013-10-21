@@ -4,7 +4,7 @@
     /*
      * Represents an action to show a form
      */
-    var FormView = Dashboard.Widgets.FormView = Dashboard.Widgets.ObjectView.extend({
+    var FormView = Dashboard.Widgets.FormView = Dashboard.Widgets.ModelView.extend({
 
         tagName: 'form',
 
@@ -85,6 +85,13 @@
 
             _.each(fields, function(field) {
                 var value = typeof(model[field.name]) == 'undefined' ? field.defaultValue : model[field.name];
+                if (value && field.related_model && !field.is_array) {
+                    if (field.related_model.embed) {
+                        value = value.data;
+                    } else {
+                        value = value.id;
+                    }
+                }
                 if (!_.contains(self.options.hidden_fields, field.name)) {
                     form.append(self.renderField(field, value));
                 } else {
@@ -98,13 +105,6 @@
         },
 
         renderField: function(field, value) {
-            if (value && field.related_model && !field.is_array) {
-                if (field.related_model.embed) {
-                    value = value['data'];
-                } else {
-                    value = value['id'];
-                }
-            }
             if (!this.options.force_edit && !_.contains(field.visibility, 'edit')) {
                 return this.wrapInBootstrapControlGroup(field, [
                     this.renderHiddenField(field, value),
@@ -320,6 +320,10 @@
                 input.addClass('modified');
             });
 
+            if (field.identifier && this.options.send_modified_fields_only) {
+                input.addClass('modified');
+            }
+
             return input;
         },
 
@@ -341,7 +345,7 @@
             if (this.options.send_modified_fields_only) {
                 selector += '.modified';
             }
-            serialize_inputs(this.$(selector), _.bind(function(data) {
+            utils.serialize_inputs(this.$(selector), _.bind(function(data) {
                 this.trigger('submit', data);
             }, this));
 

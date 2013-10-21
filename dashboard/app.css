@@ -84,11 +84,11 @@ body {
 }
 
 .form-action-view,
-.object-action-view {
+.model-action-view {
     position: relative;
 }
     .form-action-view > .toolbar,
-    .object-action-view > .toolbar {
+    .model-action-view > .toolbar {
         position: absolute;
         right: 10px;
         top: 0px;

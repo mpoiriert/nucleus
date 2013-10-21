@@ -394,9 +394,9 @@
     /*
      * Represents an action to show a form
      */
-    var ObjectView = Dashboard.Widgets.ObjectView = Dashboard.Widgets.BaseView.extend({
+    var ModelView = Dashboard.Widgets.ModelView = Dashboard.Widgets.BaseView.extend({
 
-        className: 'object-action-view',
+        className: 'model-action-view',
 
         options: {
             tabs_for_related_models: true
@@ -457,11 +457,16 @@
             var data = {};
 
             if (field.value_controller) {
+                var v;
                 if (typeof(this.model[field.value_controller.remote_id]) != 'undefined') {
-                    data[field.value_controller.remote_id] = this.model[field.value_controller.remote_id];
+                    v = this.model[field.value_controller.remote_id];
                 } else {
-                    data[field.value_controller.remote_id] = this.model[utils.get_identifiers(this.options.fields)[0].name];
+                    v = this.model[utils.get_identifiers(this.options.fields)[0].name];
                 }
+                if (typeof(v) === 'object') {
+                    v = v.id;
+                }
+                data[field.value_controller.remote_id] = v;
             } else {
                 data = this.model[fieldName];
             }
@@ -485,6 +490,22 @@
 
             pan.empty().append(view.el);
             view.render();
+        }
+
+    });
+
+
+    /*
+     * Represents an action to show a form
+     */
+    var ObjectView = Dashboard.Widgets.ObjectView = Dashboard.Widgets.ModelView.extend({
+
+        className: 'object-action-view',
+
+        render: function() {
+            this.options.fields = utils.extract_fields_from_object(this.model);
+            this.options.model_name = 'hash';
+            return ObjectView.__super__.render.apply(this)
         }
 
     });

@@ -212,6 +212,13 @@
 
     });
 
+    /*
+     * Represents an action to show a table of item
+     */
+    var ArrayView = Dashboard.Widgets.ArrayView = Dashboard.Widgets.BaseView.extend({
+
+    });
+
 
 
 })(jQuery);

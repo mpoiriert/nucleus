@@ -191,6 +191,22 @@ var Dashboard = {};
     };
 
 
+    var extract_fields_from_object = Dashboard.utils.extract_fields_from_object = function(obj) {
+        var fields = [];
+        for (var k in obj) {
+            fields.push({
+                visibility: ['list', 'view'],
+                name: k,
+                identifier: false,
+                formated_type: 'string',
+                type: 'string',
+                is_array: false
+            });
+        }
+        return fields;
+    };
+
+
     var get_identifiers = Dashboard.utils.get_identifiers = function(fields) {
         var idfields = [];
         for (var i = 0; i < fields.length; i++) {
@@ -362,11 +378,13 @@ var Dashboard = {};
         _.each(objs, function(obj, index) {
             var tr = $('<tr />');
             var pk = build_pk(fields, obj);
-            var input = $('<input type="radio" name="id" class="no-serialize serialized-in-data" />')
-                .val(JSON.stringify(pk)).data('serialized', pk);
-
-            tr.append($('<td align="center" class="no-edit" />').append(input));
-            tr.on('click', function() { input.prop('checked', true); });
+            var idtd = $('<td align="center" class="no-edit" />').appendTo(tr);
+            if (!$.isEmptyObject(pk)) {
+                var input = $('<input type="radio" name="id" class="no-serialize serialized-in-data" />')
+                    .val(JSON.stringify(pk)).data('serialized', pk);
+                idtd.append(input);
+                tr.on('click', function() { input.prop('checked', true); });
+            }
 
             _.each(vfields, function(f) {
                 var td = $('<td />').data('field', f.name).data('type', f.formated_type);

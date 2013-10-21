@@ -233,9 +233,17 @@
 
             var view;
             if (options.type == 'list') {
-                view = new widgets.ListView(options);
+                if (options.model_name) {
+                    view = new widgets.ListView(options);
+                } else {
+                    view = new widgets.ArrayView(options);
+                }
             } else if (options.type == 'object') {
-                view = new widgets.ObjectView(options);
+                if (options.model_name) {
+                    view = new widgets.ModelView(options);
+                } else {
+                    view = new widgets.ObjectView(options);
+                }
             } else if (options.type == 'form') {
                 view = new widgets.FormView(options);
             } else if (options.type == 'html') {
