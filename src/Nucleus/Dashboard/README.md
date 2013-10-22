@@ -19,12 +19,12 @@ annotation.
     <?php
 
     /**
-     * @\Nucleus\IService\Dashboard\Controller()
+     * @\Nucleus\IService\Dashboard\Controller
      */
     class MyController
     {
         /**
-         * @\Nucleus\IService\Dashboard\Action()
+         * @\Nucleus\IService\Dashboard\Action
          */
         public function index()
         {
@@ -32,17 +32,24 @@ annotation.
     }
 
 Each actions can receive input and has an output.
-There are a two possible inputs which you can specify using the *in* properties:
+There are a few possible inputs which you can specify using the *in* property:
 
- - *call*: just calls the action without any arguments
+ - *none*: the output is immediatly displayed without any data
+ - *call*: just calls the action without any arguments (default)
  - *form*: display a form to fill in the value of the arguments
+ - *dynamic*: the method will receive an array of params as only argument
 
-There are four kinds of output which you can specify using the *out* properties:
+You can specify the type of output using the *out* property:
 
  - *none*: nothing happends
- - *object*: the action returns a model which will be displayed
  - *list*: the action returns an array (or an iterator) of models which will be displayed in a table
+ - *object*: the action returns a model which will be displayed
  - *form*: the action returns a model which will be displayed as a form
+ - *redirect*: use in combination with a redirect flow to return which url to redirect to
+ - *file*: returns a file to download
+ - *dynamic*: returns an ActionDefinition which will be used to display the output of the action
+ - *builder*: returns an ActionDefinition which will be used to create a new action in the dashboard
+ - *html*: returns an html string
 
 The dashboard builder will make some asumptions to avoid having to describe
 every bit of information.
@@ -78,12 +85,12 @@ Example:
     <?php
 
     /**
-     * @\Nucleus\IService\Dashboard\Controller()
+     * @\Nucleus\IService\Dashboard\Controller
      */
     class MyController
     {
         /**
-         * @\Nucleus\IService\Dashboard\Action()
+         * @\Nucleus\IService\Dashboard\Action
          * @return User[]
          */
         public function listUsers()
@@ -128,15 +135,14 @@ Fields have a few options:
  - *property*: name of the property when the field is defined at the class level
  - *type*: type of the property. `@var` may be used instead
  - *identifier*: whether the property is the model's identifier
+ - *getter*: optional getter method name
+ - *setter*: optional setter method name
  - *formField*: the HTML input type
- - *listable*: whether the property is listable
- - *editable*: whether the property is editable
- - *queryable*: whether the property can be queried
- - *link*: an action name which will be triggered when the property is clicked
+ - *visibility*: an array of allowed visibility level (list, edit, view, query)
  - *required*: whether the property is required
 
 Models can declare a loader: a callback which will be given the model's identifier
-as argument and which should return a loaded model. 
+as argument and which should return a loaded model.
 
     <?php
 
@@ -158,12 +164,12 @@ as argument and which should return a loaded model.
         }
     }
 
-Alternatively, the `@\Nucleus\IService\Dashboard\ModelLoader` can be used on a
+Alternatively, `@\Nucleus\IService\Dashboard\ModelLoader` can be used on a
 method of the model class to use it as the model loader.
 
 ## Input validation
 
-Models may be validated using Symfony's Validator component. Fiels support
+Models may be validated using Symfony's Validator component. Fields support
 Validator's annotations but you may also use the `@\Nucleus\IService\Dashboard\Validate`
 annotation.
 
@@ -222,7 +228,7 @@ These actions are defined the same way as actions on controllers.
         public $id;
 
         /**
-         * @\Nulceus\IService\Dashboard\Action()
+         * @\Nulceus\IService\Dashboard\Action
          */
         public function delete()
         {
@@ -243,7 +249,7 @@ The action will receive the model identifier as argument.
     class MyController
     {
         /**
-         * @\Nucleus\IService\Dashboard\Action()
+         * @\Nucleus\IService\Dashboard\Action
          * @return User[]
          */
         public function listUsers()
@@ -303,7 +309,7 @@ Paginated actions (unless auto=true) must return a tuple (numberOfItems, items).
 Automatic pagination will wrapped the returned array or iterator in a `LimitIterator`
 and return only the current page's items.
 
-Results may also be sortable using the `@\Nucleus\IService\Dashboard\Sortable`
+Results may also be sorted using the `@\Nucleus\IService\Dashboard\Orderable`
 annotation. Options:
 
  - *param*: name of the action parameter used to specify the field to sort (default: sort)
@@ -317,7 +323,7 @@ Example:
     /**
      * @\Nucleus\IService\Dashboard\Action()
      * @\Nucleus\IService\Dashboard\Paginate(per_page=10, offset_param='offset')
-     * @\Nucleus\IService\Dashboard\Sortable(order_param='sortOrder')
+     * @\Nucleus\IService\Dashboard\Orderable(order_param='sortOrder')
      * @\Nucleus\IService\Dashboard\Filterable(param='filters')
      * @return User[]
      */
