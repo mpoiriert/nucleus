@@ -97,7 +97,8 @@ function iterator_to_array_recursive($traversable)
  */
 function usort_multi_level(&$array, array $callbacks)
 {
-    usort($array, function($a, $b) use ($callbacks) {
+    //This is to prevent the bug https://bugs.php.net/bug.php?id=50688
+    @usort($array, function($a, $b) use ($callbacks) {
             foreach ($callbacks as $callback) {
                 $compareResult = call_user_func($callback, $a, $b);
                 if ($compareResult !== 0) {
