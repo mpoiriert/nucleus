@@ -84,11 +84,11 @@ body {
 }
 
 .form-action-view,
-.object-action-view {
+.model-action-view {
     position: relative;
 }
     .form-action-view > .toolbar,
-    .object-action-view > .toolbar {
+    .model-action-view > .toolbar {
         position: absolute;
         right: 10px;
         top: 0px;
@@ -150,3 +150,8 @@ body {
         background: #fff;
         z-index: 1000;
     }
+
+textarea.localized + .cke {
+    display: inline-block;
+    width: 530px;
+}

@@ -328,7 +328,7 @@ class DefinitionBuilder
 
         if (!$annotation || (!$action->isFlowing() && $annotation->out === null)) {
             if ($returnTag) {
-                $isArray = isset($returnTag[2]) || $returnTag[1] == 'array';
+                $isArray = isset($returnTag[2]);
                 $action->setReturnType($isArray ? ActionDefinition::RETURN_LIST : ActionDefinition::RETURN_OBJECT);
             }
         } else if (!$action->isFlowing()) {
@@ -336,7 +336,7 @@ class DefinitionBuilder
         }
 
         $modelTypes = array(ActionDefinition::RETURN_LIST, ActionDefinition::RETURN_OBJECT, ActionDefinition::RETURN_FORM);
-        if (in_array($action->getReturnType(), $modelTypes)) {
+        if (in_array($action->getReturnType(), $modelTypes) && (!$returnTag || $returnTag[1] !== 'array')) {
             if ((!$annotation || $annotation->model === null) && !$returnTag) {
                 throw new DefinitionBuilderException("Action '{$action->getName()}' returns something but has no model attached");
             }

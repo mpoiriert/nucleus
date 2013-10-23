@@ -34,7 +34,8 @@ class DashboardModelBehavior extends Behavior
         'propertylaliases' => '',
         'fkembed' => '',
         'novcmebed' => '',
-        'typeoverrides' => ''
+        'typeoverrides' => '',
+        'hide_rank_column' => 'true'
     );
 
     public function objectAttributes()
@@ -104,6 +105,7 @@ class DashboardModelBehavior extends Behavior
     protected function addModelAttributes($builder)
     {
         return "\$model->setClassName('" . $builder->getStubObjectBuilder()->getFullyQualifiedClassname() . "')\n"
+             . "->setName('" . $this->getTable()->getPhpName() . "')\n"
              . "->setLoader(function(\$pk) { return \\" . $builder->getStubQueryBuilder()->getFullyQualifiedClassname() . "::create()->findPK(\$pk); })\n"
              . "->setValidationMethod(ModelDefinition::VALIDATE_WITH_METHOD);\n\n";
     }
@@ -160,7 +162,7 @@ class DashboardModelBehavior extends Behavior
             $cols[] = $table->getBehavior('concrete_inheritance_parent')->getParameter('descendant_column');
         }
 
-        if ($table->hasBehavior('sortable')) {
+        if ($table->hasBehavior('sortable') && $this->getParameter('hide_rank_column') == 'true') {
             $cols[] = $table->getBehavior('sortable')->getParameter('rank_column');
         }
 
@@ -220,10 +222,15 @@ class DashboardModelBehavior extends Behavior
 
 
         $editable = !$isIdentifier || !$column->isAutoIncrement();
-        if ($this->getTable()->hasBehavior('timestampable')) {
+        if ($b = $this->getTable()->getBehavior('timestampable')) {
             $editable = $editable && !in_array($column->getName(), array(
-                $this->getTable()->getBehavior('timestampable')->getParameter('create_column'),
-                $this->getTable()->getBehavior('timestampable')->getParameter('update_column')));
+                $b->getParameter('create_column'), $b->getParameter('update_column')));
+        }
+
+        if ($b = $this->getTable()->getBehavior('sortable')) {
+            if ($column->getName() == $b->getParameter('rank_column')) {
+                $script .= "\n->setGetterSetterMethodNames('getRank', 'moveToRank')";
+            }
         }
 
         $visibility = array('list', 'view');

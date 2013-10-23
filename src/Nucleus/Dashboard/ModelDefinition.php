@@ -141,6 +141,9 @@ class ModelDefinition
     public function addAction(ActionDefinition $action)
     {
         $this->actions[] = $action;
+        if ($action->getAppliedToModel() !== false) {
+            $action->applyToModel($this->className);
+        }
         return $this;
     }
 

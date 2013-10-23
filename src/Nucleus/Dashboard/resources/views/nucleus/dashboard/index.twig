@@ -23,10 +23,15 @@
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/ckeditor/ckeditor.js") }}
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/ckeditor/lang/en.js") }}
   {{ assetBag.add("/nucleus/asset/dashboard/vendor/ckeditor/adapters/jquery.js") }}
-  {{ assetBag.add("/nucleus/asset/dashboard/app.js") }}
+  {{ assetBag.add("/nucleus/asset/dashboard/js/lib.js") }}
+  {{ assetBag.add("/nucleus/asset/dashboard/js/widgets.js") }}
+  {{ assetBag.add("/nucleus/asset/dashboard/js/widgets.list.js") }}
+  {{ assetBag.add("/nucleus/asset/dashboard/js/widgets.object.js") }}
+  {{ assetBag.add("/nucleus/asset/dashboard/js/widgets.form.js") }}
+  {{ assetBag.add("/nucleus/asset/dashboard/js/app.js") }}
   <script type="text/javascript">
     $(function() {
-    Dashboard.start({{ result.configuration|json_encode|raw }});
+      Dashboard.start({{ result.configuration|json_encode|raw }});
     });
   </script>
 </head>

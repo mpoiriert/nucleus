@@ -60,16 +60,24 @@ abstract class " . $this->getClassname() . "
 
     protected function addClassBody(&$script)
     {
-        $script .= $this->addListAction();
+        $script .= $this->addListAction()
+                 . $this->addListReprAction();
 
         if ($this->getParameter('is_concrete_parent') == 'true') {
-            $script .= $this->addConcreteInheritanceViewAction();
+            $script .= $this->addConcreteInheritanceViewAction()
+                     . $this->addEditRedirectAction();
         } else {
             $editable = $this->getParameter('edit') == 'true';
             $script .= $this->addViewAction(!$editable);
             if ($editable) {
                 $script .= $this->addAddAction() . $this->addEditAction();
+            } else {
+                $script .= $this->addEditRedirectAction();
             }
+        }
+
+        if ($this->getTable()->hasBehavior('versionable')) {
+            $script .= $this->addVersionHistoryAction();
         }
 
         if ($b = $this->getTable()->getBehavior('dashboard_model')) {
@@ -86,8 +94,9 @@ abstract class " . $this->getClassname() . "
         $objectClassname = $this->getStubObjectBuilder()->getFullyQualifiedClassname();
         $queryClassname = $this->getStubQueryBuilder()->getFullyQualifiedClassname();
         $perPage = $this->getParameter('items_per_page');
+        $in = $this->getParameter('autolist') == 'true' ? 'call' : 'none';
 
-        $annotations[] = "@\Nucleus\IService\Dashboard\Action(title=\"List\", icon=\"list\", default=true)";
+        $annotations[] = "@\Nucleus\IService\Dashboard\Action(title=\"List\", icon=\"list\", default=true, in=\"$in\")";
         $annotations[] = "@\Nucleus\IService\Dashboard\Paginate(per_page={$perPage}, offset_param=\"offset\")";
         $annotations[] = "@\Nucleus\IService\Dashboard\Filterable(param=\"filters\")";
 
@@ -121,6 +130,34 @@ abstract class " . $this->getClassname() . "
         } else {
             return array(null, \$items->find());
         }
+    }
+";
+    }
+
+    protected function addListReprAction()
+    {
+        $table = $this->getTable();
+        $queryClassname = $this->getStubQueryBuilder()->getFullyQualifiedClassname();
+        $annotations = $this->getDefaultActionAnnotations();
+        $pk = $table->getFirstPrimaryKeyColumn()->getPhpName();
+        $repr = $table->getBehavior('dashboard_model')->getParameter('repr') ?: $pk;
+
+        $annotations[] = "@\Nucleus\IService\Dashboard\Action(menu=false)";
+
+        return "
+    /**
+    " . $this->renderAnnotations($annotations) . "
+     *
+     * @return array
+     */
+    public function listRepr()
+    {
+        \$items = \\{$queryClassname}::create()
+            ->setFormatter('PropelStatementFormatter')
+            ->select(array('{$pk}', '{$repr}'))
+            ->find()
+            ->fetchAll(\PDO::FETCH_KEY_PAIR);
+        return \$items;
     }
 ";
     }
@@ -230,6 +267,27 @@ abstract class " . $this->getClassname() . "
 ";
     }
 
+    protected function addEditRedirectAction()
+    {
+        $annotations = $this->getDefaultActionAnnotations();
+        $objectClassname = $this->getStubObjectBuilder()->getFullyQualifiedClassname();
+        $queryClassname = $this->getStubQueryBuilder()->getFullyQualifiedClassname();
+        list($funcargs, $callargs) = $this->getPrimaryKeyAsArgs();
+
+        return "
+    /**
+     * @\Nucleus\IService\Dashboard\Action(menu=false, redirect_with_id=\"view\")
+    " . $this->renderAnnotations($annotations) . "
+     *
+     * @return \\{$objectClassname}
+     */
+    public function edit({$funcargs})
+    {
+        return \\{$queryClassname}::create()->findPK({$callargs});
+    }
+";
+    }
+
     protected function addChildActions($fk)
     {
         $annotations = $this->getDefaultActionAnnotations();
@@ -245,6 +303,11 @@ abstract class " . $this->getClassname() . "
         $queryClassname = $this->getStubQueryBuilder()->getFullyQualifiedClassname();
         $childObjectClassname = $this->getNewStubObjectBuilder($table)->getFullyQualifiedClassname();
         $childQueryClassname = $this->getNewStubQueryBuilder($table)->getFullyQualifiedClassname();
+        
+        $childOrderBy = '';
+        if ($table->hasBehavior('sortable')) {
+            $childOrderBy = "\\{$childQueryClassname}::create()->orderByRank()";
+        }
 
         return "
 
@@ -257,7 +320,7 @@ abstract class " . $this->getClassname() . "
     public function list{$pname}(\${$localId})
     {
         \$obj = \\{$queryClassname}::create()->findPK(\${$localId});
-        return \$obj->get{$pname}();
+        return \$obj->get{$pname}({$childOrderBy});
     }
 
     /**
@@ -282,6 +345,79 @@ abstract class " . $this->getClassname() . "
         \$child = \\{$childQueryClassname}::create()->findPK(\${$remoteId});
         \$obj->remove{$name}(\$child);
         \$obj->save();
+    }
+";
+    }
+
+    public function addVersionHistoryAction()
+    {
+        $objectClassname = $this->getStubObjectBuilder()->getFullyQualifiedClassname();
+        $queryClassname = $this->getStubQueryBuilder()->getFullyQualifiedClassname();
+        list($funcargs, $callargs) = $this->getPrimaryKeyAsArgs();
+
+        $listAnnotations = $this->getDefaultActionAnnotations();
+        $listAnnotations[] = "@\Nucleus\IService\Dashboard\Action(title=\"Show versions\", icon=\"random\", on_model=\"$objectClassname\", out=\"dynamic\")";
+
+        $showAnnotations = $this->getDefaultActionAnnotations();
+        $showAnnotations[] = "@\Nucleus\IService\Dashboard\Action(title=\"Show version\", menu=false, out=\"dynamic\")";
+
+        $modelCode = "\$model = clone \\{$objectClassname}::getDashboardModelDefinition();
+        \$model->setClassName('{$objectClassname}Version')
+           ->setActions(array())
+           ->addField(\\Nucleus\\Dashboard\\FieldDefinition::create()
+             ->setProperty('Version')
+             ->setIdentifier(true)
+             ->setAccessMethod(\\Nucleus\\Dashboard\\FieldDefinition::ACCESS_GETTER_SETTER));";
+
+        return "
+    /**
+    " . $this->renderAnnotations($listAnnotations) . "
+     *
+     * @return \\{$objectClassname}Version[]
+     */
+    public function listVersionHistory({$funcargs})
+    {
+        {$modelCode}
+
+        \$model->addAction(\\Nucleus\\Dashboard\\ActionDefinition::create()
+             ->setName('showVersion')
+             ->setTitle('Show version')
+             ->setIcon('random')
+             ->applyToModel(false));
+
+        \$action = new \\Nucleus\\Dashboard\\ActionDefinition();
+        \$action->setName('listVersionHistory')
+                ->setTitle('List Version History')
+                ->setReturnType('list')
+                ->setReturnModel(\$model);
+
+        \$item = \\{$queryClassname}::create()->findPK({$callargs});
+        return array(\$action, \$item->getAllVersions());
+    }
+
+    /**
+    " . $this->renderAnnotations($showAnnotations) . "
+     *
+     * @return \\{$objectClassname}Version
+     */
+    public function showVersion({$funcargs}, \$Version)
+    {
+        {$modelCode}
+        
+        \$model->addAction(\\Nucleus\\Dashboard\\ActionDefinition::create()
+             ->setName('listVersionHistory')
+             ->setTitle('Show versions')
+             ->setIcon('random')
+             ->applyToModel(false));
+
+        \$action = new \\Nucleus\\Dashboard\\ActionDefinition();
+        \$action->setName('showVersion')
+                ->setTitle('Show version')
+                ->setReturnType('object')
+                ->setReturnModel(\$model);
+
+        \$item = \\{$queryClassname}::create()->findPK({$callargs});
+        return array(\$action, \$item->getOneVersion(\$Version));
     }
 ";
     }

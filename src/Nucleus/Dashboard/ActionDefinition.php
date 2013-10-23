@@ -6,6 +6,7 @@ use Nucleus\Dashboard\ActionBehaviors\AbstractActionBehavior;
 
 class ActionDefinition
 {
+    const INPUT_NONE = 'none';
     const INPUT_CALL = 'call';
     const INPUT_FORM = 'form';
     const INPUT_DYNAMIC = 'dynamic';
@@ -259,13 +260,17 @@ class ActionDefinition
 
     public function applyToModel($className)
     {
-        $this->appliedToModel = trim($className, '\\');
+        if (!$className) {
+            $this->appliedToModel = $className === false ? false : null;
+        } else {
+            $this->appliedToModel = trim($className, '\\');
+        }
         return $this;
     }
 
     public function isAppliedToModel()
     {
-        return $this->appliedToModel !== null;
+        return !empty($this->appliedToModel);
     }
 
     public function getAppliedToModel()
