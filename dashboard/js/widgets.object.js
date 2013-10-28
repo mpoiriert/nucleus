@@ -195,20 +195,6 @@
                     var $this = $(this);
                     var field = $this.data('field');
                     var value = $this.data('value');
-                    // var input = $('<input type="text" />')
-                    //     .attr('name', field.name)
-                    //     .data('type', field.formated_type)
-                    //     .val($this.text());
-
-                    // input.on('keyup', function(e) {
-                    //     if (e.which == 13) {
-                    //         save(function() { self.refresh(); });
-                    //         e.preventDefault();
-                    //     } else {
-                    //         $tr.addClass('modified');
-                    //         input.addClass('modified');
-                    //     }
-                    // });
                     
                     if (value && field.related_model && !field.is_array) {
                         value = value.id;
