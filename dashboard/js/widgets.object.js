@@ -161,6 +161,8 @@
 
         activateInlineEdit: function(table, tb) {
             var self = this;
+            var form = new Dashboard.Widgets.FormView();
+
             table.find('tbody tr').on('dblclick', function() {
                 var $tr = $(this);
                 if ($tr.hasClass('editing')) {
@@ -175,7 +177,7 @@
                         callback && callback();
                         return;
                     }
-                    var inputs = $tr.find('input[type="text"]');
+                    var inputs = $tr.find(':input:not(.no-serialize)');
                     utils.serialize_inputs(inputs, function(data) {
                         inputs.prop('disabled', true);
                         if (!self.value_controller) {
@@ -191,11 +193,29 @@
                 $tr.data('save', save);
                 $tr.addClass('editing').children().filter(':not(.no-edit)').each(function() {
                     var $this = $(this);
-                    var input = $('<input type="text" />')
-                        .attr('name', $this.data('field'))
-                        .data('type', $this.data('type'))
-                        .val($this.text());
+                    var field = $this.data('field');
+                    var value = $this.data('value');
+                    // var input = $('<input type="text" />')
+                    //     .attr('name', field.name)
+                    //     .data('type', field.formated_type)
+                    //     .val($this.text());
 
+                    // input.on('keyup', function(e) {
+                    //     if (e.which == 13) {
+                    //         save(function() { self.refresh(); });
+                    //         e.preventDefault();
+                    //     } else {
+                    //         $tr.addClass('modified');
+                    //         input.addClass('modified');
+                    //     }
+                    // });
+                    
+                    if (value && field.related_model && !field.is_array) {
+                        value = value.id;
+                    }
+
+                    var input = form.renderEditableField(field, value, true);
+                    input.removeClass('input-xxlarge');
                     input.on('keyup', function(e) {
                         if (e.which == 13) {
                             save(function() { self.refresh(); });
@@ -337,7 +357,8 @@
                 model_name: this.model.name,
                 fields: this.model.fields,
                 field_visibility: ['edit', 'view'],
-                model: data
+                model: data,
+                send_modified_fields_only: false
             }, options || {});
 
             if (this.value_controller) {
