@@ -203,7 +203,8 @@ class DashboardModelBehavior extends Behavior
 
         $name = ucfirst(str_replace('_', ' ', $this->getAlias($name, 'namealiases')));
 
-        if (!($type = $column->getPhpType())) {
+        $type = 'string';
+        if (!$column->isEnumType() && !($type = $column->getPhpType())) {
             $type = 'string';
             if ($column->getType() == 'OBJECT') {
                 $type = 'object';
@@ -296,7 +297,8 @@ class DashboardModelBehavior extends Behavior
                 $type = 'file';
             } else if ($column->isEnumType()) {
                 $type = 'select';
-                $options = array('values' => $column->getValueSet());
+                $options = array('values' => array_combine(
+                    array_values($column->getValueSet()), array_values($column->getValueSet())));
             }
         }
 
