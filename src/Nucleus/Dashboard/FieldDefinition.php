@@ -478,7 +478,7 @@ class FieldDefinition
         if ($this->isTranslatable()) {
             $values = array();
             foreach ($this->i18n as $locale) {
-                $values[$locale] = call_user_func(array($object, $this->getGetterMethodName()), array(), $locale);
+                $values[$locale] = call_user_func(array($object, $this->getGetterMethodName()), array(), $locale, false);
             }
             return $values;
         }

@@ -84,7 +84,7 @@
                     table.find('th.sorted').removeClass('sorted');
                     $(this).addClass('sorted').toggleClass('desc');
                     self.overrideRequestData.__offset = 0;
-                    self.overrideRequestData.__sort = $(this).data('field');
+                    self.overrideRequestData.__sort = $(this).data('field').name;
                     self.overrideRequestData.__sort_order = $(this).hasClass('desc') ? 'desc' : 'asc';
                     self.refresh(true);
                 });

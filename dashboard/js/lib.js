@@ -371,7 +371,7 @@ var Dashboard = {};
         var thead = $('<thead />').appendTo(table);
         var theadtr = $('<tr />').appendTo(thead).append('<th width="30" />');
         _.each(vfields, function(f) {
-            theadtr.append($('<th />').data('field', f.name).text(f.title));
+            theadtr.append($('<th />').data('field', f).text(f.title));
         });
 
         var tbody = $('<tbody />').appendTo(table);
@@ -387,7 +387,9 @@ var Dashboard = {};
             }
 
             _.each(vfields, function(f) {
-                var td = $('<td />').data('field', f.name).data('type', f.formated_type);
+                var td = $('<td />').data('field', f)
+                                    .data('type', f.formated_type)
+                                    .data('value', obj[f.name]);
                 td.append(format_value(obj[f.name], f, true));
                 if (!_.contains(f.visibility, 'edit')) {
                     td.addClass('no-edit');

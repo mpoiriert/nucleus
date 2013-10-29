@@ -114,7 +114,7 @@
             return this.renderEditableField(field, value);
         },
 
-        renderEditableField: function(field, value) {
+        renderEditableField: function(field, value, inputOnly) {
             var input;
             if (field.related_model && !field.is_array) {
                 if (field.related_model.embed) {
@@ -134,6 +134,10 @@
                 input = this.renderSelectField(field, value);
             } else {
                 input = this.renderInputField(field, value);
+            }
+
+            if (inputOnly) {
+                return input;
             }
 
             var inputs = [input];
