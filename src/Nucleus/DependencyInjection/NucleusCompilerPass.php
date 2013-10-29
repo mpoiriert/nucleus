@@ -70,8 +70,12 @@ class NucleusCompilerPass implements CompilerPassInterface
                 continue;
             }
             $definition = $this->container->getDefinition($name);
-           
-            $parsingResult = $annotationParser->parse($serviceConfiguration['class']);
+
+            try {
+                $parsingResult = $annotationParser->parse($serviceConfiguration['class']);
+            } catch(\Exception $e) {
+                throw new \InvalidArgumentException('The service named [' . $name . '] with class [' . $serviceConfiguration['class'] . '] cannot be parse',null,$e);
+            }
             
             $annotations = $parsingResult->getAllAnnotations();
 
