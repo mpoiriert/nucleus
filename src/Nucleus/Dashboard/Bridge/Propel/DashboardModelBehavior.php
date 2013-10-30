@@ -24,7 +24,6 @@ class DashboardModelBehavior extends Behavior
         'noquery' => '',
         'queryable' => '',
         'children' => '',
-        'noaddchildren' => '',
         'nocreatechildren' => '',
         'noremovechildren' => '',
         'noeditchildren' => '',
@@ -316,10 +315,6 @@ class DashboardModelBehavior extends Behavior
         $controllerFqdn = $table->getPhpName() . 'DashboardController';
 
         $availableActions = array('edit', 'create', 'remove', 'view');
-        if (!$table->getIsCrossRef()) {
-            $availableActions[] = 'add';
-        }
-        
         $actions = array();
         foreach ($availableActions as $a) {
             if (!in_array($table->getName(), $this->getListParameter("no{$a}children"))) {

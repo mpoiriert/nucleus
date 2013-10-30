@@ -1,6 +1,127 @@
 (function($) {
     var utils = Dashboard.utils;
 
+
+    /*
+     * Represents an action to show a form
+     */
+    var ModelView = Dashboard.Widgets.ModelView = Dashboard.Widgets.BaseView.extend({
+
+        className: 'model-action-view',
+
+        options: {
+            tabs_for_related_models: true
+        },
+
+        render: function() {
+            this.$el.empty();
+            this.renderTitleWithIdentifier(this.options.model_name).renderToolbar();
+
+            var tabs = this.buildTabList();
+
+            if (tabs.length > 1) {
+                this.$el.append(utils.render_template('#tabs-tpl', { tabs: tabs }));
+                this.renderObject(this.$('.tab-pane[id="tab-default"]'));
+                this.$('.nav-tabs a[href="#tab-default"]').parent().addClass('active');
+                this.renderTabs();
+            } else {
+                this.renderObject(this.$el);
+            }
+
+            this.unfreeze();
+            return this;
+        },
+
+        renderObject: function(parent) {
+            parent.append(utils.render_object(this.options.fields, this.model));
+        },
+
+        buildTabList: function() {
+            var tabs = [];
+            if (this.options.tabs_for_related_models) {
+                tabs.push(['default', this.options.model_name]);
+                for (var i = 0; i < this.options.fields.length; i++) {
+                    if (this.options.fields[i].related_model && this.options.fields[i].is_array) {
+                        tabs.push([this.options.fields[i].name, this.options.fields[i].title]);
+                    }
+                }
+            }
+            return tabs;
+        },
+
+        renderTabs: function() {
+            var self = this;
+            this.$('.nav-tabs a[data-related]').on('click', function() {
+                var $this = $(this);
+                var pan = self.$('div.tab-pane[id="' + $this.attr('href').substr(1) + '"]');
+
+                if (!pan.hasClass('loaded')) {
+                    self.renderRelatedTab($this.data('related'), pan);
+                    pan.addClass('loaded');
+                }
+            });
+        },
+
+        renderRelatedTab: function(fieldName, pan) {
+            var self = this;
+            var field = utils.get_field(this.options.fields, fieldName);
+            var data = {};
+
+            if (field.value_controller) {
+                var v;
+                if (typeof(this.model[field.value_controller.remote_id]) != 'undefined') {
+                    v = this.model[field.value_controller.remote_id];
+                } else {
+                    v = this.model[utils.get_identifiers(this.options.fields)[0].name];
+                }
+                if (typeof(v) === 'object') {
+                    v = v.id;
+                }
+                data[field.value_controller.remote_id] = v;
+            } else {
+                data = this.model[fieldName];
+            }
+
+            var view = new RelatedModelsView({
+                controller: this.parent.action.controller,
+                field: field,
+                data: data
+            });
+
+            this.listenTo(view, 'submit', function(data) {
+                _.each(utils.get_identifiers(this.options.fields), function(f) {
+                    data[f.name] = self.model[f.name];
+                });
+                this.trigger('submit', data, false);
+            });
+
+            this.listenTo(view, 'redirect', function(controller, action, data, force_input) {
+                this.trigger('redirect', controller, action, data, force_input);
+            });
+
+            pan.empty().append(view.el);
+            view.render();
+        }
+
+    });
+
+
+    /*
+     * Represents an action to show a form
+     */
+    var ObjectView = Dashboard.Widgets.ObjectView = Dashboard.Widgets.ModelView.extend({
+
+        className: 'object-action-view',
+
+        render: function() {
+            this.options.fields = utils.extract_fields_from_object(this.model);
+            this.options.model_name = 'hash';
+            return ObjectView.__super__.render.apply(this)
+        }
+
+    });
+    
+
     /**
      * Represents a view to manage related models
      */
@@ -91,14 +212,6 @@
                     icon: 'plus'
                 });
             }
-            if (this.value_controller && _.contains(this.model.actions, 'add')) {
-                tb_groups[0].push({
-                    name: 'add',
-                    controller: '',
-                    title: 'Add Existing',
-                    icon: 'plus'
-                });
-            }
 
             var tb = new Dashboard.Widgets.Toolbar({ groups: tb_groups });
 
@@ -133,8 +246,6 @@
                     }
                 } else if (action == 'edit') {
                     this.renderEdit(utils.serialize_object_list(table));
-                } else if (action == 'add') {
-                    this.renderAdd();
                 } else if (action == 'create') {
                     this.renderCreate();
                 } else if (action == 'edit_inline') {
@@ -357,162 +468,10 @@
             return view;
         },
 
-        renderAdd: function() {
-            var viewAction = new Dashboard.Action(this.model.controller, 'view', null, false, false);
-            var addAction = new Dashboard.Action(this.value_controller.controller, 'add' + this.field.name);
-            var view = new Dashboard.Widgets.FormView({
-                tabs_for_related_models: false,
-                action_title: 'Add',
-                show_title: false,
-                model_name: this.model.name,
-                force_edit: true,
-                fields: _.filter(this.model.fields, _.bind(function(f) {
-                    return f.name == this.value_controller.local_id; }, this))
-            });
-            var modal = utils.create_view_modal(view.computeTitle(), view);
-            view.render();
-
-            utils.connect_action_to_view(viewAction, view);
-            addAction.on('error', view.showError);
-
-            this.listenTo(viewAction, 'response', function(data) {
-                addAction.execute(_.extend({}, data, this.data));
-            });
-
-            this.listenTo(addAction, 'response', function(data) {
-                modal.modal('hide').detach();
-                view = null;
-                modal = null;
-                this.refresh();
-            });
-            
-            modal.modal('show');
-        },
-
         updateData: function() {
             var data = {};
             data[this.field.name] = this.data;
             this.trigger('submit', data);
-        }
-
-    });
-
-
-    /*
-     * Represents an action to show a form
-     */
-    var ModelView = Dashboard.Widgets.ModelView = Dashboard.Widgets.BaseView.extend({
-
-        className: 'model-action-view',
-
-        options: {
-            tabs_for_related_models: true
-        },
-
-        render: function() {
-            this.$el.empty();
-            this.renderTitleWithIdentifier(this.options.model_name).renderToolbar();
-
-            var tabs = this.buildTabList();
-
-            if (tabs.length > 1) {
-                this.$el.append(utils.render_template('#tabs-tpl', { tabs: tabs }));
-                this.renderObject(this.$('.tab-pane[id="tab-default"]'));
-                this.$('.nav-tabs a[href="#tab-default"]').parent().addClass('active');
-                this.renderTabs();
-            } else {
-                this.renderObject(this.$el);
-            }
-
-            this.unfreeze();
-            return this;
-        },
-
-        renderObject: function(parent) {
-            parent.append(utils.render_object(this.options.fields, this.model));
-        },
-
-        buildTabList: function() {
-            var tabs = [];
-            if (this.options.tabs_for_related_models) {
-                tabs.push(['default', this.options.model_name]);
-                for (var i = 0; i < this.options.fields.length; i++) {
-                    if (this.options.fields[i].related_model && this.options.fields[i].is_array) {
-                        tabs.push([this.options.fields[i].name, this.options.fields[i].title]);
-                    }
-                }
-            }
-            return tabs;
-        },
-
-        renderTabs: function() {
-            var self = this;
-            this.$('.nav-tabs a[data-related]').on('click', function() {
-                var $this = $(this);
-                var pan = self.$('div.tab-pane[id="' + $this.attr('href').substr(1) + '"]');
-
-                if (!pan.hasClass('loaded')) {
-                    self.renderRelatedTab($this.data('related'), pan);
-                    pan.addClass('loaded');
-                }
-            });
-        },
-
-        renderRelatedTab: function(fieldName, pan) {
-            var self = this;
-            var field = utils.get_field(this.options.fields, fieldName);
-            var data = {};
-
-            if (field.value_controller) {
-                var v;
-                if (typeof(this.model[field.value_controller.remote_id]) != 'undefined') {
-                    v = this.model[field.value_controller.remote_id];
-                } else {
-                    v = this.model[utils.get_identifiers(this.options.fields)[0].name];
-                }
-                if (typeof(v) === 'object') {
-                    v = v.id;
-                }
-                data[field.value_controller.remote_id] = v;
-            } else {
-                data = this.model[fieldName];
-            }
-
-            var view = new RelatedModelsView({
-                controller: this.parent.action.controller,
-                field: field,
-                data: data
-            });
-
-            this.listenTo(view, 'submit', function(data) {
-                _.each(utils.get_identifiers(this.options.fields), function(f) {
-                    data[f.name] = self.model[f.name];
-                });
-                this.trigger('submit', data, false);
-            });
-
-            this.listenTo(view, 'redirect', function(controller, action, data, force_input) {
-                this.trigger('redirect', controller, action, data, force_input);
-            });
-
-            pan.empty().append(view.el);
-            view.render();
-        }
-
-    });
-
-
-    /*
-     * Represents an action to show a form
-     */
-    var ObjectView = Dashboard.Widgets.ObjectView = Dashboard.Widgets.ModelView.extend({
-
-        className: 'object-action-view',
-
-        render: function() {
-            this.options.fields = utils.extract_fields_from_object(this.model);
-            this.options.model_name = 'hash';
-            return ObjectView.__super__.render.apply(this)
         }
 
     });

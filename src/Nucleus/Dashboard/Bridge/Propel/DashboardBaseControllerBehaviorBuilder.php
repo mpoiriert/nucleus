@@ -297,8 +297,7 @@ abstract class " . $this->getClassname() . "
 
         $lcols = $fk->getLocalColumnObjects();
         $localId = $lcols[0]->getPhpName();
-        $fcols = $fk->getForeignColumnObjects();
-        $remoteId = $fcols[0]->getPhpName();
+        list($funcargs, $callargs) = $this->getPrimaryKeyAsArgs($table, array($lcols[0]));
 
         $queryClassname = $this->getStubQueryBuilder()->getFullyQualifiedClassname();
         $childObjectClassname = $this->getNewStubObjectBuilder($table)->getFullyQualifiedClassname();
@@ -327,22 +326,10 @@ abstract class " . $this->getClassname() . "
      * @\Nucleus\IService\Dashboard\Action(menu=false)
     " . $this->renderAnnotations($annotations) . "
      */
-    public function add{$pname}(\${$localId}, \${$remoteId})
+    public function remove{$pname}(\${$localId}, {$funcargs})
     {
         \$obj = \\{$queryClassname}::create()->findPK(\${$localId});
-        \$child = \\{$childQueryClassname}::create()->findPK(\${$remoteId});
-        \$obj->add{$name}(\$child);
-        \$obj->save();
-    }
-
-    /**
-     * @\Nucleus\IService\Dashboard\Action(menu=false)
-    " . $this->renderAnnotations($annotations) . "
-     */
-    public function remove{$pname}(\${$localId}, \${$remoteId})
-    {
-        \$obj = \\{$queryClassname}::create()->findPK(\${$localId});
-        \$child = \\{$childQueryClassname}::create()->findPK(\${$remoteId});
+        \$child = \\{$childQueryClassname}::create()->findPK({$callargs});
         \$obj->remove{$name}(\$child);
         \$obj->save();
     }
@@ -427,19 +414,31 @@ abstract class " . $this->getClassname() . "
         return " * " . implode("\n     * ", $annotations);
     }
 
-    protected function getPrimaryKeyAsArgs()
+    protected function getPrimaryKeyAsArgs($table = null, $ignore = array())
     {
-        $pks = array();
-        foreach ($this->getTable()->getPrimaryKey() as $pk) {
-            $pks[] = $pk->getPhpName();
+        $table = $table ?: $this->getTable();
+        $peerClassname = $this->getNewStubPeerBuilder($table)->getFullyQualifiedClassname();
+
+        $funcargs = array();
+        $callargs = array();
+        foreach ($table->getPrimaryKey() as $pk) {
+            if (!in_array($pk, $ignore)) {
+                $funcargs[] = '$' . $pk->getPhpName();
+            }
+            if ($pk->isEnumType()) {
+                $callargs[] = sprintf('\\%s::getSqlValueForEnum(\\%s::%s, $%s)',
+                    $peerClassname, $peerClassname, strtoupper($pk->getName()), $pk->getPhpName());
+            } else {
+                $callargs[] = '$' . $pk->getPhpName();
+            }
         }
 
-        $funcargs = '$' . implode(', $', $pks);
+        $funcargs = implode(', ', $funcargs);
 
-        if (count($pks) > 1) {
-            $callargs = 'array($' . implode(', $', $pks) . ')';
+        if (count($callargs) > 1) {
+            $callargs = 'array(' . implode(', ', $callargs) . ')';
         } else {
-            $callargs = '$' . $pks[0];
+            $callargs = $callargs[0];
         }
 
         return array($funcargs, $callargs);
