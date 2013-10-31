@@ -375,6 +375,14 @@ class DefinitionBuilder
             }
             $com = isset($paramComments[$param->getName()]) ? $paramComments[$param->getName()] : null;
 
+            $annotation = null;
+            foreach ($additionalAnnotations as $anno) {
+                if (($anno instanceof \Nucleus\IService\Dashboard\ModelField) && $anno->property == $param->getName()) {
+                    $annotation = $anno;
+                    break;
+                }
+            }
+
             if (!$com) {
                 if ($param->isArray()) {
                     $type = 'array';
@@ -389,7 +397,12 @@ class DefinitionBuilder
                 continue;
             }
 
-            $field = new FieldDefinition();
+            if ($annotation) {
+                $field = $this->buildField($annotation);
+            } else {
+                $field = new FieldDefinition();
+            }
+
             $field->setProperty($param->getName())
                   ->setType($type ?: 'string')
                   ->setDescription($com ? $com['description'] : null)

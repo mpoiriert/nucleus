@@ -735,7 +735,7 @@ class Dashboard
             return null;
         }
 
-        if ($model) {
+        if ($model && !is_array($result)) {
             return $model->convertObjectToArray($result);
         }
 
