@@ -347,9 +347,13 @@ class FieldDefinition
         return $this->formFieldType;
     }
 
-    public function setFormFieldOptions($options)
+    public function setFormFieldOptions($options, $merge = false)
     {
-        $this->formFieldOptions = $options;
+        if ($merge && $this->formFieldOptions !== null) {
+            $this->formFieldOptions = array_merge($this->formFieldOptions, $options);
+        } else {
+            $this->formFieldOptions = $options;
+        }
         return $this;
     }
 

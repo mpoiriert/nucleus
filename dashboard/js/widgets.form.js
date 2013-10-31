@@ -221,10 +221,21 @@
             var div = $('<div class="array-field" />');
             var add = $('<a href="javascript:" class="valign">Add</a>').appendTo(div);
 
+            var mark_as_modified = function() {
+                div.find('>p :input').addClass('modified');
+            };
+
             var create_item = function(value) {
-                var input = self.renderInputField(field).val(value || '');
+                if (field.field_options.values) {
+                    var input = self.renderSelectField(field);
+                } else {
+                    var input = self.renderInputField(field);
+                }
+                input.val(value || '').on('change', mark_as_modified);
+
                 var remove = $('<a href="javascript:">Remove</a>').on('click', function(e) {
                     $(this).parent().remove();
+                    mark_as_modified();
                     e.preventDefault();
                 });
                 var p = $('<p />').append(input).append(' ').append(remove);
@@ -233,6 +244,7 @@
 
             add.on('click', function(e) {
                 create_item();
+                mark_as_modified();
                 e.preventDefault();
             });
 

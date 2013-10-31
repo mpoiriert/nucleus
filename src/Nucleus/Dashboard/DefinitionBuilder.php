@@ -212,7 +212,14 @@ class DefinitionBuilder
             if (!$actionAnno) {
                 continue;
             }
-            $actions[] = $this->buildAction($class->getMethod($methodName), $actionAnno, $annos);
+            $action = $this->buildAction($class->getMethod($methodName), $actionAnno, $annos);
+
+            $prepareMethod = 'prepare' . ucfirst($methodName) . 'Schema';
+            if ($class->hasMethod($prepareMethod)) {
+                $action = call_user_func(array($class->getName(), $prepareMethod), $action);
+            }
+
+            $actions[] = $action;
         }
         return $actions;
     }
