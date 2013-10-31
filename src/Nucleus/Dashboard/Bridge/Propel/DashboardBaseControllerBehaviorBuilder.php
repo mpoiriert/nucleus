@@ -155,8 +155,9 @@ abstract class " . $this->getClassname() . "
         \$items = \\{$queryClassname}::create()
             ->setFormatter('PropelStatementFormatter')
             ->select(array('{$pk}', '{$repr}'))
+            ->orderBy('{$repr}')
             ->find()
-            ->fetchAll(\PDO::FETCH_KEY_PAIR);
+            ->fetchAll(\PDO::FETCH_NUM);
         return \$items;
     }
 ";

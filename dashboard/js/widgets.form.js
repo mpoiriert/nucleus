@@ -162,10 +162,10 @@
             var action = new Dashboard.Action(field.value_controller.controller, 'listRepr');
             action.on('response', function(data) {
                 select.empty();
-                for (var k in data) {
-                    var s = value == k ? 'selected="selected"' : '';
-                    select.append('<option value="' + k + '" ' + s + '>' + data[k] + '</option>');
-                }
+                _.each(data, function(item) {
+                    var s = value == item[0] ? 'selected="selected"' : '';
+                    select.append('<option value="' + item[0] + '" ' + s + '>' + item[1] + '</option>');
+                });
                 select.prop('disabled', false);
             });
             action.execute();
