@@ -143,7 +143,9 @@ class FrontController
         if(is_null($response)) {
             $response = new Response();
         }
-        
+
+        $this->eventDispatcher->dispatch('FrontController.preExecute',$this,compact('serviceName','methodName','response','request'));
+
         $parameters = array_merge($request->query->all(), $request->request->all());
         $service = $this->serviceContainer->getServiceByName($serviceName);
         try {
