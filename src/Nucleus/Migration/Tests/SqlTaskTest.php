@@ -59,7 +59,7 @@ class SqlTaskTest extends \PHPUnit_Framework_TestCase
 
         $secondID = $sqlTask->getUniqueID();
 
-        $this->assertNotEquals($firstID, $secondID);
+        $this->assertEquals($firstID, $secondID);
 
         unlink($this->configuration['basePath'] . "test.sql");
     }
