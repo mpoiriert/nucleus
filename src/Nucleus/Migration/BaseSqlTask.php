@@ -48,15 +48,6 @@ abstract class BaseSqlTask extends BaseMigrationTask
             throw new RuntimeException("Filename [" . $this->parameters['filename'] . "] specified for SqlTask doesn't exists in [" . $this->configuration['basePath'] . "]");
         }
     }
-    
-    /**
-     * 
-     * @return string MD5 of SQL file content
-     */
-    public function getUniqueId()
-    {
-        return md5_file($this->getFile());
-    }
 
     /**
      * 
