@@ -319,12 +319,24 @@ class FieldDefinition
         return $this;
     }
 
+    public function setGetterMethodName($getter)
+    {
+        $this->getterName = $getter;
+        return $this;
+    }
+
     public function getGetterMethodName()
     {
         if ($this->getterName === null) {
             return 'get' . ucfirst($this->internalProperty);
         }
         return $this->getterName;
+    }
+
+    public function setSetterMethodName($setter)
+    {
+        $this->setterName = $setter;
+        return $this;
     }
 
     public function getSetterMethodName()

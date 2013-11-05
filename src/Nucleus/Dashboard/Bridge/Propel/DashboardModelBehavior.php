@@ -233,6 +233,13 @@ class DashboardModelBehavior extends Behavior
             }
         }
 
+        if ($getter = $this->getOverride($column->getName(), null, 'getter')) {
+            $script .= "\n->setGetterMethodName('$getter')";
+        }
+        if ($setter = $this->getOverride($column->getName(), null, 'setter')) {
+            $script .= "\n->setSetterMethodName('$setter')";
+        }
+
         $visibility = array('list', 'view');
         if ($column->isLobType()) {
             $visibility = array();

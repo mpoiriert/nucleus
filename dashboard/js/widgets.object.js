@@ -296,6 +296,8 @@
                             var index = utils.find_indexes_matching_pk(self.data, id)[0];
                             self.data[index] = data;
                             data = null;
+                        } else {
+                            $.extend(data, self.data);
                         }
                         self.executeSave(data, callback);
                     });
