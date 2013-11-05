@@ -147,6 +147,10 @@ var Dashboard = {};
             var localized = $this.hasClass('localized');
             var cast = map[t] !== undefined ? map[t] : function(v) { return v; };
 
+            if ($this.hasClass('empty-to-null') && v == '') {
+                v = null;
+            }
+
             var is_array = t.indexOf('[]') > -1;
             var is_hash = t.indexOf('{}') > -1;
             if (is_array || is_hash) {

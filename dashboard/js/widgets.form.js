@@ -124,6 +124,8 @@
                 } else {
                     input = this.renderInputField(field, value);
                 }
+            } else if (field.value_controller && !field.is_array) {
+                input = this.renderValueControllerSelectBox(field, value);
             } else if (field.is_array) {
                 input = this.renderArrayField(field, value);
             } else if (field.is_hash) {
@@ -153,7 +155,7 @@
         },
 
         renderValueControllerSelectBox: function(field, value) {
-            var select = this.createInputWithAttrs('select', field).addClass('related');
+            var select = this.createInputWithAttrs('select', field).addClass('related').addClass('empty-to-null');
             var m = field.related_model;
 
             select.append('<option>Loading...</option>');
@@ -162,6 +164,9 @@
             var action = new Dashboard.Action(field.value_controller.controller, 'listRepr');
             action.on('response', function(data) {
                 select.empty();
+                if (field.optional) {
+                    select.append('<option value=""></option>');
+                }
                 _.each(data, function(item) {
                     var s = value == item[0] ? 'selected="selected"' : '';
                     select.append('<option value="' + item[0] + '" ' + s + '>' + item[1] + '</option>');

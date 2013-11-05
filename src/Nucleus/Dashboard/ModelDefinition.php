@@ -263,7 +263,7 @@ class ModelDefinition
                 continue;
             }
             $p = $f->getProperty();
-            if (!isset($data[$p])) {
+            if (!array_key_exists($p, $data)) {
                 continue;
             }
             $f->setValue($obj, $data[$p]);

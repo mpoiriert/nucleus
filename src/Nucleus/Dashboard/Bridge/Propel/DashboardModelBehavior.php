@@ -47,7 +47,14 @@ class DashboardModelBehavior extends Behavior
         $builder->declareClass('Nucleus\Dashboard\ModelDefinition');
         $builder->declareClass('Nucleus\Dashboard\FieldDefinition');
         $builder->declareClass('Nucleus\Dashboard\ActionDefinition');
-        return $this->addGetModelDefinitionMethod($builder);
+
+        $script = $this->addGetModelDefinitionMethod($builder);
+
+        if ($this->getTable()->hasBehavior('nested_set')) {
+            $script .= $this->addNestedSetMethods($builder);
+        }
+
+        return $script;
     }
 
     public function getListParameter($name)
@@ -140,6 +147,10 @@ class DashboardModelBehavior extends Behavior
             $script .= "\$model->addField(" . $this->addChildFieldDefinition($fk) . ");\n\n";
         }
 
+        if ($table->hasBehavior('nested_set')) {
+            $script .= "\$model->addField(" . $this->addNestedSetFieldDefinition() . ");\n\n";
+        }
+
         return $script;
     }
 
@@ -167,6 +178,12 @@ class DashboardModelBehavior extends Behavior
 
         if ($table->hasBehavior('versionable')) {
             $cols[] = $table->getBehavior('versionable')->getParameter('version_column');
+        }
+
+        if ($b = $table->getBehavior('nested_set')) {
+            $cols[] = $b->getParameter('left_column');
+            $cols[] = $b->getParameter('right_column');
+            $cols[] = $b->getParameter('level_column');
         }
 
         return $cols;
@@ -344,6 +361,46 @@ class DashboardModelBehavior extends Behavior
                 . "->setValueController('" . $this->getTable()->getPhpName() . "DashboardController', '" . $lcol->getPhpName() . "', '" . $fcol->getPhpName() . "')";
 
         return $script;
+    }
+
+    protected function addNestedSetFieldDefinition()
+    {
+        $script = "FieldDefinition::create()\n"
+                . "->setProperty('ParentId')\n"
+                . "->setAccessMethod(FieldDefinition::ACCESS_GETTER_SETTER)\n"
+                . "->setName('Parent')\n"
+                . "->setType('int')\n"
+                . "->setOptional(true)\n"
+                . "->setVisibility(array('list', 'view', 'edit'))\n"
+                . "->setRelatedModel(self::getDashboardModelDefinition(), 'getParent')\n"
+                . "->setValueController('" . $this->getTable()->getPhpName() . "DashboardController')";
+
+        return $script;
+    }
+
+    protected function addNestedSetMethods($builder)
+    {
+        $queryClass = $builder->getStubQueryBuilder()->getFullyQualifiedClassname();
+        return "
+public function setParentId(\$pk = null)
+{
+    if (\$pk === null) {
+        \$this->makeRoot();
+    } else if (\$this->isInTree()) {
+        \$this->moveToLastChildOf(\\$queryClass::create()->findPk(\$pk));
+    } else {
+        \$this->insertAsLastChildOf(\\$queryClass::create()->findPk(\$pk));
+    }
+}
+
+public function getParentId()
+{
+    if (\$p = \$this->getParent()) {
+        return \$p->getPrimaryKey();
+    }
+    return null;
+}
+        ";
     }
 
     protected function getAlias($name, $param)
