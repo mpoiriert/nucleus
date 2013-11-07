@@ -32,7 +32,7 @@ class Router implements IRouterService
     private $routeCollection;
 
     /**
-     * @var RequestContext 
+     * @var RequestContext
      */
     private $context;
 
@@ -45,16 +45,16 @@ class Router implements IRouterService
      * @var UrlGenerator
      */
     private $urlGenerator;
-    
+
     /**
      * @var IEventDispatcherService
      */
     private $eventDispatcher;
-    
+
     private $defaultParameters = array();
-    
+
     private $cultureHosts = array();
-    
+
     /**
      * @\Nucleus\IService\ApplicationContext\BoundToSession
      */
@@ -64,7 +64,7 @@ class Router implements IRouterService
 
     /**
      * @param RequestContext $routingRequestContext
-     * 
+     *
      * @\Nucleus\IService\DependencyInjection\Inject
      */
     public function __construct(IEventDispatcherService $eventDispatcher)
@@ -75,17 +75,17 @@ class Router implements IRouterService
         $this->urlMatcher = new UrlMatcher($this->routeCollection, $this->context);
         $this->urlGenerator = new UrlGenerator($this->routeCollection, $this->context);
     }
-    
+
     public function setHostForCulture($host, $culture = 'default')
     {
         $this->cultureHosts[$this->normalizeCulture($culture)] = $host;
     }
-    
-    private function normalizeCulture($culture) 
+
+    private function normalizeCulture($culture)
     {
         return strtolower(str_replace('_', '-', $culture));
     }
-    
+
     /**
      * @param string $culture
      * @return string
@@ -98,22 +98,22 @@ class Router implements IRouterService
         if(array_key_exists($culture, $this->cultureHosts)) {
             return $this->cultureHosts[$culture];
         }
-        
+
         if($culture == 'default') {
             throw new NoHostFoundForCultureException(NoHostFoundForCultureException::formatMessage($culture));
         }
-       
+
         try {
-          return $this->getHostForCulture(get_parent_culture($culture));
+            return $this->getHostForCulture(get_parent_culture($culture));
         } catch (NoHostFoundForCultureException $e) {
             throw new NoHostFoundForCultureException(NoHostFoundForCultureException::formatMessage($culture));
         }
-        
+
     }
-    
+
     /**
      * @\Nucleus\IService\EventDispatcher\Listen("Culture.change")
-     * 
+     *
      * @param string $culture
      */
     public function setDefaultCulture($culture)
@@ -155,16 +155,18 @@ class Router implements IRouterService
 
     public function generate($name, array $parameters = array(), $referenceType = self::ABSOLUTE_PATH, $scheme = null)
     {
-        $parameters = array_deep_merge(
-            $this->sessionDefaultParameters, $this->defaultParameters, $parameters
+        $contextParameters = array_deep_merge(
+            $this->sessionDefaultParameters, $this->defaultParameters, $this->context->getParameters()
         );
+
+        $this->context->setParameters($contextParameters);
 
         if ($scheme) {
             $oldScheme = $this->context->getScheme();
             $this->context->setScheme($scheme);
         }
 
-        $cultures = $this->getCultures($parameters);
+        $cultures = $this->getCultures(array_merge($contextParameters,$parameters));
 
         $route = null;
         $oldHost = $this->context->getHost();
@@ -197,7 +199,7 @@ class Router implements IRouterService
             $this->context->setHost($oldHost);
             throw $e;
         }
-        
+
         $this->context->setHost($oldHost);
         if ($scheme) {
             $this->context->setScheme($oldScheme);
@@ -205,7 +207,7 @@ class Router implements IRouterService
 
         return $route;
     }
-    
+
     private function getCultures(array $parameters)
     {
         if(!isset($parameters['_culture'])) {
@@ -215,7 +217,7 @@ class Router implements IRouterService
         }
 
         $culture = $this->normalizeCulture($culture);
-        
+
         switch(strlen($culture)) {
             case 0:
                 return array('');
@@ -227,7 +229,7 @@ class Router implements IRouterService
 
         throw new InvalidArgumentException('The culture [' . $culture . '] does not have a valid format');
     }
-    
+
     private function getI18nRouteName($name, $culture)
     {
         if(!$culture) {
@@ -256,7 +258,7 @@ class Router implements IRouterService
             unset($this->sessionDefaultParameters[$name]);
             return;
         }
-        
+
         if($boundToSession) {
             unset($this->defaultParameters[$name]);
             $this->sessionDefaultParameters[$name] = $value;
@@ -288,13 +290,13 @@ class Router implements IRouterService
             $this->context->getScheme(),
             $this->context->getMethod()
         );
-          
+
         $route = $result['_route'];
-        
+
         if(strpos($route, ':i18n:') != false) {
             list(,,$route) = explode(':',$route,3);
         }
-        
+
         $result['_culture'] = $culture;
         unset($result['_route']);
         $parameters = new ArrayObject($result);
