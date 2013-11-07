@@ -311,6 +311,7 @@ class Dashboard
         if (($model = $action->getReturnModel()) !== null) {
             $json['actions'] = $this->getActionActionsSchema($controller, $action, $model);
             $json['model_name'] = $model->getName();
+            $json['model_repr'] = $model->getStringReprField()->getProperty();
             $json['fields'] = $this->getFieldsSchema($model->getPublicFields());
         }
 

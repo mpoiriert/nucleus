@@ -58,12 +58,24 @@ if (typeof(Dashboard) === 'undefined') {
 
         renderTitleWithIdentifier: function(title) {
             var values = this.model || {};
+            var repr, id;
             for (var i = 0; i < this.options.fields.length; i++) {
-                if (this.options.fields[i].identifier) {
-                    if (values[this.options.fields[i].name]) {
-                        title += ' #' + values[this.options.fields[i].name];
+                if (values[this.options.fields[i].name]) {
+                    if (this.options.fields[i].name == this.options.model_repr) {
+                        repr = values[this.options.fields[i].name];
+                    } else if (this.options.fields[i].identifier) {
+                        id = values[this.options.fields[i].name];
+                        if (typeof(id) != 'string') {
+                            id = id.id;
+                        }
                     }
                 }
+            }
+            if (repr) {
+                title += ' ' + repr;
+            }
+            if (id) {
+                title += ' (#' + id + ')';
             }
             return this.renderTitle(title);
         },

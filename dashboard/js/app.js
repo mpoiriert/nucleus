@@ -361,8 +361,18 @@
                 this.$el.removeClass('dropdown-menu');
             }
             this.$el.empty();
-            _(this.items).each(function(item, name) {
-                var li = $('<li/>').appendTo(self.$el),
+
+            var items = _.toArray(this.items);
+
+            items.sort(function(a, b) {
+                a = (a instanceof Menu) ? a.options.name : a.menu_name;
+                b = (b instanceof Menu) ? b.options.name : b.menu_name;
+                return a.localeCompare(b);
+            });
+
+            _(items).each(function(item) {
+                var name = (item instanceof Menu) ? item.options.name : item.menu_name,
+                    li = $('<li/>').appendTo(self.$el),
                     a = $('<a href="#" />').text(name);
 
                 if (item instanceof Menu && _.size(item.items) == 1) {
@@ -488,7 +498,8 @@
             _(this.schema).each(_.bind(function(action) {
                 var menu_segs = action.menu.split('/');
                 var parent_menu = this._buildMenuTree(_.initial(menu_segs));
-                parent_menu.items[_.last(menu_segs)] = action;
+                action.menu_name = _.last(menu_segs);
+                parent_menu.items[action.menu_name] = action;
             }, this));
             this.menu.render();
             $('.navbar .dropdown-toggle').dropdown();
@@ -506,7 +517,7 @@
                 return parent.items[item];
             }
 
-            var menu_item = new Dashboard.Menu();
+            var menu_item = new Menu({ name: item });
             parent.items[item] = menu_item;
             return menu_item;
         },
