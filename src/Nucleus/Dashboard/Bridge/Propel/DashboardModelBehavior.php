@@ -50,6 +50,10 @@ class DashboardModelBehavior extends Behavior
 
         $script = $this->addGetModelDefinitionMethod($builder);
 
+        if ($this->getTable()->hasBehavior('sortable')) {
+            $script .= $this->addSortableMethod($builder);
+        }
+
         if ($this->getTable()->hasBehavior('nested_set')) {
             $script .= $this->addNestedSetMethods($builder);
         }
@@ -106,6 +110,22 @@ class DashboardModelBehavior extends Behavior
 
         $script .= "return \$model;\n}";
         return $script;
+    }
+
+    protected function addSortableMethod($builder)
+    {
+        return "
+public function moveOrInsertRank(\$rank)
+{
+    if (\$rank) {
+        if (\$this->isNew()) {
+            \$this->insertAtRank(\$rank);
+        } else {
+            \$this->moveToRank(\$rank);
+        }
+    }
+}
+        ";
     }
 
     protected function addModelAttributes($builder)
@@ -246,7 +266,7 @@ class DashboardModelBehavior extends Behavior
 
         if ($b = $this->getTable()->getBehavior('sortable')) {
             if ($column->getName() == $b->getParameter('rank_column')) {
-                $script .= "\n->setGetterSetterMethodNames('getRank', 'moveToRank')";
+                $script .= "\n->setGetterSetterMethodNames('getRank', 'moveOrInsertRank')";
             }
         }
 
