@@ -208,7 +208,7 @@
         renderInput: function(data) {
             this.updateUrl();
             this.view = new widgets.FormView(_.extend({
-                field_visibility: ['edit'],
+                field_visibility: ['edit', 'add'],
                 tabs_for_related_models: false,
                 title_with_id: false,
                 model: data,
