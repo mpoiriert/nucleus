@@ -50,10 +50,10 @@
             }
             this.renderToolbar();
 
-            var tabs = this.buildTabList();
+            this.tabs = this.buildTabList();
 
-            if (tabs.length > 1) {
-                this.$el.append(utils.render_template('#tabs-tpl', { tabs: tabs }));
+            if (this.tabs.length > 1) {
+                this.$el.append(utils.render_template('#tabs-tpl', { tabs: this.tabs }));
                 this.renderForm(this.$('.tab-pane[id="tab-default"]'));
                 this.$('.nav-tabs a[href="#tab-default"]').parent().addClass('active');
                 this.renderTabs();

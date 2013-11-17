@@ -17,10 +17,10 @@
             this.$el.empty();
             this.renderTitleWithIdentifier(this.options.model_name).renderToolbar();
 
-            var tabs = this.buildTabList();
+            this.tabs = this.buildTabList();
 
-            if (tabs.length > 1) {
-                this.$el.append(utils.render_template('#tabs-tpl', { tabs: tabs }));
+            if (this.tabs.length > 1) {
+                this.$el.append(utils.render_template('#tabs-tpl', { tabs: this.tabs }));
                 this.renderObject(this.$('.tab-pane[id="tab-default"]'));
                 this.$('.nav-tabs a[href="#tab-default"]').parent().addClass('active');
                 this.renderTabs();
@@ -101,6 +101,16 @@
 
             pan.empty().append(view.el);
             view.render();
+        },
+
+        toolbarClick: function(controller, action) {
+            var container = this.$body;
+            if (this.tabs.length > 1) {
+                container = this.$('.tab-pane[id="tab-default"]');
+            }
+            utils.serialize(container, _.bind(function(data) {
+                this.trigger('tbclick', controller, action, data);
+            }, this));
         }
 
     });
