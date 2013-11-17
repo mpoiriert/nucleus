@@ -205,7 +205,7 @@
 
         renderInputField: function(field, value) {
             var tagName = _.contains(['textarea', 'richtext'], field.field_type) ? 'textarea' : 'input';
-            var input = this.createInputWithAttrs(tagName, field).val(value || '');
+            var input = this.createInputWithAttrs(tagName, field).val(value === 0 ? '0' : (value || ''));
             var knownTypes = ['text', 'password', 'file'];
             if (tagName != 'textarea') {
                 if (!_.contains(knownTypes, field.field_type)) {
@@ -247,7 +247,7 @@
                 } else {
                     var input = self.renderInputField(field);
                 }
-                input.val(value || '').on('change', mark_as_modified);
+                input.val(value === 0 ? '0' : (value || '')).on('change', mark_as_modified);
 
                 var remove = $('<a href="javascript:">Remove</a>').on('click', function(e) {
                     $(this).parent().remove();
@@ -291,9 +291,9 @@
 
             var create_item = function(key, value) {
                 div.find('>input').remove();
-                
+
                 var keyinput = $('<input type="text" class="no-serialize" />').val(key || '');
-                var input = self.renderInputField(field).data('key', keyinput).val(value || '')
+                var input = self.renderInputField(field).data('key', keyinput).val(value === 0 ? '0' : (value || ''))
                                 .removeClass('input-xxlarge').addClass('input-xlarge');
                 var remove = $('<a href="javascript:">Remove</a>').on('click', function(e) {
                     $(this).parent().remove();

@@ -145,7 +145,7 @@ var Dashboard = {};
                 return;
             }
 
-            var v = $this.val() || '';
+            var v = $this.val() === '0' ? 0 : ($this.val() || '');
             var t = $this.data('type') || 'string';
             var localized = $this.hasClass('localized');
             var cast = map[t] !== undefined ? map[t] : function(v) { return v; };
@@ -328,6 +328,8 @@ var Dashboard = {};
             v = 'false';
         } else if (v === true) {
             v = 'true';
+        } else if (v === 0) {
+            v = 0;
         } else {
             v = escape_html(v || '');
         }
