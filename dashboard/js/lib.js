@@ -111,8 +111,11 @@ var Dashboard = {};
         var map = {
             "int": function(v) { return parseInt(v, 10); },
             "double": parseFloat,
-            "float": parseFloat
+            "float": parseFloat,
+            "bool": function(v) { return (v === true || v === "false" || v === 0); }
         };
+        map['integer'] = map['int'];
+        map['boolean'] = map['bool'];
 
         var done = function() {
             if (--lock <= 0) {
@@ -151,6 +154,13 @@ var Dashboard = {};
                 v = null;
             }
 
+            if (this.type == 'checkbox' && (t == 'bool' || t == 'boolean')) {
+                if (!this.checked && ignoreEmptyValues) {
+                    return done();
+                }
+                v = this.checked;
+            }
+
             var is_array = t.indexOf('[]') > -1;
             var is_hash = t.indexOf('{}') > -1;
             if (is_array || is_hash) {
@@ -167,13 +177,6 @@ var Dashboard = {};
 
             if (!v && ignoreEmptyValues) {
                 return done();
-            }
-
-            if (this.type == 'checkbox' && (t == 'bool' || t == 'boolean')) {
-                if (!this.checked && ignoreEmptyValues) {
-                    return done();
-                }
-                v = this.checked;
             }
 
             if (is_hash) {

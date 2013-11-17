@@ -527,6 +527,8 @@ class FieldDefinition
             $value = array_map(function($v) use ($m) {
                 return $m->instanciateObject($v);
             }, array_filter($value));
+        } else if ($this->isArray && empty($value)) {
+            $value = array();
         }
 
         if ($this->formFieldType == 'file' && substr($value, 0, 5) == 'data:') {

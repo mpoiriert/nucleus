@@ -227,10 +227,21 @@
             var add = $('<a href="javascript:" class="valign">Add</a>').appendTo(div);
 
             var mark_as_modified = function() {
-                div.find('>p :input').addClass('modified');
+                var inputs = div.find('>p :input');
+                if (inputs.length > 0) {
+                    inputs.addClass('modified');
+                } else {
+                    div.append($('<input />')
+                        .attr({ type: "hidden", name: field.name })
+                        .data('type', 'bool')
+                        .attr('checked', false)
+                        .addClass('modified'));
+                }
             };
 
             var create_item = function(value) {
+                div.find('>input').remove();
+
                 if (field.field_options.values) {
                     var input = self.renderSelectField(field);
                 } else {
@@ -265,12 +276,28 @@
             var div = $('<div class="hash-field" />');
             var add = $('<a href="javascript:" class="valign">Add</a>').appendTo(div);
 
+            var mark_as_modified = function() {
+                var inputs = div.find('>p :input:not(.no-serialize)');
+                if (inputs.length > 0) {
+                    inputs.addClass('modified');
+                } else {
+                    div.append($('<input />')
+                        .attr({ type: "hidden", name: field.name })
+                        .data('type', 'bool')
+                        .attr('checked', false)
+                        .addClass('modified'));
+                }
+            };
+
             var create_item = function(key, value) {
+                div.find('>input').remove();
+                
                 var keyinput = $('<input type="text" class="no-serialize" />').val(key || '');
                 var input = self.renderInputField(field).data('key', keyinput).val(value || '')
                                 .removeClass('input-xxlarge').addClass('input-xlarge');
                 var remove = $('<a href="javascript:">Remove</a>').on('click', function(e) {
                     $(this).parent().remove();
+                    mark_as_modified();
                     e.preventDefault();
                 });
                 var p = $('<p />').append(keyinput).append(' ').append(input).append(' ').append(remove);
