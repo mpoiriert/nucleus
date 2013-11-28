@@ -159,6 +159,8 @@ class Router implements IRouterService
             $this->sessionDefaultParameters, $this->defaultParameters, $this->context->getParameters()
         );
 
+        $oldContextParameters = $this->context->getParameters();
+
         $this->context->setParameters($contextParameters);
 
         if ($scheme) {
@@ -197,10 +199,12 @@ class Router implements IRouterService
                 $this->context->setScheme($oldScheme);
             }
             $this->context->setHost($oldHost);
+            $this->context->setParameters($oldContextParameters);
             throw $e;
         }
 
         $this->context->setHost($oldHost);
+        $this->context->setParameters($oldContextParameters);
         if ($scheme) {
             $this->context->setScheme($oldScheme);
         }
