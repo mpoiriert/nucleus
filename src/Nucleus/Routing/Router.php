@@ -7,6 +7,7 @@
 
 namespace Nucleus\Routing;
 
+use Nucleus\Invoker\OutOfScopeFinalize;
 use Symfony\Component\Routing\Matcher\UrlMatcher;
 use Symfony\Component\Routing\RequestContext;
 use Symfony\Component\Routing\RouteCollection;
@@ -160,53 +161,48 @@ class Router implements IRouterService
         );
 
         $oldContextParameters = $this->context->getParameters();
-
         $this->context->setParameters($contextParameters);
 
+        $oldScheme = null;
         if ($scheme) {
             $oldScheme = $this->context->getScheme();
             $this->context->setScheme($scheme);
         }
 
-        $cultures = $this->getCultures(array_merge($contextParameters,$parameters));
-
-        $route = null;
         $oldHost = $this->context->getHost();
-        try {
-            foreach ($cultures as $culture) {
-                $routeName = $this->getI18nRouteName($name, $culture);
-                if ($this->routeCollection->get($routeName)) {
-                    try {
-                        $host = $this->getHostForCulture($culture == '' ? 'default' : $culture);
-                        $this->context->setHost($host);
-                        if($host != $oldHost) {
-                            $referenceType = self::ABSOLUTE_URL;
-                        }
-                    } catch(NoHostFoundForCultureException $e) {
-                        //We do nothing with the exception, it will use the request domain
-                    }
-                    $route = $this->urlGenerator->generate($routeName, $parameters, $referenceType);
-                    break;
-                }
-            }
 
-            if (is_null($route)) {
-                $route = $this->urlGenerator->generate($name, $parameters);
-            }
-        } catch (\Exception $e) {
-            //We want to put the old scheme back on exception
+        $context =  $this->context;
+
+        $finalize = new OutOfScopeFinalize(function () use ($oldContextParameters, $oldScheme, $oldHost, $context, $scheme) {
             if ($scheme) {
-                $this->context->setScheme($oldScheme);
+                $context->setScheme($oldScheme);
             }
-            $this->context->setHost($oldHost);
-            $this->context->setParameters($oldContextParameters);
-            throw $e;
+            $context->setHost($oldHost);
+            $context->setParameters($oldContextParameters);
+        });
+
+        $cultures = $this->getCultures(array_merge($contextParameters,$parameters));
+        $route = null;
+
+        foreach ($cultures as $culture) {
+            $routeName = $this->getI18nRouteName($name, $culture);
+            if ($this->routeCollection->get($routeName)) {
+                try {
+                    $host = $this->getHostForCulture($culture == '' ? 'default' : $culture);
+                    $this->context->setHost($host);
+                    if($host != $oldHost) {
+                        $referenceType = self::ABSOLUTE_URL;
+                    }
+                } catch(NoHostFoundForCultureException $e) {
+                    //We do nothing with the exception, it will use the request domain
+                }
+                $route = $this->urlGenerator->generate($routeName, $parameters, $referenceType);
+                break;
+            }
         }
 
-        $this->context->setHost($oldHost);
-        $this->context->setParameters($oldContextParameters);
-        if ($scheme) {
-            $this->context->setScheme($oldScheme);
+        if (is_null($route)) {
+            $route = $this->urlGenerator->generate($name, $parameters);
         }
 
         return $route;
