@@ -41,7 +41,7 @@ class ListenAnnotationContainerGenerator implements IAnnotationContainerGenerato
       $serviceContainer->getServiceByName(\Nucleus\IService\Invoker\IInvokerService::NUCLEUS_SERVICE_NAME)
         ->invoke($listener,$event->getParameters(),array($event, $event->getSubject()));
     },
-    "' . $annotation->priority . '"
+    ' . $annotation->priority . '
   );
 ');
     }
