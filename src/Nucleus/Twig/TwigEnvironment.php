@@ -13,7 +13,7 @@ class TwigEnvironment extends Twig_Environment
      * @var FileSystemLoader
      */
     private $fileSystemLoader = null;
-    
+
     /**
      * @\Nucleus\IService\DependencyInjection\Inject(options="$")
      */
@@ -29,17 +29,17 @@ class TwigEnvironment extends Twig_Environment
         }
 
         parent::__construct($twigLoaderChain, $options);
-        
+
         $this->arrayLoader = new Twig_Loader_Array(array());
         $this->loader->addLoader($this->arrayLoader);
-        
+
         $this->setBaseTemplateClass('Nucleus\Twig\TwigTemplate');
     }
 
     /**
-     * 
+     *
      * @param \Twig_Extension[] $extensions
-     * 
+     *
      * @\Nucleus\IService\DependencyInjection\Inject(extensions="@twigRenderer.twigExtension")
      */
     public function setTwigExtensions(array $extensions)
@@ -63,7 +63,7 @@ class TwigEnvironment extends Twig_Environment
     {
         return $this->arrayLoader;
     }
-    
+
     /**
      * @\Nucleus\IService\EventDispatcher\Listen("ServiceContainer.warmUp")
      */
@@ -73,14 +73,22 @@ class TwigEnvironment extends Twig_Environment
         $finder->files()->name('*.twig')->in($this->fileSystemLoader->getPaths());
         foreach($finder as $file) {
             $fileName = $file->getRelativePathname();
-            $cache = $this->getCacheFilename($fileName);
-            if(!$cache) {
-                continue;
-            } 
-            
-            if (!is_file($cache) || ($this->isAutoReload() && !$this->isTemplateFresh($fileName, filemtime($cache)))) {
-                $this->writeCacheFile($cache, $this->compileSource($this->getLoader()->getSource($fileName), $fileName));
-            } 
+            $this->generateCacheFile($fileName);
+            if(strpos($fileName,DIRECTORY_SEPARATOR) !== 0) {
+                $this->generateCacheFile(DIRECTORY_SEPARATOR . $fileName);
+            }
+        }
+    }
+
+    private function generateCacheFile($fileName)
+    {
+        $cache = $this->getCacheFilename($fileName);
+        if(!$cache) {
+            return;
+        }
+
+        if (!is_file($cache) || ($this->isAutoReload() && !$this->isTemplateFresh($fileName, filemtime($cache)))) {
+            $this->writeCacheFile($cache, $this->compileSource($this->getLoader()->getSource($fileName), $fileName));
         }
     }
 }
