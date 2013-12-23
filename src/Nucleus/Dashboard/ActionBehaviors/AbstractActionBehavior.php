@@ -2,8 +2,29 @@
 
 namespace Nucleus\Dashboard\ActionBehaviors;
 
+/**
+ * Base class for action behaviors
+ *
+ * Behaviors should subclass this class, create the getName() method, provide an array of params.
+ * <code>
+ * class MyBehavor extends AbstractActionBehavior {
+ *   protected $params = array('myparam1' => 'value');
+ *   public function getName() { return 'MyBehavior'; }
+ * }
+ * </code>
+ * Optionnaly, behavior can have the following methods:
+ *  - invoke(): to be directly invokable
+ *  - beforeInvoke(): will be called before an action is invoked
+ *  - afterInvoke(): will be called after an action has been invoked
+ *  - beforeModelInvoke(): will be called before a model action is invoked
+ *  - afterModelInvoke(): will be called after a model action has been invoked
+ *  - formatInvokedResponse(): will be before the response is sent back
+ */
 abstract class AbstractActionBehavior
 {
+    /**
+     * @var array
+     */
     protected $params = array();
 
     protected $action;
@@ -18,6 +39,11 @@ abstract class AbstractActionBehavior
         return $this->action;
     }
 
+    /**
+     * Returns the name of the behavior
+     *
+     * @return string
+     */
     abstract public function getName();
 
     public function __construct(array $params = array())
