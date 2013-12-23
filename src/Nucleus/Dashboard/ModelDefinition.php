@@ -6,10 +6,25 @@ use Symfony\Component\Validator\Validator;
 use Symfony\Component\Validator\ConstraintViolationList;
 use ReflectionClass;
 
+/**
+ * A model is a data structure use by the dashboard to carry data around
+ *
+ * A model is named and composed of fields and actions. Model actions are
+ * methods of the model object.
+ */
 class ModelDefinition
 {
+    /**
+     * Validates data with a Symfony validator
+     */
     const VALIDATE_WITH_VALIDATOR = 0;
+    /**
+     * Validates data using a callback
+     */
     const VALIDATE_WITH_CALLBACK = 1;
+    /**
+     * Validates data using a method named "validate" of the model
+     */
     const VALIDATE_WITH_METHOD = 2;
 
     protected $className;
@@ -162,6 +177,13 @@ class ModelDefinition
         return $this->actions;
     }
 
+    /**
+     * The callback used to load a model.
+     *
+     * The callback will be called with the parameters given to the action
+     *
+     * @param callback $callback
+     */
     public function setLoader($callback = null)
     {
         $this->loader = $callback;
@@ -189,6 +211,11 @@ class ModelDefinition
         return $this->validationMethod;
     }
 
+    /**
+     * Sets the Symfony validator object or the validator callback depending on the validation method
+     *
+     * @param mixed $validator
+     */
     public function setValidator($validator)
     {
         $this->validator = $validator;
@@ -202,7 +229,7 @@ class ModelDefinition
 
     /**
      * Loads a model using the $data according to the ModelDefinition (eg: using the model loader)
-     * 
+     *
      * @param array $data
      * @return object
      */
@@ -233,7 +260,7 @@ class ModelDefinition
 
     /**
      * Creates a new object according to the ModelDefinition
-     * 
+     *
      * @param array $data
      * @return object
      */
@@ -251,7 +278,7 @@ class ModelDefinition
 
     /**
      * Populates an object with the specified data according to the given ModelDefinition
-     * 
+     *
      * @param object $obj
      * @param array $data
      * @return object
@@ -273,7 +300,7 @@ class ModelDefinition
 
     /**
      * Converts an object to an array representation according to the ModelDefinition
-     * 
+     *
      * @param object $obj
      * @return array
      */
@@ -289,6 +316,11 @@ class ModelDefinition
         return $array;
     }
 
+    /**
+     * Returns the string representation of a model
+     *
+     * @return string
+     */
     public function getObjectRepr($obj)
     {
         $f = $this->getStringReprField();
@@ -297,7 +329,7 @@ class ModelDefinition
 
     /**
      * Validates an object using fields validators
-     * 
+     *
      * @param object $object
      */
     public function validateObject($object)

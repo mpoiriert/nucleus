@@ -34,6 +34,11 @@ class ModelField
     public $identifier = false;
 
     /**
+     * If this property is the model's string repr
+     */
+    public $repr = false;
+
+    /**
      * Getter method
      */
     public $getter;

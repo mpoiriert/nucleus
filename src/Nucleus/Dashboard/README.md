@@ -41,14 +41,14 @@ There are a few possible inputs which you can specify using the *in* property:
 
 You can specify the type of output using the *out* property:
 
- - *none*: nothing happends
+ - *none*: nothing happens
  - *list*: the action returns an array (or an iterator) of models which will be displayed in a table
  - *object*: the action returns a model which will be displayed
  - *form*: the action returns a model which will be displayed as a form
  - *redirect*: use in combination with a redirect flow to return which url to redirect to
- - *file*: returns a file to download
- - *dynamic*: returns an ActionDefinition which will be used to display the output of the action
- - *builder*: returns an ActionDefinition which will be used to create a new action in the dashboard
+ - *file*: returns a file to download (you have to return the file content or a tuple (filename, content))
+ - *dynamic*: returns an ActionDefinition which will be used to display the output of the action (see Dynamism section)
+ - *builder*: returns an ActionDefinition which will be used to create a new action in the dashboard (see Dynamism section)
  - *html*: returns an html string
 
 The dashboard builder will make some asumptions to avoid having to describe
@@ -68,7 +68,7 @@ If no ̀@return` annotation are used and you set a custom output type, you can u
 
 Actions will be visible in the menu unless specified otherwise. To hide an action
 from the menu use `menu=false` in the annotation. The menu property can also be a string
-which defines the parent menu item. By default it will be the controller's title.
+which defines the parent menu item. By default it will be the controller's menu.
 Multiple levels can be specified using slashes.
 
     @Action(menu=false)
@@ -102,9 +102,12 @@ Example:
         }
     }
 
+Tip: Actions can receive the Dashboard, Request or Response objects as parameters
+respectively using typed parameters named $dashboard, $request or $response.
+
 ## Models
 
-Models are classes which are data objects. Each models as a set of fields.
+Models are classes which are data objects. Each model has a set of fields.
 Fields can be define using annotations on properties or at the class level.
 If the properties is not public, the relevant getter/setter will be used.
 
@@ -135,6 +138,7 @@ Fields have a few options:
  - *property*: name of the property when the field is defined at the class level
  - *type*: type of the property. `@var` may be used instead
  - *identifier*: whether the property is the model's identifier
+ - *repr*: whether the field is used as the string representation of the model
  - *getter*: optional getter method name
  - *setter*: optional setter method name
  - *formField*: the HTML input type
@@ -333,6 +337,110 @@ Example:
         return array($count, $items);
     }
 
+## Propel bridge
+
+CRUD controllers can be auto-generated for Propel models using the [Propel Bridge](Bridge/Propel/README.md)
+
+## Defining controllers programmatically
+
+Controllers and models can be defined programmatically. Controllers are described
+using a `Nucleus\Dashboard\ControllerDefinition` object and models are described
+using a `Nucleus\Dashboard\ModelDefinition` object.
+
+Additionally, actions needs to be defined using `Nucleus\Dashboard\ActionDefinition`
+and model fields using `Nucleus\Dashboard\FieldDefinition`.
+
+All these classes use a fluent interface and can be constructed statically using
+the `create()` method.
+
+    $userModel = ModelDefinition::create()
+        ->setClassName('User')
+        ->addField(FieldDefinition::create()
+            ->setProperty('FirstName')
+            ->setType('string'))
+        ->addField(FieldDefinition::create()
+            ->setProperty('LastName')
+            ->setType('string'));
+
+    $userController = ControllerDefinition::create()
+        ->setClassName('UserController')
+        ->addAction(ActionDefinition::create()
+            ->setName('listUsers')
+            ->setReturnType('User[]')
+            ->setReturnModel($userModel));
+
+    $dashboard->addController($userController);
+
+## Related models
+
+Model's can be linked together but this can only be done programmatically (or with the
+propel bridge).
+
+The type of a model fields may be an object or an array of objects which are defined
+by a model. This model is called a related model and can be defined using `setRelatedModel()`.
+
+    $field->setRelatedModel($model);
+
+The dashboard interface will display tabs in the edit and view panels which allow you
+to access these related models.
+
+Manipulating a related object can be done using another controller. For example, a related
+model can have its own controller which you may want to use to modify these objects instead
+of duplicating actions.
+
+The value controller is defined using `setValueController()` which takes a controller name
+as mandatory parameter.
+
+## Dynamism with dashboard actions
+
+Actions can be dynamic using the *dynamic* or *builder* return type. Note that dynamic input
+is very easy to achieve with the *dynamic* input type.
+
+The *dynamic* return type allows you to define a new output definition along with
+some data. This new definition has to be defined using an ActionDefinition object.
+
+    /**
+     * @\Nucleus\IService\Dashboard\Action(out="dynamic")
+     */
+    public function dynamicAction()
+    {
+        $overrideOutput = ActionDefinition::create()->...;
+        $data = array(...);
+        return array($overrideOutput, $data);
+    }
+
+The *builder* return type allows you to create a whole new actions which input
+will also be called. Your actions must return an array with the following properties:
+
+ - *action*: ActionDefinition object for the new action
+ - *controller*: ControllerDefinition object which the action belongs to (optional, default to current controller)
+ - *data*: data for the new action (optional, will skip input)
+ - *force\_input*: whether input should be forced when data is specified (bool, default false)
+
+An example usage of the builder output is to create an action with a dynamic input,
+the form fields being created depending on parameters. Example:
+
+    /**
+     * @\Nucleus\IService\Dashboard\Action(out="builder")
+     */
+    public function processVideos($id, Dashboard $dashboard)
+    {
+        $action = $dashboard->getController('...')->getAction('processVideosForm');
+        // replace the input model:
+        $newInputModel = ModelDefinition::create()->addField(/* ... */);
+        $action->setInputType('form')->setInputModel($newInputModel);
+        return $action; // you can also only return an ActionDefinition object
+    }
+
+    /**
+     * @\Nucleus\IService\Dashboard\Action(in="dynamic")
+     */
+    public function processVideosForm($params)
+    {
+        // process fields form $params array
+    }
+
+
 ## Dashboard schema
 
 The dashboard will generate a schema from the annotations which will be used to
@@ -342,3 +450,4 @@ actions.
 Each action has its own schema available by appending /\_schema at the end of the
 action URL.
 
+[Protocol definition](PROTOCOL.md)

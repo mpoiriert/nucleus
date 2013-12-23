@@ -14,6 +14,11 @@ use LimitIterator;
 use Countable;
 use ArrayIterator;
 
+/**
+ * Dashboard
+ *
+ * Register controller and acts as the service for calling actions
+ */
 class Dashboard
 {
     /**
@@ -71,6 +76,12 @@ class Dashboard
         $this->controllers[$controller->getName()] = $controller;
     }
 
+    /**
+     * Adds a service as a controller
+     *
+     * @param string $serviceName
+     * @param string $name If the name of the controller is provided, the controller will be built only if accessed (saves a lot of time)
+     */
     public function addServiceAsController($serviceName, $name = null)
     {
         if ($name) {
@@ -79,6 +90,7 @@ class Dashboard
         }
 
         if ($this->serviceContainer === null) {
+            // if the service container is still not defined, saves the service name for later initialization
             $this->initializeServices[] = $serviceName;
             return;
         }
@@ -95,6 +107,12 @@ class Dashboard
         return $base;
     }
 
+    /**
+     * Returns the ControllerDefinition associated with the name
+     *
+     * @param string $name
+     * @return ControllerDefinition
+     */
     public function getController($name)
     {
         if (isset($this->lazyServiceControllers[$name])) {
@@ -119,7 +137,7 @@ class Dashboard
     
     /**
      * Loads the dashboard interface
-     * 
+     *
      * @\Nucleus\IService\Routing\Route(name="dasboard", path="/nucleus/dashboard")
      * @\Nucleus\IService\FrontController\ViewDefinition(template="nucleus/dashboard/index.twig")
      */
@@ -130,7 +148,7 @@ class Dashboard
 
     /**
      * Returns the schema for all actions of all controllers
-     * 
+     *
      * @\Nucleus\IService\Routing\Route(name="dashboard.schema", path="/nucleus/dashboard/_schema")
      */
     public function getSchema()
@@ -145,7 +163,7 @@ class Dashboard
 
     /**
      * Returns the schema for the actions of a controller
-     * 
+     *
      * @param ControllerDefinition $controller
      * @return array
      */
@@ -170,7 +188,7 @@ class Dashboard
 
     /**
      * Returns the schema of an action
-     * 
+     *
      * @\Nucleus\IService\Routing\Route(name="dashboard.actionSchema", path="/nucleus/dashboard/{controllerName}/{actionName}/_schema")
      */
     public function getActionSchemaFromNames($controllerName, $actionName)
@@ -181,7 +199,7 @@ class Dashboard
 
     /**
      * Returns the schema of a model action
-     * 
+     *
      * @\Nucleus\IService\Routing\Route(name="dashboard.modelActionSchema", path="/nucleus/dashboard/{controllerName}/{actionName}/{modelActionName}/_schema")
      */
     public function getModelActionSchemaFromNames($controllerName, $actionName, $modelActionName)
@@ -192,7 +210,7 @@ class Dashboard
 
     /**
      * Returns the limited schema for an action
-     * 
+     *
      * @param ActionDefinition $action
      * @return array
      */
@@ -208,9 +226,9 @@ class Dashboard
 
     /**
      * Returns the schema for an action
-     * 
-     * @param  ControllerDefinition $controller
-     * @param  ActionDefinition     $action    
+     *
+     * @param ControllerDefinition $controller
+     * @param ActionDefinition $action
      * @return array
      */
     public function getActionSchema(ControllerDefinition $controller, ActionDefinition $action)
@@ -226,11 +244,11 @@ class Dashboard
 
     /**
      * Retuns the schema for a model action
-     * 
-     * @param  ControllerDefinition $controller  
-     * @param  ActionDefinition     $action      
-     * @param  ActionDefinition     $modelAction 
-     * @return array                   
+     *
+     * @param ControllerDefinition $controller
+     * @param ActionDefinition $action
+     * @param ActionDefinition $modelAction
+     * @return array
      */
     public function getModelActionSchema(ControllerDefinition $controller, ActionDefinition $action, ActionDefinition $modelAction)
     {
@@ -252,7 +270,7 @@ class Dashboard
 
     /**
      * Returns the schema of the input part of an action
-     * 
+     *
      * @param ControllerDefinition $controller
      * @param ActionDefinition $action
      * @return array
@@ -284,7 +302,7 @@ class Dashboard
 
     /**
      * Returns the schema of the output part of an action
-     * 
+     *
      * @param ControllerDefinition $controller
      * @param ActionDefinition $action
      * @return array
@@ -318,6 +336,13 @@ class Dashboard
         return $json;
     }
 
+    /**
+     * Returns the schema for model actions
+     *
+     * @param ControllerDefinition $controller
+     * @param ActionDefinition $action
+     * @param ModelDefinition $model
+     */
     public function getActionActionsSchema(ControllerDefinition $controller, ActionDefinition $action, ModelDefinition $model)
     {
         $self = $this;
@@ -363,7 +388,7 @@ class Dashboard
 
     /**
      * Returns the schema for an array of behaviors
-     * 
+     *
      * @param array $behaviors
      * @return array
      */
@@ -382,7 +407,7 @@ class Dashboard
 
     /**
      * Returns the schema for an array of fields
-     * 
+     *
      * @param array $fields
      * @return array
      */
@@ -563,7 +588,7 @@ class Dashboard
 
     /**
      * Returns the ControllerDefinition and ActionDefinition based on their names
-     * 
+     *
      * @param string $controllerName
      * @param string $actionName
      * @param string $modelActionName
@@ -600,7 +625,7 @@ class Dashboard
 
     /**
      * Returns the input data
-     * 
+     *
      * @param Request $request
      * @return array
      */
@@ -623,7 +648,7 @@ class Dashboard
 
     /**
      * Formats a successful response
-     * 
+     *
      * @param mixed $data
      * @return array
      */
@@ -634,7 +659,7 @@ class Dashboard
 
     /**
      * Formats an error response
-     * 
+     *
      * @param string $message
      * @return array
      */
@@ -645,14 +670,14 @@ class Dashboard
 
     /**
      * Formats the result of an invoked action to be used as the query response
-     * 
+     *
      * @param Request $request
      * @param Response $response
      * @param ControllerDefinition $controller
      * @param ActionDefinition $action
      * @param mixed $result
      * @param object $obj The object used if this was a model action
-     * @return array                 
+     * @return array
      */
     protected function formatInvokedResponse(Request $request, Response $response, ControllerDefinition $controller, ActionDefinition $action, $result, $obj = null)
     {
@@ -661,6 +686,16 @@ class Dashboard
         return $this->formatResponse($data);
     }
 
+    /**
+     * Formats the data of a response
+     *
+     * @param Request $request
+     * @param Response $response
+     * @param ControllerDefinition $controller
+     * @param ActionDefinition $action
+     * @param mixed $result
+     * @param object $obj
+     */
     protected function prepareResponseData(Request $request, Response $response, ControllerDefinition $controller, ActionDefinition $action, $result, $obj = null)
     {
         $model = $action->getReturnModel();

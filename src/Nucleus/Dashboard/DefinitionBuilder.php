@@ -445,6 +445,7 @@ class DefinitionBuilder
               ->setDescription($annotation->description)
               ->setType($annotation->type)
               ->setIdentifier($annotation->identifier)
+              ->setStringRepr($annotation->repr)
               ->setOptional(!$annotation->required)
               ->setGetterSetterMethodNames($annotation->getter, $annotation->setter);
 

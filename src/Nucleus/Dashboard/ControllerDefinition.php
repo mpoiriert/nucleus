@@ -2,6 +2,11 @@
 
 namespace Nucleus\Dashboard;
 
+/**
+ * Defines a controller
+ *
+ * A controller is a class or a service which has actions
+ */
 class ControllerDefinition
 {
     protected $serviceName;

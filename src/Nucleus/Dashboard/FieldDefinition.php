@@ -4,15 +4,39 @@ namespace Nucleus\Dashboard;
 
 use Symfony\Component\Validator\Constraint;
 
+/**
+ * A field is a property of a model
+ */
 class FieldDefinition
 {
+    /**
+     * Access the data using an object property
+     */
     const ACCESS_PROPERTY = 0;
+    /**
+     * Access the data using a method
+     */
     const ACCESS_GETTER_SETTER = 1;
 
+    /**
+     * Field is hidden
+     */
     const VISIBILITY_NONE = 'none';
+    /**
+     * Field is visible in list
+     */
     const VISIBILITY_LIST = 'list';
+    /**
+     * Field is visible in object view
+     */
     const VISIBILITY_VIEW = 'view';
+    /**
+     * Field is visible in form view
+     */
     const VISIBILITY_EDIT = 'edit';
+    /**
+     * Field is queryable
+     */
     const VISIBILITY_QUERY = 'query';
 
     protected $property;
@@ -93,6 +117,11 @@ class FieldDefinition
         return new FieldDefinition();
     }
 
+    /**
+     * The object property
+     *
+     * @param string $name
+     */
     public function setProperty($name)
     {
         $this->property = $name;
@@ -107,6 +136,11 @@ class FieldDefinition
         return $this->property;
     }
 
+    /**
+     * Sets the actual name of the object properties (defaults to the property name)
+     *
+     * @param string $name
+     */
     public function setInternalProperty($name)
     {
         $this->internalProperty = $name;
@@ -118,6 +152,14 @@ class FieldDefinition
         return $this->internalProperty;
     }
 
+    /**
+     * Sets the type: class name or php type
+     *
+     * If ended with [], it will be marked as an array
+     * If "hash", it will be marked as an hash of strings
+     *
+     * @param string $type
+     */
     public function setType($type)
     {
         if (strpos($type, '[]') !== false) {
@@ -149,6 +191,11 @@ class FieldDefinition
         return $this->type;
     }
 
+    /**
+     * Returns the type as a formated string
+     *
+     * @return string
+     */
     public function getFormatedType()
     {
         $suffix = '';
@@ -160,6 +207,18 @@ class FieldDefinition
         return $this->type . $suffix;
     }
 
+    /**
+     * Sets the related model
+     *
+     * When the type is object, a ModelDefinition can be used to defined the nature of this object.
+     * This can be used to make child objects editable. Possible actions are view, edit, remove, create.
+     *
+     * @param ModelDefinition $model
+     * @param string $getter Getter method to access the object
+     * @param string $modelController Controller name used to manipulate this object
+     * @param array $actions Which actions can be performed on this model
+     * @param boolean $embed Whether to embed this model in object view
+     */
     public function setRelatedModel(ModelDefinition $model, $getter = null, $modelController = null, $actions = null, $embed = false)
     {
         $this->relatedModel = $model;
@@ -197,6 +256,11 @@ class FieldDefinition
         return $this->relatedModelActions;
     }
 
+    /**
+     * Sets whether the data is an array (where items will be of the given type)
+     *
+     * @param boolean $isArray
+     */
     public function setIsArray($isArray = true)
     {
         $this->isArray = $isArray;
@@ -208,6 +272,12 @@ class FieldDefinition
         return $this->isArray;
     }
 
+    /**
+     * Sets whether the data is an hash. Keys are string.
+     *
+     * @param boolean $isHash
+     * @param array $possibleKeys Array of strings limiting which keys are allowed
+     */
     public function setIsHash($isHash = true, array $possibleKeys = array())
     {
         $this->isHash = $isHash;
@@ -222,6 +292,11 @@ class FieldDefinition
         return $this->isHash;
     }
 
+    /**
+     * Name of the field as it is viewed by the user in the dashboard
+     *
+     * @param string $name
+     */
     public function setName($name)
     {
         $this->name = $name;
@@ -247,6 +322,11 @@ class FieldDefinition
         return $this->description;
     }
 
+    /**
+     * Sets whether this fields identifies the model
+     *
+     * @param boolean $isIdentifier
+     */
     public function setIdentifier($isIdentifier = true)
     {
         $this->isIdentifier = $isIdentifier;
@@ -258,6 +338,11 @@ class FieldDefinition
         return $this->isIdentifier;
     }
 
+    /**
+     * Sets whether this string is used as the string representation of the model
+     *
+     * @param boolean $isStringRepr
+     */
     public function setStringRepr($isStringRepr = true)
     {
         $this->isStringRepr = $isStringRepr;
@@ -347,6 +432,12 @@ class FieldDefinition
         return $this->setterName;
     }
 
+    /**
+     * Sets the type of html input used in html forms
+     *
+     * @param string $type HTML input type (any type of input or textarea or richtext)
+     * @param array $options
+     */
     public function setFormFieldType($type, $options = null)
     {
         $this->formFieldType = $type;
@@ -390,6 +481,11 @@ class FieldDefinition
         return in_array($visibility, $this->visibility);
     }
 
+    /**
+     * Sets Symfony validator constraints
+     *
+     * @param array $constraints
+     */
     public function setConstraints(array $constraints)
     {
         $this->constraints = array();
@@ -407,6 +503,17 @@ class FieldDefinition
         return $this->constraints;
     }
 
+    /**
+     * Sets the value controller
+     *
+     * When using object as type and a related model, this defines the controller which can be used
+     * to manipulate the object.
+     *
+     * @param string $controllerName
+     * @param string $remoteId
+     * @param string $localId
+     * @param boolean $embed
+     */
     public function setValueController($controllerName, $remoteId = 'id', $localId = null, $embed = true)
     {
         $this->valueController = $controllerName;
@@ -441,6 +548,11 @@ class FieldDefinition
         return $this->valueControllerEmbed;
     }
 
+    /**
+     * Sets whether this field is translatable and which locales it supports
+     *
+     * @param array $locales Strings of locale names (eg: en, fr)
+     */
     public function setI18n(array $locales)
     {
         $this->i18n = $locales;
@@ -462,6 +574,11 @@ class FieldDefinition
         return $this->type != 'resource';
     }
 
+    /**
+     * Sets whether this is an internal field
+     *
+     * @param boolean $internal
+     */
     public function setInternal($internal = true)
     {
         $this->isInternal = $internal;
@@ -475,7 +592,7 @@ class FieldDefinition
 
     /**
      * Returns the field's value from an object
-     * 
+     *
      * @param object $object
      * @return mixed
      */
@@ -516,7 +633,7 @@ class FieldDefinition
 
     /**
      * Sets the field's valud on a object
-     * 
+     *
      * @param object $object
      * @param mixed $value
      */

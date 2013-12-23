@@ -5,6 +5,9 @@ namespace Nucleus\Dashboard;
 use Nucleus\DependencyInjection\BaseAnnotationContainerGenerator;
 use Nucleus\DependencyInjection\GenerationContext;
 
+/**
+ * Registers a controller marked with a @Controller annotation in the dashboard
+ */
 class ControllerAnnotationContainerGenerator extends BaseAnnotationContainerGenerator
 {
     /**
