@@ -30,7 +30,7 @@
         "symfony/config": "2.4.*",
         "symfony/console":"2.4.*",
         "maximebf/debugbar": "*",
-        "monolog/monolog": "1.5.*",
+        "monolog/monolog": "1.7.*",
         "psr/log": "1.0.0",
         "lisachenko/go-aop-php": "*",
         "sami/sami":"1.0",
