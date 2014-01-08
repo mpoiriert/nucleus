@@ -20,9 +20,9 @@ class NucleusCompilerPass implements CompilerPassInterface
      * @var DnaConfiguration
      */
     private $dnaConfiguration;
-    
+
     private $configuration;
-    
+
     /**
      * @var ContainerBuilder
      */
@@ -30,7 +30,7 @@ class NucleusCompilerPass implements CompilerPassInterface
     private $loaderFiles;
 
     /**
-     * @var \Nucleus\Annotation\AnnotationParser 
+     * @var \Nucleus\Annotation\AnnotationParser
      */
     private $annotationParser;
 
@@ -76,7 +76,7 @@ class NucleusCompilerPass implements CompilerPassInterface
             } catch(\Exception $e) {
                 throw new \InvalidArgumentException('The service named [' . $name . '] with class [' . $serviceConfiguration['class'] . '] cannot be parse',null,$e);
             }
-            
+
             $annotations = $parsingResult->getAllAnnotations();
 
             foreach ($annotations as $parsingNode) {
@@ -86,7 +86,7 @@ class NucleusCompilerPass implements CompilerPassInterface
                     $builder->processContainerBuilder($generationContext);
                 }
             }
-            
+
             if(array_key_exists('configuration', $serviceConfiguration)) {
                 $this->container->getDefinition("configuration")
                     ->addMethodCall(
@@ -96,7 +96,7 @@ class NucleusCompilerPass implements CompilerPassInterface
             }
         }
     }
-    
+
     private function getAnnotationContainerBuilder($annotation)
     {
         $annotationClass = get_class($annotation);
@@ -105,7 +105,7 @@ class NucleusCompilerPass implements CompilerPassInterface
             $this->addFileResource($class);
             return new $class();
         }
-        
+
     }
 
     private function setDefaultConfiguration()
@@ -114,9 +114,9 @@ class NucleusCompilerPass implements CompilerPassInterface
         $defaultConfiguration['services']['aspectKernel']['arguments'] = array(
             $this->dnaConfiguration->getAspectConfiguration()
         );
-        
+
         $defaultConfiguration['services']['configuration']['configuration']['generatedDirectory'] = $this->dnaConfiguration->getCachePath();
-        
+
         $this->configuration = array_deep_merge($defaultConfiguration, $this->configuration);
     }
 
@@ -139,22 +139,23 @@ class NucleusCompilerPass implements CompilerPassInterface
                 $this->container->setParameter($key, $this->resolveServices($value));
             }
         }
-        
+
         $definition = new Definition();
         $definition->setClass("Nucleus\DependencyInjection\BaseServiceContainer");
         $definition->setFactoryService("service_container");
         $definition->setFactoryMethod("getThis");
-        $this->container->setDefinition("serviceContainer", $definition);
-        
+        $this->container->setDefinition("service_container", $definition);
+        $this->container->setAlias("servicecontainer","service_container");
+
         uksort($this->configuration['services'], function($a, $b) {
             if($a == 'aspectKernel') {
                 return -1;
             }
-            
+
             if($b == 'aspectKernel') {
                 return 1;
             }
-            
+
             if (strpos($a, 'aspect.') === 0 && strpos($b, 'aspect.') === false) {
                 return -1;
             }
@@ -169,7 +170,7 @@ class NucleusCompilerPass implements CompilerPassInterface
             $this->parseDefinition($id, $service);
             if(strpos($id,'aspect.') === 0 && (!isset($service['disabled']) || !$service['disabled'])) {
                 $class = $definition = $this->container->getDefinition($id)->getClass();
-                $service = new $class(); 
+                $service = new $class();
                 $aspectContainer = $this->container->get('aspectKernel')->getContainer();
                 $aspectContainer->registerAspect($service);
             }
@@ -317,7 +318,7 @@ class NucleusCompilerPass implements CompilerPassInterface
 
         $this->container->setDefinition($id, $definition);
     }
-    
+
     private function resolveServices($value)
     {
         if (is_array($value)) {
