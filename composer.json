@@ -2,6 +2,7 @@
     "name": "mpoiriert/nucleus",
     "type": "library",
     "minimum-stability": "dev",
+    "prefer-stable": true,
     "description": "Reusable library",
     "keywords": ["framework"],
     "license": "MIT",
@@ -26,15 +27,15 @@
         "leafo/lessphp": "0.4.*",
         "symfony/yaml": "2.4.*",
         "symfony/filesystem": "2.4.*",
-        "symfony/dependency-injection": "2.4.*",
+        "symfony/dependency-injection": "2.4.0",
         "symfony/expression-language": "2.4.*",
         "symfony/config": "2.4.*",
-        "symfony/console":"2.4.*",
+        "symfony/console": "2.4.*",
         "maximebf/debugbar": "*",
         "monolog/monolog": "1.7.*",
         "psr/log": "1.0.0",
-        "lisachenko/go-aop-php": "*",
-        "sami/sami":"1.0",
+        "lisachenko/go-aop-php": "0.4.0",
+        "sami/sami": "1.0",
         "shuber/curl": "dev-master"
     },
     "require-dev": {
@@ -42,7 +43,10 @@
         "phpmd/phpmd": "1.4.*"
     },
     "autoload": {
-        "psr-0": {"Nucleus\\": "src/"},
-        "files": ["src/Nucleus/IService/functions.php","src/Nucleus/Framework/nucleus-autoload.php"]
-    }
+        "psr-0": {
+            "Nucleus\\": "src/"
+        },
+        "files": ["src/Nucleus/IService/functions.php", "src/Nucleus/Framework/nucleus-autoload.php"]
+    },
+    "include-path": ["src/"]
 }

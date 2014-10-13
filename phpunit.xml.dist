@@ -12,6 +12,7 @@
             <exclude>
                 <directory>./src/Nucleus/IService/*/Tests</directory>
                 <directory>./src/Nucleus/*/Tests</directory>
+                <directory>./src/Nucleus/Dashboard/Bridge</directory>
             </exclude>
         </whitelist>
     </filter>
