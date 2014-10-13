@@ -30,9 +30,10 @@ class PhpDumper extends BasePhpDumper
         $options = array_merge(array(
             'class' => 'ProjectServiceContainer',
             'base_class' => '\Nucleus\DependencyInjection\BaseServiceContainer',
+            'namespace' => '',
             ), $options);
 
-        $code = $this->call('startClass', $options['class'], $options['base_class']);
+        $code = $this->call('startClass', $options['class'], $options['base_class'], $options['namespace']);
         $code .= $this->addCustom($options);
 
         if ($this->container->isFrozen()) {

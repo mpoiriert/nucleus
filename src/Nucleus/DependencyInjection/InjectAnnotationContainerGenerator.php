@@ -8,7 +8,7 @@
 namespace Nucleus\DependencyInjection;
 
 use Nucleus\IService\DependencyInjection\Inject;
-use Symfony\Component\DependencyInjection\Variable;
+use Symfony\Component\ExpressionLanguage\Expression;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -24,19 +24,19 @@ class InjectAnnotationContainerGenerator implements IAnnotationContainerGenerato
         $method = $context->getParsingContextName();
         $definition = $context->getServiceDefinition();
         $parameters = $this->getParameters(
-            $definition->getClass(), 
-            $method, 
+            $definition->getClass(),
+            $method,
             $context->getServiceName(),
             $context->getAnnotation()
         );
-        
+
         if ($method == "__construct") {
             $definition->setArguments($parameters);
         } else {
             $definition->addMethodCall($method, $parameters);
         }
     }
-    
+
     private function getParameters($class, $method, $serviceCurrentlyGenerated, Inject $annotation)
     {
         $reflectionMethod = new \ReflectionMethod($class, $method);
@@ -53,7 +53,7 @@ class InjectAnnotationContainerGenerator implements IAnnotationContainerGenerato
 
             switch (true) {
                 case strpos($serviceName, '@') === 0:
-                    $parameters[$parameter->getPosition()] = new Variable('this->getServicesByTag("' . substr($serviceName, 1) . '")');
+                    $parameters[$parameter->getPosition()] = new Expression('service("service_container").getServicesByTag("' . substr($serviceName, 1) . '")');
                     break;
                 case strpos($serviceName, '$') === 0:
                     if ($serviceName == '$') {
@@ -61,7 +61,7 @@ class InjectAnnotationContainerGenerator implements IAnnotationContainerGenerato
                     } else {
                         $configuration = substr($serviceName, 1);
                     }
-                    $parameters[$parameter->getPosition()] = new Variable('this->getServiceByName("configuration")->get("' . $configuration . '")');
+                    $parameters[$parameter->getPosition()] = new Expression('service("configuration").get("' . $configuration . '")');
                     break;
                 default:
                     $parameters[$parameter->getPosition()] = new Reference(
@@ -74,5 +74,5 @@ class InjectAnnotationContainerGenerator implements IAnnotationContainerGenerato
         return $parameters;
     }
 
-    
+
 }

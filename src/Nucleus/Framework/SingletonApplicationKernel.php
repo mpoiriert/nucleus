@@ -22,7 +22,7 @@ abstract class SingletonApplicationKernel implements IApplicationKernel
     /**
      * @var SingletonApplicationKernel 
      */
-    private static $instance;
+    protected static $instance;
 
     /**
      * @var Nucleus 
